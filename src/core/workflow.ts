@@ -1402,14 +1402,14 @@ export async function finalizeIssueAfterReviewMerge(
 	linear: LinearClient,
 	state: RunState,
 ): Promise<void> {
-	state.pullRequestApprovedAt = new Date().toISOString();
-	await saveRunState(config.workspacePath, state);
 	await linear.markStage(state.issue.id, "done");
 	await linear.clearWorkflowStageLabels(state.issue.id);
 	await linear.comment(
 		state.issue.id,
 		"PR squash-merged after completed review.",
 	);
+	state.pullRequestApprovedAt = new Date().toISOString();
+	await saveRunState(config.workspacePath, state);
 	await safeNotifyTaskOutcome(notifications, state, "done");
 }
 

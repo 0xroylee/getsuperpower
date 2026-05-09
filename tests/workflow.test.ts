@@ -933,6 +933,47 @@ describe("review-only done-stage merge finalization", () => {
 			"PR squash-merged after completed review.",
 		);
 	});
+
+	it("does not persist pullRequestApprovedAt when Linear finalization fails", async () => {
+		const workspace = await mkdtemp(
+			path.join(os.tmpdir(), "adhd-review-merge-fail-"),
+		);
+		const state = createRunState("ENG-102", "done", Date.now());
+		state.pullRequest = {
+			branch: "codex/eng-102",
+			title: "ENG-102",
+			url: "https://github.com/acme/repo/pull/102",
+		};
+		const config = {
+			...createProject("default"),
+			workspacePath: workspace,
+		};
+		const notifications = {
+			email: { enabled: false, to: [] },
+		};
+		const markStage = mock(async () => {
+			throw new Error("Linear unavailable");
+		});
+		const clearWorkflowStageLabels = mock(async () => {});
+		const comment = mock(async () => {});
+		const linear = {
+			markStage,
+			clearWorkflowStageLabels,
+			comment,
+		};
+
+		await expect(
+			finalizeIssueAfterReviewMerge(
+				config,
+				notifications,
+				linear as never,
+				state,
+			),
+		).rejects.toThrow("Linear unavailable");
+		expect(state.pullRequestApprovedAt).toBeUndefined();
+		expect(clearWorkflowStageLabels).not.toHaveBeenCalled();
+		expect(comment).not.toHaveBeenCalled();
+	});
 });
 
 describe("normalizeFailedReviewBugs", () => {
