@@ -18,6 +18,7 @@ import {
 	applyPlannerIssueRefinement,
 	buildIssueJobLogFields,
 	buildPrioritizedIssueQueue,
+	buildReviewOnlyIssueQueue,
 	buildRunLeaseOwnerId,
 	fixedBugsForImplementationComment,
 	isReviewOnlyExecutableStage,
@@ -28,13 +29,16 @@ import {
 	parsePlannerIssueRefinement,
 	readyPullRequestAfterPassingReview,
 	resolvePollingSettings,
+	resolveReviewFailureStage,
 	resolveReviewModeForComplexityScore,
+	resolveReviewOnlyBootstrapStage,
 	routeProjectsForIssueProjectId,
 	runAgentWithChatLog,
 	selectIssueQueueForCycle,
 	selectReviewOnlyIssueKeys,
 	selectStaleRunIssueKeys,
 	shouldRetryRunStage,
+	shouldSkipReviewOnlyRunState,
 	shouldStopPolling,
 	withExecutionPathLock,
 } from "../src/core/workflow";
@@ -253,6 +257,82 @@ describe("review-only selection", () => {
 			"ROY-3",
 		]);
 	});
+
+	it("merges local and Linear review-only candidates and skips missing PRs", () => {
+		const now = Date.parse("2026-05-07T12:00:00.000Z");
+		const runStates: RunState[] = [
+			{
+				...createRunState("ROY-1", "reviewing", now),
+				pullRequest: {
+					branch: "codex/roy-1",
+					title: "PR",
+					url: "https://github.com/acme/repo/pull/1",
+				},
+			},
+		];
+		const localIssues = [createWorkflowIssue("ROY-1", 2, "High")];
+		const linearIssues = [
+			createWorkflowIssue("ROY-1", 1, "Urgent"),
+			createWorkflowIssue("ROY-2", 2, "High"),
+			createWorkflowIssue("ROY-3", 3, "Medium"),
+		];
+		const discoveredPullRequestsByIssueKey = new Map([
+			[
+				"ROY-2",
+				{
+					branch: "codex/roy-2",
+					title: "PR",
+					url: "https://github.com/acme/repo/pull/2",
+				},
+			],
+			["ROY-3", undefined],
+		]);
+
+		const result = buildReviewOnlyIssueQueue({
+			runStates,
+			localIssues,
+			linearIssues,
+			discoveredPullRequestsByIssueKey,
+		});
+
+		expect(result.issueQueue.map((issue) => issue.identifier)).toEqual([
+			"ROY-1",
+			"ROY-2",
+		]);
+		expect(result.mergedCandidateCount).toBe(3);
+		expect(result.discoveredPrCount).toBe(1);
+		expect(result.skippedWithoutPr).toBe(1);
+	});
+
+	it("resolves review-only bootstrap stage from issue state mapping", () => {
+		const statusMap = {
+			...createProject("default").linear.statusMap,
+			pr_created: "PR Created",
+			reviewing: "In Review",
+			testing: "Testing",
+		};
+		expect(
+			resolveReviewOnlyBootstrapStage(
+				{ id: "unknown", name: "In Review" },
+				statusMap,
+			),
+		).toBe("reviewing");
+		expect(
+			resolveReviewOnlyBootstrapStage(
+				{ id: "in review", name: "Whatever" },
+				{
+					...statusMap,
+					pr_created: "In Review",
+				},
+			),
+		).toBe("pr_created");
+		expect(
+			resolveReviewOnlyBootstrapStage(
+				{ id: "unknown", name: "Something else" },
+				statusMap,
+			),
+		).toBe("testing");
+	});
 });
 
 describe("isReviewOnlyExecutableStage", () => {
@@ -261,6 +341,7 @@ describe("isReviewOnlyExecutableStage", () => {
 		expect(isReviewOnlyExecutableStage("reviewing")).toBe(true);
 		expect(isReviewOnlyExecutableStage("testing")).toBe(true);
 		expect(isReviewOnlyExecutableStage("implementing")).toBe(false);
+		expect(isReviewOnlyExecutableStage("human_review")).toBe(false);
 		expect(isReviewOnlyExecutableStage("planning")).toBe(false);
 		expect(isReviewOnlyExecutableStage("received")).toBe(false);
 	});
@@ -990,6 +1071,49 @@ describe("resolveReviewModeForComplexityScore", () => {
 	it("uses human review for threshold and above", () => {
 		expect(resolveReviewModeForComplexityScore(5)).toBe("human");
 		expect(resolveReviewModeForComplexityScore(10)).toBe("human");
+	});
+});
+
+describe("resolveReviewFailureStage", () => {
+	it("routes to implementing when codex session is present", () => {
+		expect(resolveReviewFailureStage({ codexSessionId: "session-1" })).toBe(
+			"implementing",
+		);
+	});
+
+	it("routes to human_review when codex session is missing", () => {
+		expect(resolveReviewFailureStage({ codexSessionId: undefined })).toBe(
+			"human_review",
+		);
+	});
+});
+
+describe("shouldSkipReviewOnlyRunState", () => {
+	it("skips existing human_review states in review-only mode", () => {
+		expect(
+			shouldSkipReviewOnlyRunState(
+				{ stage: "human_review" },
+				{ reviewOnly: true },
+			),
+		).toBe(true);
+	});
+
+	it("does not skip non-human-review states in review-only mode", () => {
+		expect(
+			shouldSkipReviewOnlyRunState(
+				{ stage: "reviewing" },
+				{ reviewOnly: true },
+			),
+		).toBe(false);
+	});
+
+	it("does not skip when review-only mode is disabled", () => {
+		expect(
+			shouldSkipReviewOnlyRunState(
+				{ stage: "human_review" },
+				{ reviewOnly: false },
+			),
+		).toBe(false);
 	});
 });
 

@@ -312,6 +312,58 @@ export async function markPrReadyForReview(
 	return true;
 }
 
+export async function findOpenPullRequestForIssue(
+	config: ResolvedProjectConfig,
+	issueKey: string,
+	deps: GithubCommandDeps = {},
+): Promise<PullRequestRef | undefined> {
+	const commandRunner = deps.runCommand ?? runCommand;
+	const assertOk = deps.assertCommandOk ?? assertCommandOk;
+	const search = `${issueKey} in:title`;
+	const list = await withRetries("gh pr list", async () => {
+		const result = await commandRunner(
+			"gh",
+			[
+				"pr",
+				"list",
+				"--state",
+				"open",
+				"--search",
+				search,
+				"--limit",
+				"20",
+				"--json",
+				"number,url,title,headRefName",
+			],
+			{
+				cwd: config.executionPath,
+			},
+		);
+		assertOk("gh", ["pr", "list"], result);
+		return result;
+	});
+	const parsed = parsePrListJson(list.stdout);
+	if (parsed.length === 0) {
+		return undefined;
+	}
+	const key = issueKey.trim().toLowerCase();
+	const matched = parsed.find((entry) =>
+		isMatchingIssuePullRequest(entry, key, issueBranchName(issueKey)),
+	);
+	if (!matched) {
+		return undefined;
+	}
+	if (!matched?.url) {
+		return undefined;
+	}
+	return {
+		number: matched.number,
+		url: matched.url,
+		branch: matched.headRefName || issueBranchName(issueKey),
+		title: matched.title || `[codex] ${issueKey}`,
+	};
+}
+
 export function buildBugIssueBody(
 	bugTitle: string,
 	bugBody: string,
@@ -462,6 +514,78 @@ function parsePrNumber(prUrl: string | undefined): number | undefined {
 	}
 	const match = prUrl.match(/\/pull\/(\d+)/);
 	return match ? Number(match[1]) : undefined;
+}
+
+interface PrListEntry {
+	number?: number;
+	url?: string;
+	title?: string;
+	headRefName?: string;
+}
+
+function parsePrListJson(raw: string): PrListEntry[] {
+	const trimmed = raw.trim();
+	if (!trimmed) {
+		return [];
+	}
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(trimmed);
+	} catch (error) {
+		throw new Error(
+			`gh pr list returned invalid JSON: ${
+				error instanceof Error ? error.message : String(error)
+			}`,
+		);
+	}
+	if (!Array.isArray(parsed)) {
+		return [];
+	}
+	return parsed.map((entry) => {
+		const record = typeof entry === "object" && entry ? entry : {};
+		const row = record as Record<string, unknown>;
+		return {
+			number:
+				typeof row.number === "number" && Number.isFinite(row.number)
+					? row.number
+					: undefined,
+			url: typeof row.url === "string" ? row.url : undefined,
+			title: typeof row.title === "string" ? row.title : undefined,
+			headRefName:
+				typeof row.headRefName === "string" ? row.headRefName : undefined,
+		};
+	});
+}
+
+function isMatchingIssuePullRequest(
+	entry: PrListEntry,
+	normalizedIssueKey: string,
+	defaultBranchName: string,
+): boolean {
+	const title = entry.title?.toLowerCase() ?? "";
+	const branch = entry.headRefName?.toLowerCase() ?? "";
+	const defaultBranch = defaultBranchName.toLowerCase();
+	return (
+		matchesIssueKeyToken(title, normalizedIssueKey) ||
+		matchesIssueKeyToken(branch, normalizedIssueKey) ||
+		branch === defaultBranch
+	);
+}
+
+function matchesIssueKeyToken(
+	value: string,
+	normalizedIssueKey: string,
+): boolean {
+	if (!value || !normalizedIssueKey) {
+		return false;
+	}
+	const escaped = escapeRegExp(normalizedIssueKey.toLowerCase());
+	const pattern = new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, "i");
+	return pattern.test(value);
+}
+
+function escapeRegExp(value: string): string {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 async function withRetries<T>(

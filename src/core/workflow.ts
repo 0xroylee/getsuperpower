@@ -1,6 +1,7 @@
 import {
 	commentOnPr,
 	createDraftPrFromWorktree,
+	findOpenPullRequestForIssue,
 	issueBranchName,
 	markPrReadyForReview,
 	prepareImplementationBranch,
@@ -53,6 +54,7 @@ import type {
 	IssueRef,
 	PlannedSplitTask,
 	PollingConfig,
+	PullRequestRef,
 	ResolvedNotificationConfig,
 	ResolvedProjectConfig,
 	RunOptions,
@@ -79,6 +81,7 @@ interface WorkflowIssue {
 		id: string;
 		name: string;
 	};
+	pullRequest?: PullRequestRef;
 }
 
 const DEFAULT_PLANNER_COMPLEXITY_SCORE = 4;
@@ -392,7 +395,11 @@ async function buildIssueQueueForProjectCycle(
 ): Promise<{ issueQueue: WorkflowIssue[]; staleRetryCount: number }> {
 	if (options.reviewOnly) {
 		const runStates = await listRunStates(config.workspacePath, config.id);
-		const reviewOnlyIssues = await fetchReviewOnlyIssues(linear, runStates);
+		const reviewOnlyIssues = await fetchReviewOnlyIssues(
+			config,
+			linear,
+			runStates,
+		);
 		return {
 			issueQueue: sortIssuesByPriority(reviewOnlyIssues),
 			staleRetryCount: 0,
@@ -461,6 +468,71 @@ export function isReviewOnlyEligibleRunState(state: RunState): boolean {
 	);
 }
 
+export function resolveReviewOnlyBootstrapStage(
+	state: WorkflowIssue["state"],
+	statusMap: ResolvedProjectConfig["linear"]["statusMap"],
+): WorkflowStage {
+	if (matchesIssueStateConfigValue(state, statusMap.pr_created)) {
+		return "pr_created";
+	}
+	if (matchesIssueStateConfigValue(state, statusMap.reviewing)) {
+		return "reviewing";
+	}
+	return "testing";
+}
+
+export interface ReviewOnlyQueueBuildResult {
+	issueQueue: WorkflowIssue[];
+	mergedCandidateCount: number;
+	discoveredPrCount: number;
+	skippedWithoutPr: number;
+}
+
+export function buildReviewOnlyIssueQueue(input: {
+	runStates: RunState[];
+	localIssues: WorkflowIssue[];
+	linearIssues: WorkflowIssue[];
+	discoveredPullRequestsByIssueKey: Map<string, PullRequestRef | undefined>;
+}): ReviewOnlyQueueBuildResult {
+	const merged = dedupeIssuesByKey([
+		...input.localIssues,
+		...input.linearIssues,
+	]);
+	const runStateByKey = new Map(
+		input.runStates.map((state) => [normalizeIssueKey(state.issue.key), state]),
+	);
+	const issueQueue: WorkflowIssue[] = [];
+	let discoveredPrCount = 0;
+	let skippedWithoutPr = 0;
+
+	for (const issue of merged) {
+		const key = normalizeIssueKey(issue.identifier);
+		const runStatePr = runStateByKey.get(key)?.pullRequest;
+		const discoveredPr = input.discoveredPullRequestsByIssueKey.get(key);
+		const pullRequest = runStatePr?.url ? runStatePr : discoveredPr;
+
+		if (!runStatePr?.url && discoveredPr?.url) {
+			discoveredPrCount += 1;
+		}
+		if (!pullRequest?.url) {
+			skippedWithoutPr += 1;
+			continue;
+		}
+
+		issueQueue.push({
+			...issue,
+			pullRequest,
+		});
+	}
+
+	return {
+		issueQueue,
+		mergedCandidateCount: merged.length,
+		discoveredPrCount,
+		skippedWithoutPr,
+	};
+}
+
 export function selectReviewOnlyIssueKeys(runStates: RunState[]): string[] {
 	return runStates
 		.filter((state) => isReviewOnlyEligibleRunState(state))
@@ -469,6 +541,19 @@ export function selectReviewOnlyIssueKeys(runStates: RunState[]): string[] {
 
 export function isReviewOnlyExecutableStage(stage: WorkflowStage): boolean {
 	return stage === "pr_created" || stage === "reviewing" || stage === "testing";
+}
+
+export function shouldSkipReviewOnlyRunState(
+	state: Pick<RunState, "stage"> | null,
+	options: Pick<RunOptions, "reviewOnly">,
+): boolean {
+	return options.reviewOnly === true && state?.stage === "human_review";
+}
+
+export function resolveReviewFailureStage(
+	state: Pick<RunState, "codexSessionId">,
+): Extract<WorkflowStage, "implementing" | "human_review"> {
+	return state.codexSessionId ? "implementing" : "human_review";
 }
 
 export async function withExecutionPathLock<T>(
@@ -595,17 +680,18 @@ async function fetchStaleIssuesForRetry(
 }
 
 async function fetchReviewOnlyIssues(
+	config: ResolvedProjectConfig,
 	linear: LinearClient,
 	runStates: RunState[],
 ): Promise<WorkflowIssue[]> {
 	const issueKeys = selectReviewOnlyIssueKeys(runStates);
-	const issues: WorkflowIssue[] = [];
+	const localIssues: WorkflowIssue[] = [];
 	for (const key of issueKeys) {
 		const issue = await linear.fetchIssueByIdentifier(key);
 		if (!issue) {
 			continue;
 		}
-		issues.push({
+		localIssues.push({
 			id: issue.id,
 			identifier: issue.identifier,
 			title: issue.title,
@@ -616,7 +702,60 @@ async function fetchReviewOnlyIssues(
 			state: issue.state,
 		});
 	}
-	return dedupeIssuesByKey(issues);
+
+	const linearIssues = await linear.fetchReviewOnlyWork();
+	const discoveredPullRequestsByIssueKey = new Map<
+		string,
+		PullRequestRef | undefined
+	>();
+	for (const issue of dedupeIssuesByKey([...localIssues, ...linearIssues])) {
+		const key = normalizeIssueKey(issue.identifier);
+		const hasRunStatePr = runStates.some(
+			(state) =>
+				normalizeIssueKey(state.issue.key) === key &&
+				Boolean(state.pullRequest?.url),
+		);
+		if (hasRunStatePr) {
+			continue;
+		}
+		try {
+			discoveredPullRequestsByIssueKey.set(
+				key,
+				await findOpenPullRequestForIssue(config, key),
+			);
+		} catch (error) {
+			discoveredPullRequestsByIssueKey.set(key, undefined);
+			logger.warn(
+				{
+					projectId: config.id,
+					issueKey: key,
+					err: normalizeError(error),
+				},
+				"Failed to discover PR for review-only issue",
+			);
+		}
+	}
+	const built = buildReviewOnlyIssueQueue({
+		runStates,
+		localIssues,
+		linearIssues,
+		discoveredPullRequestsByIssueKey,
+	});
+
+	logger.info(
+		{
+			projectId: config.id,
+			localReviewCandidates: localIssues.length,
+			linearReviewCandidates: linearIssues.length,
+			mergedReviewCandidates: built.mergedCandidateCount,
+			discoveredPrCount: built.discoveredPrCount,
+			skippedWithoutPr: built.skippedWithoutPr,
+			queuedReviewCandidates: built.issueQueue.length,
+		},
+		"Built review-only candidate queue",
+	);
+
+	return built.issueQueue;
 }
 
 async function processIssue(
@@ -631,8 +770,15 @@ async function processIssue(
 	const key = normalizeIssueKey(issue.identifier);
 	const issueLogger = logger.child({ projectId: config.id, issueKey: key });
 	const existing = await loadRunState(config.workspacePath, config.id, key);
+	if (shouldSkipReviewOnlyRunState(existing, options)) {
+		issueLogger.info(
+			{ stage: existing?.stage },
+			"Skipping review-only issue parked for manual review",
+		);
+		return;
+	}
 	const isAssignedState = await linear.isAssignedState(issue.state.id);
-	if (!existing && !isAssignedState) {
+	if (!existing && !isAssignedState && !options.reviewOnly) {
 		issueLogger.info(
 			{ issueState: issue.state.name, issueStateId: issue.state.id },
 			"Skipping in-progress issue without resumable local run state",
@@ -658,11 +804,36 @@ async function processIssue(
 				url: issue.url,
 				teamId: issue.teamId,
 			},
-			stage: "received",
+			stage: options.reviewOnly
+				? resolveReviewOnlyBootstrapStage(issue.state, config.linear.statusMap)
+				: "received",
+			reviewMode: options.reviewOnly ? "bot" : undefined,
+			pullRequest: issue.pullRequest,
 			bugs: [],
 			startedAt: new Date().toISOString(),
 			updatedAt: new Date().toISOString(),
 		} satisfies RunState);
+
+	if (
+		options.reviewOnly &&
+		issue.pullRequest?.url &&
+		!runState.pullRequest?.url
+	) {
+		runState.pullRequest = issue.pullRequest;
+	}
+	if (
+		options.reviewOnly &&
+		runState.stage !== "human_review" &&
+		!isReviewOnlyExecutableStage(runState.stage)
+	) {
+		runState.stage = resolveReviewOnlyBootstrapStage(
+			issue.state,
+			config.linear.statusMap,
+		);
+	}
+	if (options.reviewOnly && !runState.reviewMode) {
+		runState.reviewMode = "bot";
+	}
 	issueLogger.info(
 		buildIssueJobLogFields(runState, runState.stage, {
 			resumed: existing !== null,
@@ -758,6 +929,16 @@ export interface IssueJobLogFields {
 	issueTitle: string;
 	stage: string;
 	resumed?: true;
+}
+
+function matchesIssueStateConfigValue(
+	state: WorkflowIssue["state"],
+	configValue: string,
+): boolean {
+	const expected = configValue.trim().toLowerCase();
+	return (
+		state.id.toLowerCase() === expected || state.name.toLowerCase() === expected
+	);
 }
 
 export function buildIssueJobLogFields(
@@ -1113,13 +1294,26 @@ async function handleReviewTestingStage(
 	await linear.comment(state.issue.id, reviewComment);
 
 	if (!outcome.passed) {
-		Object.assign(state, transitionStage(state, "implementing"));
+		const nextStage = resolveReviewFailureStage(state);
+		Object.assign(state, transitionStage(state, nextStage));
 		await saveRunState(config.workspacePath, state);
-		await linear.markStage(state.issue.id, "implementing");
-		await linear.comment(
-			state.issue.id,
-			"Review/testing failed. Feedback was sent back to implementation for another pass.",
-		);
+		if (nextStage === "implementing") {
+			await linear.markStage(state.issue.id, nextStage);
+		} else {
+			await linear.markStage(state.issue.id, "reviewing");
+		}
+		if (nextStage === "implementing") {
+			await linear.comment(
+				state.issue.id,
+				"Review/testing failed. Feedback was sent back to implementation for another pass.",
+			);
+		} else {
+			await linear.applyStageLabel(state.issue.id, "reviewing");
+			await linear.comment(
+				state.issue.id,
+				"Review/testing failed, but no resumable implementation session is available. Parked for manual review and PR updates.",
+			);
+		}
 		return;
 	}
 
