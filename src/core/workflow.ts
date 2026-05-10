@@ -20,6 +20,7 @@ import {
 import { buildFixPrompt, buildImplementPrompt } from "../skills/prompts";
 import { buildImplementationComment } from "../utils/comments";
 import { logger, normalizeError } from "../utils/logger";
+import { runAgentWithChatLog } from "./agent-chat-log";
 import { type LoadedConfig, getProjectById } from "./config";
 import {
 	handlePlanningStage,
@@ -30,11 +31,7 @@ import {
 	handleReviewTestingStage as handleReviewTestingStageInternal,
 } from "./review-stage";
 import {
-	appendAgentChatLog,
 	appendProjectErrorLog,
-	applyRunLease,
-	clearRunLease,
-	hasRunLeaseConflict,
 	isRunLeaseExpired,
 	listRunStates,
 	loadRunState,
@@ -43,9 +40,19 @@ import {
 	saveRunState,
 	transitionStage,
 } from "./state";
+import {
+	buildRunLeaseOwnerId,
+	heartbeatRunLease,
+	releaseRunLease,
+	tryAcquireRunLease,
+} from "./workflow-lease";
+import {
+	buildPrioritizedIssueQueue as buildPrioritizedIssueQueueHelper,
+	dedupeIssuesByKey,
+} from "./workflow-queue";
+
+export { buildRunLeaseOwnerId } from "./workflow-lease";
 import type {
-	AgentChatLogEntry,
-	AgentChatLogRole,
 	CodexUsageRecord,
 	PollingConfig,
 	PullRequestRef,
@@ -55,6 +62,8 @@ import type {
 	RunState,
 	WorkflowStage,
 } from "./types";
+
+export { runAgentWithChatLog } from "./agent-chat-log";
 
 interface WorkflowIssue {
 	id: string;
@@ -437,7 +446,7 @@ export function buildPrioritizedIssueQueue(
 	staleRetryIssues: WorkflowIssue[],
 ): WorkflowIssue[] {
 	return sortIssuesByPriority(
-		dedupeIssuesByKey([...assignedIssues, ...staleRetryIssues]),
+		buildPrioritizedIssueQueueHelper(assignedIssues, staleRetryIssues),
 	);
 }
 
@@ -631,20 +640,6 @@ export function selectStaleRunIssueKeys(
 	return runStates
 		.filter((state) => isRunStateStaleForRetry(state, nowMs, timeoutMs))
 		.map((state) => normalizeIssueKey(state.issue.key));
-}
-
-function dedupeIssuesByKey(issues: WorkflowIssue[]): WorkflowIssue[] {
-	const seen = new Set<string>();
-	const unique: WorkflowIssue[] = [];
-	for (const issue of issues) {
-		const key = normalizeIssueKey(issue.identifier);
-		if (seen.has(key)) {
-			continue;
-		}
-		seen.add(key);
-		unique.push(issue);
-	}
-	return unique;
 }
 
 async function fetchStaleIssuesForRetry(
@@ -1405,59 +1400,6 @@ export {
 	readyPullRequestAfterPassingReview,
 	resolveReviewFailureStage,
 } from "./review-stage";
-
-export function buildRunLeaseOwnerId(nowMs = Date.now()): string {
-	return `${process.pid}-${nowMs}-${Math.floor(Math.random() * 100000)}`;
-}
-
-async function tryAcquireRunLease(
-	cwd: string,
-	state: RunState,
-	leaseOwnerId: string,
-	leaseTimeoutMs: number,
-): Promise<boolean> {
-	const nowMs = Date.now();
-	if (hasRunLeaseConflict(state, leaseOwnerId, nowMs)) {
-		return false;
-	}
-	Object.assign(
-		state,
-		applyRunLease(state, leaseOwnerId, leaseTimeoutMs, nowMs),
-	);
-	await saveRunState(cwd, state);
-	return true;
-}
-
-async function heartbeatRunLease(
-	cwd: string,
-	state: RunState,
-	leaseOwnerId: string,
-	leaseTimeoutMs: number,
-): Promise<void> {
-	const nowMs = Date.now();
-	if (hasRunLeaseConflict(state, leaseOwnerId, nowMs)) {
-		throw new Error(
-			"Run lease is no longer owned by the active worker; stopping issue execution.",
-		);
-	}
-	Object.assign(
-		state,
-		applyRunLease(state, leaseOwnerId, leaseTimeoutMs, nowMs),
-	);
-	await saveRunState(cwd, state);
-}
-
-async function releaseRunLease(
-	cwd: string,
-	state: RunState,
-	leaseOwnerId: string,
-): Promise<void> {
-	if (!state.lease?.ownerId || state.lease.ownerId !== leaseOwnerId) {
-		return;
-	}
-	Object.assign(state, clearRunLease(state));
-	await saveRunState(cwd, state);
-}
 
 async function safeLinearComment(
 	linear: LinearClient,
