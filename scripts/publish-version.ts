@@ -18,12 +18,12 @@ export async function runPublishVersion(
 ): Promise<void> {
 	const commands: Array<{ command: string; args: string[] }> = [
 		{ command: "git", args: ["status", "--porcelain"] },
-		{ command: "bun", args: ["run", "changeset", "version"] },
+		{ command: "bunx", args: ["@changesets/cli", "version"] },
 		{ command: "bun", args: ["run", "check"] },
 		{ command: "bun", args: ["run", "typecheck"] },
 		{ command: "bun", args: ["test"] },
 		{ command: "bun", args: ["run", "build"] },
-		{ command: "bun", args: ["run", "changeset", "publish"] },
+		{ command: "bunx", args: ["@changesets/cli", "publish"] },
 	];
 
 	for (const step of commands) {
