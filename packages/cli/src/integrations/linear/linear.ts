@@ -26,6 +26,17 @@ type LinearSdkWorkflowState = {
 	teamId?: string | null;
 };
 
+type LinearSdkTeam = {
+	id: string;
+	name?: string | null;
+	key?: string | null;
+};
+
+type LinearSdkProject = {
+	id: string;
+	teams: () => Promise<{ nodes: LinearSdkTeam[] }>;
+};
+
 type LinearSdkIssueLabel = {
 	id: string;
 	name: string;
@@ -55,6 +66,7 @@ type LinearSdkClientInstance = {
 		}>;
 	}>;
 	issue: (identifier: string) => Promise<LinearSdkIssue | undefined>;
+	project: (id: string) => Promise<LinearSdkProject | undefined>;
 	updateIssue: (
 		issueId: string,
 		input: Record<string, unknown>,
@@ -388,17 +400,12 @@ export class LinearClient {
 	async createBacklogTask(
 		input: BacklogTaskInput,
 	): Promise<CreatedLinearIssueRef> {
-		const teamId = this.config.linear.teamId?.trim();
-		if (!teamId) {
-			throw new Error(
-				`Cannot create Linear backlog task for project '${this.config.id}' because linear.teamId is not configured.`,
-			);
-		}
-		await this.ensureResolvedStatusMap();
+		const teamId = await this.resolveBacklogTaskTeamId();
+		const backlogStateId = await this.resolveBacklogStateIdForTeam(teamId);
 		const createInput = buildBacklogTaskIssueInput({
 			title: input.title,
 			description: input.description,
-			backlogStateId: this.requiredStatusMap().backlog,
+			backlogStateId,
 			teamId,
 			projectId: this.config.linear.projectId,
 		});
@@ -608,6 +615,85 @@ export class LinearClient {
 
 		const refreshedParent = await this.findIssueByIdentifier(parentIssue.key);
 		return resolveSplitTaskTeamId(undefined, refreshedParent?.teamId);
+	}
+
+	private async resolveBacklogTaskTeamId(): Promise<string> {
+		const configuredTeamId = this.config.linear.teamId?.trim();
+		if (configuredTeamId) {
+			return configuredTeamId;
+		}
+
+		const projectTeamId = await this.resolveBacklogTaskTeamIdFromProject();
+		if (projectTeamId) {
+			return projectTeamId;
+		}
+
+		return this.resolveBacklogTaskTeamIdFromBacklogState();
+	}
+
+	private async resolveBacklogTaskTeamIdFromProject(): Promise<
+		string | undefined
+	> {
+		const projectId = this.config.linear.projectId?.trim();
+		if (!projectId) {
+			return undefined;
+		}
+		const project = await this.linearRequest(async () =>
+			(await this.getClient()).project(projectId),
+		);
+		const teams = project
+			? (await this.linearRequest(() => project.teams())).nodes
+			: [];
+		const teamIds = uniqueTrimmed(teams.map((team) => team.id));
+		if (teamIds.length === 1) {
+			return teamIds[0];
+		}
+		if (teamIds.length > 1) {
+			throw new Error(
+				`Cannot create Linear backlog task for project '${this.config.id}' because linear.projectId '${projectId}' is attached to multiple teams: ${teamIds.join(", ")}. Set linear.teamId to choose one.`,
+			);
+		}
+		return undefined;
+	}
+
+	private async resolveBacklogTaskTeamIdFromBacklogState(): Promise<string> {
+		const backlogStatus = this.config.linear.statusMap.backlog.trim();
+		const states = await this.fetchWorkflowStates();
+		const matchingStates = isLikelyUuid(backlogStatus)
+			? states.filter((state) => state.id === backlogStatus)
+			: states.filter(
+					(state) => state.name.toLowerCase() === backlogStatus.toLowerCase(),
+				);
+		const teamIds = uniqueTrimmed(matchingStates.map((state) => state.teamId));
+		if (teamIds.length === 1) {
+			return teamIds[0];
+		}
+		if (teamIds.length > 1) {
+			throw new Error(
+				`Cannot create Linear backlog task for project '${this.config.id}' because backlog status '${backlogStatus}' exists for multiple teams: ${teamIds.join(", ")}. Set linear.teamId to choose one.`,
+			);
+		}
+		throw new Error(
+			`Cannot create Linear backlog task for project '${this.config.id}' because linear.teamId is not configured and no team could be inferred from linear.projectId or backlog status '${backlogStatus}'. Set linear.teamId to choose a team.`,
+		);
+	}
+
+	private async resolveBacklogStateIdForTeam(teamId: string): Promise<string> {
+		const configuredTeamId = this.config.linear.teamId?.trim();
+		if (configuredTeamId && configuredTeamId === teamId) {
+			await this.ensureResolvedStatusMap();
+			return this.requiredStatusMap().backlog;
+		}
+
+		const backlogStatus = this.config.linear.statusMap.backlog.trim();
+		if (isLikelyUuid(backlogStatus)) {
+			return backlogStatus;
+		}
+
+		const states = (await this.fetchWorkflowStates()).filter(
+			(state) => state.teamId === teamId,
+		);
+		return this.resolveStatusValue("backlog", backlogStatus, states);
 	}
 
 	private async hydrateSplitTaskParentIssue(
@@ -993,6 +1079,7 @@ export class LinearClient {
 			}>;
 		}>;
 		updateIssue(issueId: string, input: unknown): PromiseLike<unknown>;
+		project(projectId: string): PromiseLike<LinearSdkProject | undefined>;
 		createIssue(input: unknown): PromiseLike<{
 			success: boolean;
 			issueId?: string;
@@ -1204,6 +1291,12 @@ function isLikelyUuid(value: string): boolean {
 	return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
 		value,
 	);
+}
+
+function uniqueTrimmed(values: Array<string | null | undefined>): string[] {
+	return Array.from(
+		new Set(values.map((value) => value?.trim()).filter(Boolean)),
+	) as string[];
 }
 
 function isWorkflowLabelStage(

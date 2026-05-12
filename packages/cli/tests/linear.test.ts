@@ -307,6 +307,7 @@ describe("LinearClient.createBacklogTask", () => {
 	it("resolves backlog status and creates the issue in configured team/project", async () => {
 		const capturedInputs: Array<Record<string, unknown>> = [];
 		const client = new LinearClient(createLinearProject());
+		disableLinearRequestThrottle(client);
 		(
 			client as unknown as {
 				getClient: () => Promise<unknown>;
@@ -353,15 +354,130 @@ describe("LinearClient.createBacklogTask", () => {
 		expect(created.identifier).toBe("ROY-100");
 	});
 
-	it("requires a configured team id", async () => {
+	it("resolves missing team id from a single configured project team", async () => {
+		const capturedInputs: Array<Record<string, unknown>> = [];
 		const client = new LinearClient({
 			...createLinearProject(),
 			linear: { ...createLinearProject().linear, teamId: undefined },
 		});
+		disableLinearRequestThrottle(client);
+		(
+			client as unknown as {
+				getClient: () => Promise<unknown>;
+			}
+		).getClient = async () =>
+			createBacklogFakeClient({
+				capturedInputs,
+				projectTeams: [{ id: "team_project" }],
+				workflowStates: [
+					{ id: "state_other_backlog", name: "Backlog", teamId: "team_other" },
+					{
+						id: "state_project_backlog",
+						name: "Backlog",
+						teamId: "team_project",
+					},
+				],
+			});
+
+		await client.createBacklogTask({
+			title: "Create task intake CLI",
+			description: "Clarify then create backlog tasks.",
+		});
+
+		expect(capturedInputs[0]).toMatchObject({
+			stateId: "state_project_backlog",
+			teamId: "team_project",
+			projectId: "proj_123",
+		});
+	});
+
+	it("resolves missing team id from a unique backlog state team", async () => {
+		const capturedInputs: Array<Record<string, unknown>> = [];
+		const client = new LinearClient({
+			...createLinearProject(),
+			linear: {
+				...createLinearProject().linear,
+				projectId: undefined,
+				teamId: undefined,
+			},
+		});
+		disableLinearRequestThrottle(client);
+		(
+			client as unknown as {
+				getClient: () => Promise<unknown>;
+			}
+		).getClient = async () =>
+			createBacklogFakeClient({
+				capturedInputs,
+				workflowStates: [
+					{
+						id: "state_backlog_unique",
+						name: "Backlog",
+						teamId: "team_unique",
+					},
+				],
+			});
+
+		await client.createBacklogTask({
+			title: "Create task intake CLI",
+			description: "Clarify then create backlog tasks.",
+		});
+
+		expect(capturedInputs[0]).toMatchObject({
+			stateId: "state_backlog_unique",
+			teamId: "team_unique",
+		});
+		expect(capturedInputs[0]).not.toHaveProperty("projectId");
+	});
+
+	it("fails when configured project is attached to multiple teams", async () => {
+		const client = new LinearClient({
+			...createLinearProject(),
+			linear: { ...createLinearProject().linear, teamId: undefined },
+		});
+		disableLinearRequestThrottle(client);
+		(
+			client as unknown as {
+				getClient: () => Promise<unknown>;
+			}
+		).getClient = async () =>
+			createBacklogFakeClient({
+				projectTeams: [{ id: "team_a" }, { id: "team_b" }],
+				workflowStates: [
+					{ id: "state_backlog_a", name: "Backlog", teamId: "team_a" },
+				],
+			});
 
 		await expect(
 			client.createBacklogTask({ title: "Title", description: "Description" }),
-		).rejects.toThrow("linear.teamId is not configured");
+		).rejects.toThrow("attached to multiple teams: team_a, team_b");
+	});
+
+	it("fails when backlog status matches multiple teams", async () => {
+		const client = new LinearClient({
+			...createLinearProject(),
+			linear: {
+				...createLinearProject().linear,
+				projectId: undefined,
+				teamId: undefined,
+			},
+		});
+		disableLinearRequestThrottle(client);
+		(
+			client as unknown as {
+				getClient: () => Promise<unknown>;
+			}
+		).getClient = async () =>
+			createBacklogFakeClient({
+				workflowStates: [
+					{ id: "state_backlog_a", name: "Backlog", teamId: "team_a" },
+					{ id: "state_backlog_b", name: "Backlog", teamId: "team_b" },
+				],
+			});
+
+		await expect(
+			client.createBacklogTask({ title: "Title", description: "Description" }),
+		).rejects.toThrow("exists for multiple teams: team_a, team_b");
 	});
 });
 
@@ -486,6 +602,44 @@ describe("resolveSplitTaskTeamId", () => {
 		);
 	});
 });
+
+function disableLinearRequestThrottle(client: LinearClient): void {
+	(
+		client as unknown as {
+			linearRequest: <T>(operation: () => T | PromiseLike<T>) => Promise<T>;
+		}
+	).linearRequest = async (operation) => operation();
+}
+
+function createBacklogFakeClient(input: {
+	capturedInputs?: Array<Record<string, unknown>>;
+	projectTeams?: Array<{ id: string }>;
+	workflowStates: Array<{ id: string; name: string; teamId: string }>;
+}) {
+	return {
+		project: async () =>
+			input.projectTeams
+				? {
+						teams: async () => ({ nodes: input.projectTeams }),
+					}
+				: undefined,
+		workflowStates: async () => ({
+			nodes: input.workflowStates,
+		}),
+		createIssue: async (createInput: Record<string, unknown>) => {
+			input.capturedInputs?.push(createInput);
+			return {
+				success: true,
+				issue: Promise.resolve({
+					id: "lin_created",
+					identifier: "ROY-100",
+					title: String(createInput.title),
+					url: "https://linear.example/ROY-100",
+				}),
+			};
+		},
+	};
+}
 
 function createLinearProject(): ResolvedProjectConfig {
 	return {

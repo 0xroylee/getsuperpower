@@ -76,7 +76,11 @@ export async function runSetupWizard(cwd: string): Promise<void> {
 			await ask(io, "Linear project ID filter (optional)", ""),
 		);
 		const linearTeamId = emptyToUndefined(
-			await ask(io, "Linear team ID filter (optional)", ""),
+			await ask(
+				io,
+				"Linear team ID filter (optional; inferred from project when possible)",
+				"",
+			),
 		);
 		const enableEmailNotifications = parseYesNo(
 			await ask(io, "Enable email notifications? (y/N)", "N"),
