@@ -154,25 +154,51 @@ function resolveInvocation(
 		};
 	}
 	if (request.action === "cron") {
+		if (request.once !== undefined && typeof request.once !== "boolean") {
+			return {
+				status: "error",
+				error: "Malformed cron request: once must be a boolean",
+			};
+		}
+		if (request.jobId !== undefined && !isNonEmptyString(request.jobId)) {
+			return {
+				status: "error",
+				error: "Malformed cron request: jobId must be a non-empty string",
+			};
+		}
 		return {
 			status: "ok",
 			invocation: {
 				command,
-				args: [...baseArgs, ...buildCronArgs(request)],
+				args: [
+					...baseArgs,
+					...buildCronArgs({
+						once: request.once,
+						jobId: request.jobId,
+					}),
+				],
 			},
 		};
 	}
 	if (request.action === "setup") {
+		if (request.check !== undefined && typeof request.check !== "boolean") {
+			return {
+				status: "error",
+				error: "Malformed setup request: check must be a boolean",
+			};
+		}
 		return {
 			status: "ok",
 			invocation: {
 				command,
-				args: [...baseArgs, ...buildSetupArgs(request)],
+				args: [...baseArgs, ...buildSetupArgs({ check: request.check })],
 			},
 		};
 	}
 	if (request.action === "skills") {
-		const skillsResolution = resolveSkillsArgs(request);
+		const skillsResolution = resolveSkillsArgs(
+			request as unknown as Record<string, unknown>,
+		);
 		if (skillsResolution.status !== "ok") {
 			return skillsResolution;
 		}
@@ -185,7 +211,9 @@ function resolveInvocation(
 		};
 	}
 	if (request.action === "task") {
-		const taskResolution = resolveTaskArgs(request);
+		const taskResolution = resolveTaskArgs(
+			request as unknown as Record<string, unknown>,
+		);
 		if (taskResolution.status !== "ok") {
 			return taskResolution;
 		}
@@ -233,25 +261,21 @@ function buildStatusArgs(
 	];
 }
 
-function buildCronArgs(
-	request: Extract<SupportedCliCommandRequest, { action: "cron" }>,
-): string[] {
+function buildCronArgs(request: { once?: boolean; jobId?: string }): string[] {
 	const args = ["cron"];
 	appendBooleanFlag(args, "--once", request.once);
 	appendFlag(args, "--job", request.jobId);
 	return args;
 }
 
-function buildSetupArgs(
-	request: Extract<SupportedCliCommandRequest, { action: "setup" }>,
-): string[] {
+function buildSetupArgs(request: { check?: boolean }): string[] {
 	const args = ["setup"];
 	appendBooleanFlag(args, "--check", request.check);
 	return args;
 }
 
 function resolveSkillsArgs(
-	request: CliCommandRequest,
+	request: Record<string, unknown>,
 ): { status: "ok"; args: string[] } | { status: "error"; error: string } {
 	if (!isNonEmptyString(request.skillsAction)) {
 		return {
@@ -344,7 +368,7 @@ function resolveSkillsArgs(
 }
 
 function resolveTaskArgs(
-	request: CliCommandRequest,
+	request: Record<string, unknown>,
 ): { status: "ok"; args: string[] } | { status: "error"; error: string } {
 	if (!isNonEmptyString(request.taskAction)) {
 		return {
