@@ -1,6 +1,19 @@
-import { describe, expect, it } from "bun:test";
-import { createHandleRequest, handleRequest } from "../src/app";
+import { afterEach, describe, expect, it } from "bun:test";
+import { createHandleRequest } from "../src/app";
 import type { AppDeps, BoardReadModels, CliExecutor } from "../src/app.types";
+import { createBoardReadModels } from "../src/board-read-models";
+import {
+	type NewBoardProjectRow,
+	type NewBoardTaskRow,
+	type NewProjectBoardRow,
+	boardProjectsTable,
+	boardTasksTable,
+	projectBoardsTable,
+} from "../src/db";
+import {
+	type DrizzleServerTestDatabase,
+	createDrizzleServerTestDatabase,
+} from "./server-db-test-helpers";
 
 function createCliExecutor(): CliExecutor {
 	return {
@@ -19,6 +32,15 @@ function createDeps(boardReadModels: BoardReadModels): AppDeps {
 		boardReadModels,
 	};
 }
+
+let testDatabase: DrizzleServerTestDatabase | undefined;
+
+afterEach(async () => {
+	if (testDatabase) {
+		await testDatabase.cleanup();
+		testDatabase = undefined;
+	}
+});
 
 describe("board routes", () => {
 	it("returns workspace projects through createHandleRequest", async () => {
@@ -107,15 +129,55 @@ describe("board routes", () => {
 		});
 	});
 
-	it("routes board endpoints through handleRequest and returns 200", async () => {
-		const projectsResponse = await handleRequest(
+	it("returns seeded board data from database-backed read models", async () => {
+		testDatabase = await createDrizzleServerTestDatabase();
+		const board: NewProjectBoardRow = {
+			id: "board-1",
+			name: "Core Board",
+			description: "Workspace board",
+			ownerId: "ws-1",
+			createdAt: "2026-05-14 00:00:00",
+			updatedAt: "2026-05-14 00:00:00",
+		};
+		const project: NewBoardProjectRow = {
+			id: "project-1",
+			boardId: "board-1",
+			externalProjectId: "ROY",
+			name: "API Project",
+			description: "Server API",
+			ownerId: "ws-1",
+			createdAt: "2026-05-14 00:01:00",
+			updatedAt: "2026-05-14 00:01:00",
+		};
+		const task: NewBoardTaskRow = {
+			id: "task-1",
+			projectId: "project-1",
+			title: "Implement endpoint",
+			content: "Wire endpoint to db read model",
+			priority: 1,
+			status: "open",
+			dueDate: null,
+			creatorId: "user-1",
+			linkedPr: null,
+			createdAt: "2026-05-14 00:02:00",
+			updatedAt: "2026-05-14 00:02:00",
+		};
+		await testDatabase.db.insert(projectBoardsTable).values(board);
+		await testDatabase.db.insert(boardProjectsTable).values(project);
+		await testDatabase.db.insert(boardTasksTable).values(task);
+
+		const app = createHandleRequest(
+			createDeps(createBoardReadModels(testDatabase.db)),
+		);
+
+		const projectsResponse = await app(
 			new Request("http://localhost/api/workspaces/ws-1/projects", {
 				method: "GET",
 			}),
 		);
-		const boardResponse = await handleRequest(
+		const boardResponse = await app(
 			new Request(
-				"http://localhost/api/workspaces/ws-1/projects/proj-1/board",
+				"http://localhost/api/workspaces/ws-1/projects/project-1/board",
 				{
 					method: "GET",
 				},
@@ -123,17 +185,53 @@ describe("board routes", () => {
 		);
 
 		expect(projectsResponse.status).toBe(200);
+		expect(await projectsResponse.json()).toEqual([
+			{
+				id: "project-1",
+				boardId: "board-1",
+				externalProjectId: "ROY",
+				name: "API Project",
+				description: "Server API",
+				ownerId: "ws-1",
+				createdAt: "2026-05-14 00:01:00",
+				updatedAt: "2026-05-14 00:01:00",
+			},
+		]);
 		expect(boardResponse.status).toBe(200);
-		expect(await projectsResponse.json()).toEqual([]);
 		expect(await boardResponse.json()).toEqual({
-			id: "board-proj-1",
-			name: "Project Board",
-			description: null,
-			ownerId: "system",
-			createdAt: "1970-01-01T00:00:00.000Z",
-			updatedAt: "1970-01-01T00:00:00.000Z",
-			projects: [],
-			tasks: [],
+			id: "board-1",
+			name: "Core Board",
+			description: "Workspace board",
+			ownerId: "ws-1",
+			createdAt: "2026-05-14 00:00:00",
+			updatedAt: "2026-05-14 00:00:00",
+			projects: [
+				{
+					id: "project-1",
+					boardId: "board-1",
+					externalProjectId: "ROY",
+					name: "API Project",
+					description: "Server API",
+					ownerId: "ws-1",
+					createdAt: "2026-05-14 00:01:00",
+					updatedAt: "2026-05-14 00:01:00",
+				},
+			],
+			tasks: [
+				{
+					id: "task-1",
+					projectId: "project-1",
+					title: "Implement endpoint",
+					content: "Wire endpoint to db read model",
+					priority: 1,
+					status: "open",
+					dueDate: null,
+					creatorId: "user-1",
+					linkedPr: null,
+					createdAt: "2026-05-14 00:02:00",
+					updatedAt: "2026-05-14 00:02:00",
+				},
+			],
 		});
 	});
 });
