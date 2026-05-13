@@ -7,30 +7,6 @@ import type {
 const cwd = process.cwd();
 
 const config: DeepPartial<AdhdAiRootConfig> = {
-	automations: {
-		jobs: [
-			{
-				id: "hourly-pr-review",
-				name: "Hourly PR Review",
-				schedule: { frequency: "hourly", every: 1, minute: 0 },
-				run: { allProjects: true, reviewOnly: true },
-			},
-			{
-				id: "daily-codebase-maintenance",
-				name: "Daily Codebase Maintenance",
-				schedule: { frequency: "daily", time: "09:00" },
-				run: {
-					allProjects: true,
-					poll: true,
-					maxPollCycles: 1,
-					exitWhenIdle: true,
-				},
-				skills: {
-					implement: "daily-codebase-maintenance/SKILL.md",
-				},
-			},
-		],
-	},
 	projects: [
 		{
 			id: "adhd-47ea7f022b5d",

@@ -36,12 +36,6 @@ bun run src/index.ts run --project <PROJECT_ID> --issue ENG-123
 # local polling mode
 bun run src/index.ts run --project <PROJECT_ID> --poll
 
-# unattended scheduled mode (server-owned cron runner)
-bun run --filter adhdai-server cron
-
-# run the first enabled automation job once now
-bun run --filter adhdai-server cron:once
-
 # run the hourly PR review job
 bun run --filter adhdai-server review:hourly
 
@@ -90,7 +84,7 @@ After linking/installing the package bin, you can also use `adhd-ai ...` directl
 - Guided setup stores local secrets in `.piv-loop/config/env.sqlite` (and writes `.env` for compatibility).
 - Docker-isolated Codex execution status and caveats (ROY-95): [docs/RELIABILITY.md#docker-isolated-codex-execution](docs/RELIABILITY.md#docker-isolated-codex-execution)
 
-For full config shape, polling, automations/cron compatibility, env vars, and routing behavior, use:
+For full config shape, polling, env vars, and routing behavior, use:
 
 - [ARCHITECTURE.md](ARCHITECTURE.md)
 - [docs/PLANS.md](docs/PLANS.md)
