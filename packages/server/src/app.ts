@@ -1,13 +1,40 @@
-import type { AppDeps, RouteHandler } from "./app.types";
+import type { AppDeps, BoardReadModels, RouteHandler } from "./app.types";
 
 const UNSAFE_RAW_COMMAND_FIELDS = ["command", "cmd", "args", "argv", "shell"];
+const WORKSPACE_PROJECTS_PATTERN =
+	/^\/api\/workspaces\/([^/]+)\/projects(?:\/)?$/;
+const PROJECT_BOARD_PATTERN =
+	/^\/api\/workspaces\/([^/]+)\/projects\/([^/]+)\/board(?:\/)?$/;
 
 export function createHandleRequest(deps: AppDeps): RouteHandler {
+	const boardReadModels = deps.boardReadModels ?? createEmptyBoardReadModels();
+
 	return async (request) => {
 		const { pathname } = new URL(request.url);
+		const workspaceProjectsMatch = pathname.match(WORKSPACE_PROJECTS_PATTERN);
+		const projectBoardMatch = pathname.match(PROJECT_BOARD_PATTERN);
 
 		if (pathname === "/health" && request.method === "GET") {
 			return Response.json({ status: "ok" });
+		}
+		if (workspaceProjectsMatch) {
+			if (request.method !== "GET") {
+				return Response.json({ error: "Method Not Allowed" }, { status: 405 });
+			}
+			const workspaceId = decodeURIComponent(workspaceProjectsMatch[1] ?? "");
+			return Response.json(
+				await boardReadModels.listWorkspaceProjects(workspaceId),
+			);
+		}
+		if (projectBoardMatch) {
+			if (request.method !== "GET") {
+				return Response.json({ error: "Method Not Allowed" }, { status: 405 });
+			}
+			const workspaceId = decodeURIComponent(projectBoardMatch[1] ?? "");
+			const projectId = decodeURIComponent(projectBoardMatch[2] ?? "");
+			return Response.json(
+				await boardReadModels.getProjectBoard(workspaceId, projectId),
+			);
 		}
 
 		if (pathname === "/api/cli/history") {
@@ -35,11 +62,27 @@ export function createHandleRequest(deps: AppDeps): RouteHandler {
 	};
 }
 
-export const handleRequest: RouteHandler = (request) => {
+export const handleRequest: RouteHandler = async (request) => {
 	const { pathname } = new URL(request.url);
+	const workspaceProjectsMatch = pathname.match(WORKSPACE_PROJECTS_PATTERN);
+	const projectBoardMatch = pathname.match(PROJECT_BOARD_PATTERN);
+	const boardReadModels = createEmptyBoardReadModels();
 
 	if (pathname === "/health" && request.method === "GET") {
 		return Response.json({ status: "ok" });
+	}
+	if (workspaceProjectsMatch && request.method === "GET") {
+		const workspaceId = decodeURIComponent(workspaceProjectsMatch[1] ?? "");
+		return Response.json(
+			await boardReadModels.listWorkspaceProjects(workspaceId),
+		);
+	}
+	if (projectBoardMatch && request.method === "GET") {
+		const workspaceId = decodeURIComponent(projectBoardMatch[1] ?? "");
+		const projectId = decodeURIComponent(projectBoardMatch[2] ?? "");
+		return Response.json(
+			await boardReadModels.getProjectBoard(workspaceId, projectId),
+		);
 	}
 
 	return new Response("Not Found", { status: 404 });
@@ -87,4 +130,24 @@ async function parseDispatchRequest(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function createEmptyBoardReadModels(): BoardReadModels {
+	return {
+		async listWorkspaceProjects(): Promise<[]> {
+			return [];
+		},
+		async getProjectBoard(_workspaceId, projectId) {
+			return {
+				id: `board-${projectId}`,
+				name: "Project Board",
+				description: null,
+				ownerId: "system",
+				createdAt: new Date(0).toISOString(),
+				updatedAt: new Date(0).toISOString(),
+				projects: [],
+				tasks: [],
+			};
+		},
+	};
 }
