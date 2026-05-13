@@ -1,3 +1,4 @@
+import path from "node:path";
 import type {
 	AdhdAiRootConfig,
 	DeepPartial,
@@ -177,4 +178,20 @@ function mergeRuntime(
 		},
 		dryRun: project.dryRun ?? rootDefaults.dryRun ?? base.dryRun,
 	};
+}
+
+function normalizeOptionalPath(
+	input: unknown,
+	baseDir: string,
+): string | undefined {
+	if (typeof input !== "string") {
+		return undefined;
+	}
+	const trimmed = input.trim();
+	if (!trimmed) {
+		return undefined;
+	}
+	return path.isAbsolute(trimmed)
+		? trimmed
+		: path.resolve(baseDir || process.cwd(), trimmed);
 }

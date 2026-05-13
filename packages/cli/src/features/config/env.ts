@@ -4,7 +4,11 @@ import type {
 	ProjectRuntimeConfig,
 	ResolvedNotificationConfig,
 } from "../../features/types";
-import { AUTO_SELECT_SKILLS_DB_FILE, SERVER_DB_DIR, SQLITE_ENV_DIR } from "./constants";
+import {
+	AUTO_SELECT_SKILLS_DB_FILE,
+	SERVER_DB_DIR,
+	SQLITE_ENV_DIR,
+} from "./constants";
 import {
 	normalizeAgentBackend,
 	normalizeBooleanEnvValue,

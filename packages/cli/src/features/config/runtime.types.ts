@@ -1,4 +1,4 @@
-import { ServerRuntimeConfig } from "./server.types";
+import type { ServerRuntimeConfig } from "./server.types";
 
 export interface LinearStatusMap {
 	backlog: string;
