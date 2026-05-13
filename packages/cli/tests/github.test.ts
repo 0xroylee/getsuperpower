@@ -10,6 +10,7 @@ import {
 	findOpenPullRequestForIssue,
 	getPullRequestMergeStatus,
 	issueBranchName,
+	prepareWorktreeDependencies,
 	removeIssueWorktree,
 	squashMergePullRequest,
 } from "../src/integrations/github";
@@ -585,6 +586,52 @@ describe("ensureIssueWorktree", () => {
 			removed: false,
 			reason: "contains modified files",
 		});
+	});
+});
+
+describe("prepareWorktreeDependencies", () => {
+	it("runs frozen bun install in the isolated worktree", async () => {
+		const calls: Array<{ command: string; args: string[]; cwd: string }> = [];
+		const runCommand = mock(
+			async (
+				command: string,
+				args: string[],
+				options: { cwd: string },
+			): Promise<CommandResult> => {
+				calls.push({ command, args, cwd: options.cwd });
+				return { code: 0, stdout: "", stderr: "" };
+			},
+		);
+
+		await prepareWorktreeDependencies("/tmp/worktrees/eng-42", {
+			runCommand,
+		});
+
+		expect(calls).toEqual([
+			{
+				command: "bun",
+				args: ["install", "--frozen-lockfile"],
+				cwd: "/tmp/worktrees/eng-42",
+			},
+		]);
+	});
+
+	it("throws an actionable dependency setup error when install fails", async () => {
+		const runCommand = mock(async (): Promise<CommandResult> => {
+			return {
+				code: 1,
+				stdout: "",
+				stderr: "FailedToOpenSocket while fetching package manifests",
+			};
+		});
+
+		await expect(
+			prepareWorktreeDependencies("/tmp/worktrees/eng-42", {
+				runCommand,
+			}),
+		).rejects.toThrow(
+			"Ensure this environment has network access or a populated Bun dependency cache / node_modules matching bun.lock.",
+		);
 	});
 });
 

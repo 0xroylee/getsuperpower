@@ -89,6 +89,7 @@ export interface WorkflowRuntime {
 		pullRequest: PullRequestRef | undefined,
 		worktreePath: string,
 	): Promise<string>;
+	prepareWorktreeDependencies(worktreePath: string): Promise<void>;
 	removeIssueWorktree(
 		config: ResolvedProjectConfig,
 		worktreePath: string,

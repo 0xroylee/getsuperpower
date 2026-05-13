@@ -1597,11 +1597,21 @@ describe("isolated worktree workflow helpers", () => {
 		const config = createProject("default");
 		config.workflow.isolatedWorktrees = { enabled: true };
 		const state = createRunState("ENG-42", "implementing", Date.now());
-		const ensureBaseBranchFresh = mock(async () => {});
-		const ensureIssueWorktree = mock(async () => "codex/eng-42");
+		const calls: string[] = [];
+		const ensureBaseBranchFresh = mock(async () => {
+			calls.push("ensureBaseBranchFresh");
+		});
+		const ensureIssueWorktree = mock(async () => {
+			calls.push("ensureIssueWorktree");
+			return "codex/eng-42";
+		});
+		const prepareWorktreeDependencies = mock(async (worktreePath: string) => {
+			calls.push(`prepareWorktreeDependencies:${worktreePath}`);
+		});
 		const runtime = {
 			ensureBaseBranchFresh,
 			ensureIssueWorktree,
+			prepareWorktreeDependencies,
 		} as unknown as WorkflowRuntime;
 
 		const isolatedConfig = await prepareIsolatedExecutionConfig(
@@ -1626,6 +1636,36 @@ describe("isolated worktree workflow helpers", () => {
 			undefined,
 			isolatedConfig.executionPath,
 		);
+		expect(prepareWorktreeDependencies).toHaveBeenCalledWith(
+			isolatedConfig.executionPath,
+		);
+		expect(calls).toEqual([
+			"ensureBaseBranchFresh",
+			"ensureIssueWorktree",
+			"prepareWorktreeDependencies:/tmp/workspace/.piv-loop/projects/default/worktrees/eng-42",
+		]);
+	});
+
+	it("does not record isolated execution state when dependency setup fails", async () => {
+		const config = createProject("default");
+		config.workflow.isolatedWorktrees = { enabled: true };
+		const state = createRunState("ENG-42", "implementing", Date.now());
+		const prepareWorktreeDependencies = mock(async () => {
+			throw new Error("bun install --frozen-lockfile failed");
+		});
+		const runtime = {
+			ensureBaseBranchFresh: mock(async () => {}),
+			ensureIssueWorktree: mock(async () => "codex/eng-42"),
+			prepareWorktreeDependencies,
+		} as unknown as WorkflowRuntime;
+
+		await expect(
+			prepareIsolatedExecutionConfig(config, state, runtime),
+		).rejects.toThrow("bun install --frozen-lockfile failed");
+		expect(prepareWorktreeDependencies).toHaveBeenCalledWith(
+			"/tmp/workspace/.piv-loop/projects/default/worktrees/eng-42",
+		);
+		expect(state.executionWorkspace).toBeUndefined();
 	});
 
 	it("cleans terminal worktrees and keeps dirty retained worktrees in state", async () => {

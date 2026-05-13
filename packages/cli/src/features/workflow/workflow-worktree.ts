@@ -56,6 +56,7 @@ export async function prepareIsolatedExecutionConfig(
 		state.pullRequest,
 		worktreePath,
 	);
+	await runtime.prepareWorktreeDependencies(worktreePath);
 	state.executionWorkspace = {
 		mode: "git-worktree",
 		path: worktreePath,
