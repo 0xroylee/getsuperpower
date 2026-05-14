@@ -12,9 +12,7 @@ export interface CliExecutor {
 
 export interface AppDeps {
 	cliExecutor: CliExecutor;
-	repository: {
-		database: ServerDatabase | null;
-	};
+	db: ServerDatabase["db"];
 }
 
 export type RouteHandler = (request: Request) => Response | Promise<Response>;

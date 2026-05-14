@@ -225,8 +225,6 @@ function createDeps(overrides?: {
 				})),
 			getHistory: () => overrides?.history ?? [],
 		},
-		repository: {
-			database: null,
-		},
+		db: {} as AppDeps["db"],
 	};
 }
