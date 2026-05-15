@@ -60,8 +60,10 @@ export function WebJobBoard({
 				display: "grid",
 				gap: "1rem",
 				alignContent: "start",
-				minHeight: "100vh",
+				height: "100dvh",
+				maxHeight: "100dvh",
 				minWidth: 0,
+				overflow: "auto",
 			}}
 		>
 			<header

@@ -1,5 +1,7 @@
+import type { CliCommandStreamEvent } from "devos/features/server";
 import { z } from "zod";
 import type { CliExecutor } from "../app.types";
+import type { ServerLogger } from "../logger.types";
 import { methodNotAllowed } from "./http-utils";
 import { badRequestResponse, jsonSuccess } from "./response";
 import { isRecord } from "./zod-utils";
@@ -13,6 +15,7 @@ export async function handleCliRoute(
 	request: Request,
 	cliExecutor: CliExecutor,
 	pathname: string,
+	logger?: ServerLogger,
 ): Promise<Response | null> {
 	if (pathname === "/api/cli/history") {
 		if (request.method !== "GET") {
@@ -29,6 +32,18 @@ export async function handleCliRoute(
 		if (parsed.status === "error") {
 			return badRequestResponse(parsed.error);
 		}
+		logger?.info(
+			{
+				method: request.method,
+				path: pathname,
+				action: parsed.request.action,
+				requestKeys: Object.keys(parsed.request).sort(),
+			},
+			"CLI dispatch executed",
+		);
+		if (parsed.stream) {
+			return createDispatchStreamResponse(cliExecutor, parsed.request);
+		}
 		const result = await cliExecutor.execute(parsed.request);
 		return jsonSuccess(result, {
 			status: result.status === "rejected" ? 400 : 200,
@@ -38,10 +53,12 @@ export async function handleCliRoute(
 	return null;
 }
 
-async function parseDispatchRequest(
-	request: Request,
-): Promise<
-	| { status: "ok"; request: Record<string, unknown> & { action: string } }
+async function parseDispatchRequest(request: Request): Promise<
+	| {
+			status: "ok";
+			stream: boolean;
+			request: Record<string, unknown> & { action: string };
+	  }
 	| { status: "error"; error: string }
 > {
 	let body: unknown;
@@ -63,6 +80,12 @@ async function parseDispatchRequest(
 			error: "Malformed dispatch request: action must be a non-empty string",
 		};
 	}
+	if (body.stream !== undefined && typeof body.stream !== "boolean") {
+		return {
+			status: "error",
+			error: "Malformed dispatch request: stream must be a boolean",
+		};
+	}
 	for (const field of UNSAFE_RAW_COMMAND_FIELDS) {
 		if (field in body) {
 			return {
@@ -71,7 +94,8 @@ async function parseDispatchRequest(
 			};
 		}
 	}
-	const result = dispatchRequestSchema.safeParse(body);
+	const { stream, ...dispatchBody } = body;
+	const result = dispatchRequestSchema.safeParse(dispatchBody);
 	if (!result.success) {
 		return {
 			status: "error",
@@ -81,6 +105,52 @@ async function parseDispatchRequest(
 
 	return {
 		status: "ok",
+		stream: stream === true,
 		request: result.data,
 	};
+}
+
+function createDispatchStreamResponse(
+	cliExecutor: CliExecutor,
+	request: Record<string, unknown> & { action: string },
+): Response {
+	const encoder = new TextEncoder();
+	let closed = false;
+	const body = new ReadableStream<Uint8Array>({
+		start(controller) {
+			const emit = (event: CliCommandStreamEvent) => {
+				if (closed) {
+					return;
+				}
+				controller.enqueue(encoder.encode(formatServerSentEvent(event)));
+				if (event.type === "complete") {
+					closed = true;
+					controller.close();
+				}
+			};
+			void cliExecutor.executeStream(request, emit).catch((error) => {
+				if (closed) {
+					return;
+				}
+				emit({
+					type: "error",
+					error: error instanceof Error ? error.message : String(error),
+				});
+				closed = true;
+				controller.close();
+			});
+		},
+	});
+	return new Response(body, {
+		headers: {
+			"cache-control": "no-cache",
+			connection: "keep-alive",
+			"content-type": "text/event-stream; charset=utf-8",
+		},
+	});
+}
+
+function formatServerSentEvent(event: CliCommandStreamEvent): string {
+	const { type, ...data } = event;
+	return `event: ${type}\ndata: ${JSON.stringify(data)}\n\n`;
 }
