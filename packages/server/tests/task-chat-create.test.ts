@@ -68,6 +68,9 @@ describe("chat task create route", () => {
 		expect(body.task.content).toBe("Create both task records.");
 		expect(body.task.status).toBe("planning");
 		expect(body.task.linkedPr).toBeNull();
+		expect(body.task.projectId).toBe("project-1");
+		const tasks = await testDatabase.db.select().from(boardTasksTable);
+		expect(tasks).toEqual([body.task]);
 		const board = await createBoardRepository(
 			testDatabase.db,
 		).getWorkspaceProjectBoard("owner-1", "project-1");
@@ -75,7 +78,7 @@ describe("chat task create route", () => {
 		expect(
 			board?.statusColumns.find((column) => column.status === "planning")
 				?.tasks,
-		).toHaveLength(0);
+		).toHaveLength(1);
 		expect(calls).toEqual([
 			{
 				action: "task",
@@ -121,6 +124,8 @@ describe("chat task create route", () => {
 			status: "needs_info",
 			questions: ["Which project?"],
 		});
+		const tasks = await testDatabase.db.select().from(boardTasksTable);
+		expect(tasks).toHaveLength(0);
 	});
 
 	it("creates an unassigned board task when project id is omitted", async () => {
@@ -160,12 +165,11 @@ describe("chat task create route", () => {
 			task: BoardTaskRow;
 		};
 		expect(body.status).toBe("created");
-		expect(body.task).toEqual(createdTaskChatBoardTask({ projectId: null }));
 		expect(body.task.projectId).toBeNull();
 		expect(body.task.status).toBe("planning");
 		expect(body.task.linkedPr).toBeNull();
 		const tasks = await testDatabase.db.select().from(boardTasksTable);
-		expect(tasks).toHaveLength(0);
+		expect(tasks).toEqual([body.task]);
 		expect(calls).toEqual([
 			{
 				action: "task",
@@ -182,7 +186,7 @@ describe("chat task create route", () => {
 	it("normalizes legacy task description output to board task content", async () => {
 		testDatabase = await createDrizzleServerTestDatabase();
 		const legacyTask = {
-			...createdTaskChatBoardTask({ content: undefined }),
+			...createdTaskChatBoardTask({ content: undefined, projectId: null }),
 			description: "Legacy task body.",
 		};
 		const app = createTaskChatCreateTestApp(
@@ -218,6 +222,56 @@ describe("chat task create route", () => {
 		};
 		expect(body.status).toBe("created");
 		expect(body.task.content).toBe("Legacy task body.");
+		expect(body.task.projectId).toBeNull();
+		const tasks = await testDatabase.db.select().from(boardTasksTable);
+		expect(tasks).toEqual([body.task]);
+	});
+
+	it("does not duplicate a task when chat intake already inserted it", async () => {
+		testDatabase = await createDrizzleServerTestDatabase();
+		await seedTaskChatProject(testDatabase.db, "project-1");
+		const existingTask = createdTaskChatBoardTask({
+			id: "existing-task",
+			projectId: "project-1",
+		});
+		await testDatabase.db.insert(boardTasksTable).values(existingTask);
+		const [persistedExistingTask] = await testDatabase.db
+			.select()
+			.from(boardTasksTable);
+		const app = createTaskChatCreateTestApp(
+			testDatabase.db,
+			async (request) => ({
+				status: "succeeded",
+				request,
+				commandResult: {
+					code: 0,
+					stdout: `${JSON.stringify({
+						status: "created",
+						task: existingTask,
+					})}\n`,
+					stderr: "",
+				},
+			}),
+		);
+
+		const response = await app(
+			new Request("http://localhost/api/tasks/chat-create", {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({
+					request: "Create something already persisted",
+					projectId: "project-1",
+				}),
+			}),
+		);
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({
+			status: "created",
+			task: persistedExistingTask,
+		});
+		const tasks = await testDatabase.db.select().from(boardTasksTable);
+		expect(tasks).toEqual([persistedExistingTask]);
 	});
 
 	it("returns db_error for stale Linear-shaped task errors", async () => {

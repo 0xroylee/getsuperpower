@@ -41,6 +41,25 @@ export function createTaskService(repository: TaskRepository): TaskService {
 				return mapMutationError(error);
 			}
 		},
+		async ensureChatCreatedTask(input, task) {
+			const existing = await repository.getTask(task.id);
+			if (existing) {
+				return { status: "ok", value: existing };
+			}
+			const projectId = input.projectId ?? task.projectId;
+			if (projectId && !(await repository.projectExists(projectId))) {
+				return { status: "foreign_key_error" };
+			}
+			try {
+				const created = await repository.createTask({
+					...task,
+					projectId: projectId ?? null,
+				});
+				return { status: "ok", value: created };
+			} catch (error) {
+				return mapMutationError(error);
+			}
+		},
 		async updateTask(id, input) {
 			if (Object.keys(input).length === 0) {
 				return { status: "invalid_payload" };

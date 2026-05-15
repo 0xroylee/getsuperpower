@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import type { AgentRow, SkillRow } from "../src/db";
+import type { BoardTaskRow } from "../src/db/board-tasks.types";
 import { createProjectService } from "../src/projects";
 import type { ProjectRepository } from "../src/projects";
 import { createEntityCrudService } from "../src/routes/entity-crud-service";
@@ -51,14 +52,14 @@ describe("server services", () => {
 
 	it("creates task defaults and rejects empty task updates", async () => {
 		const createdTasks: unknown[] = [];
+		const storedTasks = new Map<string, BoardTaskRow>();
 		const service = createTaskService({
 			listTasks: async () => [],
-			getTask: async () => null,
-			projectExists: async () => true,
+			getTask: async (id) => storedTasks.get(id) ?? null,
+			projectExists: async (id) => id === "project-1",
 			nextTaskKey: async () => "TASK-000123",
 			createTask: async (input) => {
-				createdTasks.push(input);
-				return {
+				const created = {
 					...input,
 					projectId: input.projectId ?? null,
 					dueDate: input.dueDate ?? null,
@@ -67,6 +68,9 @@ describe("server services", () => {
 					linearIdentifier: input.linearIdentifier ?? null,
 					linearUrl: input.linearUrl ?? null,
 				};
+				createdTasks.push(created);
+				storedTasks.set(created.id, created);
+				return created;
 			},
 			updateTask: async () => null,
 			deleteTask: async () => null,
@@ -90,6 +94,31 @@ describe("server services", () => {
 
 		const emptyUpdate = await service.updateTask("task-1", {});
 		expect(emptyUpdate.status).toBe("invalid_payload");
+
+		const chatTask = buildServiceTask({ id: "chat-task", projectId: null });
+		const persisted = await service.ensureChatCreatedTask(
+			{ projectId: "project-1" },
+			chatTask,
+		);
+		expect(persisted.status).toBe("ok");
+		if (persisted.status === "ok") {
+			expect(persisted.value.projectId).toBe("project-1");
+		}
+
+		const duplicate = await service.ensureChatCreatedTask(
+			{ projectId: "project-1" },
+			chatTask,
+		);
+		expect(duplicate.status).toBe("ok");
+		expect(
+			createdTasks.filter((task) => task === storedTasks.get("chat-task")),
+		).toHaveLength(1);
+
+		const fkFailure = await service.ensureChatCreatedTask(
+			{ projectId: "missing-project" },
+			buildServiceTask({ id: "missing-project-task", projectId: null }),
+		);
+		expect(fkFailure.status).toBe("foreign_key_error");
 	});
 
 	it("maps agent and skill CRUD through the entity service", async () => {
@@ -173,3 +202,24 @@ describe("server services", () => {
 		).toThrow("legacy Linear error output");
 	});
 });
+
+function buildServiceTask(overrides: Partial<BoardTaskRow> = {}): BoardTaskRow {
+	return {
+		id: "task-1",
+		taskKey: "TASK-000001",
+		projectId: null,
+		title: "Task",
+		content: "Body",
+		priority: 1,
+		status: "planning",
+		dueDate: null,
+		creatorId: "owner-1",
+		linkedPr: null,
+		linearIssueId: null,
+		linearIdentifier: null,
+		linearUrl: null,
+		createdAt: "2026-05-13T00:00:00.000Z",
+		updatedAt: "2026-05-13T00:00:00.000Z",
+		...overrides,
+	};
+}

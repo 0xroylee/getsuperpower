@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { CliExecutor } from "../app.types";
 import type { ServerDatabase } from "../db";
+import { createTaskRepository, createTaskService } from "../tasks";
 import {
 	composeTaskChatCreate,
 	runTaskIntake,
@@ -25,7 +26,7 @@ const requestSchema = z.object({
 
 export async function handleTaskChatCreateRoute(
 	request: Request,
-	_db: ServerDatabase["db"],
+	db: ServerDatabase["db"],
 	cliExecutor: CliExecutor,
 ): Promise<Response> {
 	if (request.method !== "POST") {
@@ -39,8 +40,25 @@ export async function handleTaskChatCreateRoute(
 	if (!parsed.success) {
 		return badRequest("Invalid chat task create payload");
 	}
+	const taskService = createTaskService(createTaskRepository(db));
 	const result = await composeTaskChatCreate(parsed.data, {
 		runTaskIntake: (input) => runTaskIntake(cliExecutor, input),
+		persistCreatedTask: async (input, task) => {
+			const persisted = await taskService.ensureChatCreatedTask(input, task);
+			if (persisted.status !== "ok") {
+				throw new Error(mapTaskPersistenceError(persisted.status));
+			}
+			return persisted.value;
+		},
 	});
 	return jsonSuccess(result);
+}
+
+function mapTaskPersistenceError(
+	status: "not_found" | "foreign_key_error" | "invalid_payload",
+): string {
+	if (status === "foreign_key_error") {
+		return "Foreign key constraint failed";
+	}
+	return "Invalid task create payload";
 }

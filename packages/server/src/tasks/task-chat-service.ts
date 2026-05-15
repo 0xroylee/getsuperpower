@@ -13,6 +13,10 @@ export async function composeTaskChatCreate(
 		runTaskIntake(
 			input: TaskChatCreateRequest,
 		): Promise<TaskChatCreateIntakeResult>;
+		persistCreatedTask(
+			input: TaskChatCreateRequest,
+			task: BoardTaskRow,
+		): Promise<BoardTaskRow>;
 	},
 ): Promise<TaskChatCreateResponse> {
 	const intake = await settle(() => deps.runTaskIntake(input));
@@ -22,7 +26,14 @@ export async function composeTaskChatCreate(
 	if (intake.value.status === "needs_info") {
 		return intake.value;
 	}
-	return { status: "created", task: intake.value.task };
+	const createdTask = intake.value.task;
+	const persisted = await settle(() =>
+		deps.persistCreatedTask(input, createdTask),
+	);
+	if (!persisted.ok) {
+		return { status: "db_error", error: persisted.error };
+	}
+	return { status: "created", task: persisted.value };
 }
 
 export async function runTaskIntake(

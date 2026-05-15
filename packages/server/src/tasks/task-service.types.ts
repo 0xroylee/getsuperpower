@@ -29,6 +29,10 @@ export interface TaskService {
 	createTask(
 		input: CreateTaskPayload,
 	): Promise<TaskServiceResult<BoardTaskRow>>;
+	ensureChatCreatedTask(
+		input: { projectId?: string },
+		task: BoardTaskRow,
+	): Promise<TaskServiceResult<BoardTaskRow>>;
 	updateTask(
 		id: string,
 		input: UpdateTaskPayload,
