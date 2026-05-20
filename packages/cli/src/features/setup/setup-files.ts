@@ -3,7 +3,11 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { saveSqliteEnv } from "../config";
 import { ENV_FILE, INSTANCE_CONFIG_FILE, LOCAL_CONFIG_FILE } from "./constants";
-import { buildEnvUpdates, mergeEnvFile } from "./env-file";
+import {
+	buildDatabaseEnvUpdates,
+	buildEnvUpdates,
+	mergeEnvFile,
+} from "./env-file";
 import {
 	createInstanceConfig,
 	renderInstanceConfigDocument,
@@ -23,8 +27,12 @@ export async function writeSetupFiles(
 	const existingEnv = await readExistingFile(envPath);
 	const jwtSecret = randomBytes(32).toString("base64url");
 	const envUpdates = { ...buildEnvUpdates(draft), JWT_SECRET: jwtSecret };
+	const databaseEnvUpdates = {
+		...buildDatabaseEnvUpdates(draft),
+		...envUpdates,
+	};
 	await writeFile(envPath, mergeEnvFile(existingEnv, envUpdates));
-	await saveSqliteEnv(cwd, envUpdates);
+	await saveSqliteEnv(cwd, databaseEnvUpdates);
 	await writeFile(configPath, renderLocalConfig(draft));
 	const instanceConfig = createInstanceConfig(cwd, new Date().toISOString());
 	await mkdir(path.dirname(instanceConfigPath), { recursive: true });

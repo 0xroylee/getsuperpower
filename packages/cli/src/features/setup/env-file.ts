@@ -1,7 +1,7 @@
 import type { SetupDraft } from "./setup.types";
 
 export function renderEnvFile(
-	draft: Pick<SetupDraft, "linearApiKey" | "notifications">,
+	draft: Pick<SetupDraft, "notifications">,
 ): string {
 	return `${renderEnvEntries(buildEnvUpdates(draft))}\n`;
 }
@@ -10,8 +10,11 @@ export function mergeEnvFile(
 	existingContent: string | undefined,
 	updates: Record<string, string | undefined>,
 ): string {
+	const definedUpdates = Object.fromEntries(
+		Object.entries(updates).filter(([, value]) => value !== undefined),
+	);
 	if (!existingContent) {
-		return `${renderEnvEntries(updates)}\n`;
+		return `${renderEnvEntries(definedUpdates)}\n`;
 	}
 
 	const lines = existingContent.split(/\r?\n/);
@@ -22,14 +25,14 @@ export function mergeEnvFile(
 			return line;
 		}
 		const key = match[1];
-		if (!(key in updates)) {
+		if (!(key in definedUpdates)) {
 			return line;
 		}
 		seen.add(key);
-		return renderEnvEntry(key, updates[key] ?? "");
+		return renderEnvEntry(key, definedUpdates[key] ?? "");
 	});
 
-	const missingEntries = Object.entries(updates).filter(
+	const missingEntries = Object.entries(definedUpdates).filter(
 		([key]) => !seen.has(key),
 	);
 	if (missingEntries.length > 0) {
@@ -45,11 +48,9 @@ export function mergeEnvFile(
 }
 
 export function buildEnvUpdates(
-	draft: Pick<SetupDraft, "linearApiKey" | "notifications">,
+	draft: Pick<SetupDraft, "notifications">,
 ): Record<string, string | undefined> {
-	const updates: Record<string, string | undefined> = {
-		LINEAR_API_KEY: draft.linearApiKey,
-	};
+	const updates: Record<string, string | undefined> = {};
 	if (draft.notifications.email.resendApiKey) {
 		updates.RESEND_API_KEY = draft.notifications.email.resendApiKey;
 	}
@@ -60,6 +61,20 @@ export function buildEnvUpdates(
 		updates.RESEND_TO = draft.notifications.email.to.join(",");
 	}
 	return updates;
+}
+
+export function buildDatabaseEnvUpdates(
+	draft: Pick<
+		SetupDraft,
+		"baseBranch" | "linearApiKey" | "repoName" | "repoOwner"
+	>,
+): Record<string, string | undefined> {
+	return {
+		GITHUB_REPO_OWNER: draft.repoOwner || undefined,
+		GITHUB_REPO_NAME: draft.repoName || undefined,
+		GITHUB_BASE_BRANCH: draft.baseBranch || undefined,
+		LINEAR_API_KEY: draft.linearApiKey || undefined,
+	};
 }
 
 function renderEnvEntries(entries: Record<string, string | undefined>): string {

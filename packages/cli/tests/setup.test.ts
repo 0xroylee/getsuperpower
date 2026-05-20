@@ -87,11 +87,14 @@ describe("setup helpers", () => {
 		expect(normalizeProjectId("   ")).toBe("default");
 	});
 
-	it("renders secrets only to env file", () => {
+	it("keeps repo and Linear lookup values out of generated files", () => {
 		const env = renderEnvFile(draft);
 		const localConfig = renderLocalConfig(draft);
-		expect(env).toContain("LINEAR_API_KEY=lin_secret_123");
+		expect(env).not.toContain("LINEAR_API_KEY");
 		expect(env).toContain("RESEND_API_KEY=re_secret_123");
+		expect(localConfig).not.toContain("octo");
+		expect(localConfig).not.toContain('"repo"');
+		expect(localConfig).not.toContain('"baseBranch"');
 		expect(localConfig).not.toContain("lin_secret_123");
 		expect(localConfig).not.toContain("re_secret_123");
 		expect(localConfig).toContain("demo-project");
@@ -178,66 +181,69 @@ describe("setup helpers", () => {
 		expect(DEFAULT_REASONING_EFFORTS.plan).toBe("low");
 	});
 
-	it("exports the Linear API key settings URL used by setup prompts", () => {
+	it("exports the Linear API key settings URL", () => {
 		expect(LINEAR_API_KEY_SETTINGS_URL).toBe(
 			"https://linear.app/settings/account/security",
 		);
 	});
 
 	it("maps typed onboarding prompts into the setup draft", async () => {
-		const draft = await collectSetupDraft("/tmp/demo", {
-			prompts: promptAdapter({
-				text: {
-					"Project name": "Demo Project",
-					"Project ID": "demo-project",
-					"Local repository path": "/tmp/demo",
-					"GitHub owner": "octo",
-					"GitHub repository name": "demo",
-					"GitHub base branch": "main",
-					"Linear project ID filter (optional)": "linear-project",
-					"Linear team ID filter (optional; inferred from project when possible)":
-						"linear-team",
-					"Resend sender email": "devos@example.com",
-					"Resend recipients (comma-separated)":
-						"alerts@example.com, ops@example.com",
-					"Planning model": "gpt-5.5",
-					"Implementation model": "gpt-5.3-codex",
-					"Review/testing model": "gpt-5.3-codex",
-				},
-				password: {
-					"Linear API key (create one: https://linear.app/settings/account/security)":
-						"lin_secret_123",
-					"Resend API key": "re_secret_123",
-				},
-				confirm: {
-					"Enable email notifications?": true,
-					"Enable GitHub and Linear Codex plugins?": false,
-				},
-				select: {
-					"Codex sandbox": "danger-full-access",
-					"Planning reasoning effort": "medium",
-					"Implementation reasoning effort": "low",
-					"Review/testing reasoning effort": "high",
-				},
-			}),
-			inferGitHubDefaults: async () => ({}),
-		});
+		const previousLinearApiKey = process.env.LINEAR_API_KEY;
+		process.env.LINEAR_API_KEY = "lin_secret_123";
+		try {
+			const draft = await collectSetupDraft("/tmp/demo", {
+				prompts: promptAdapter({
+					text: {
+						"Project name": "Demo Project",
+						"Project ID": "demo-project",
+						"Local repository path": "/tmp/demo",
+						"Planning model": "gpt-5.5",
+						"Implementation model": "gpt-5.3-codex",
+						"Review/testing model": "gpt-5.3-codex",
+					},
+					confirm: {
+						"Enable GitHub and Linear Codex plugins?": false,
+					},
+					select: {
+						"Codex sandbox": "danger-full-access",
+						"Planning reasoning effort": "medium",
+						"Implementation reasoning effort": "low",
+						"Review/testing reasoning effort": "high",
+					},
+				}),
+				inferGitHubDefaults: async () => ({
+					owner: "octo",
+					name: "demo",
+					baseBranch: "main",
+				}),
+			});
 
-		expect(draft.linearApiKey).toBe("lin_secret_123");
-		expect(draft.notifications.email).toMatchObject({
-			enabled: true,
-			resendApiKey: "re_secret_123",
-			from: "devos@example.com",
-			to: ["alerts@example.com", "ops@example.com"],
-		});
-		expect(draft.codex.sandbox).toBe("danger-full-access");
-		expect(draft.codex.reasoningEfforts).toMatchObject({
-			plan: "medium",
-			implement: "low",
-			reviewTest: "high",
-			githubComment: "high",
-		});
-		expect(draft.codex.plugins).toEqual([]);
+			expect(draft.repoOwner).toBe("octo");
+			expect(draft.repoName).toBe("demo");
+			expect(draft.baseBranch).toBe("main");
+			expect(draft.linearApiKey).toBe("lin_secret_123");
+			expect(draft.linearProjectId).toBeUndefined();
+			expect(draft.linearTeamId).toBeUndefined();
+			expect(draft.notifications.email).toEqual({
+				enabled: false,
+				to: [],
+			});
+			expect(draft.statusMap).toEqual(DEFAULT_STATUS_MAP);
+			expect(draft.codex.sandbox).toBe("danger-full-access");
+			expect(draft.codex.reasoningEfforts).toMatchObject({
+				plan: "medium",
+				implement: "low",
+				reviewTest: "high",
+				githubComment: "high",
+			});
+			expect(draft.codex.plugins).toEqual([]);
+		} finally {
+			if (previousLinearApiKey === undefined) {
+				process.env.LINEAR_API_KEY = undefined;
+			} else {
+				process.env.LINEAR_API_KEY = previousLinearApiKey;
+			}
+		}
 	});
 
 	it("does not write setup files when onboarding prompts are cancelled", async () => {
@@ -304,19 +310,36 @@ describe("setup helpers", () => {
 		expect(merged).not.toContain("LINEAR_API_KEY=old");
 	});
 
-	it("writes setup secrets to sqlite and preserves env fallback", async () => {
+	it("preserves existing Linear API key when onboarding has no env key", () => {
+		const merged = mergeEnvFile("LINEAR_API_KEY=old\nKEEP_ME=yes\n", {
+			LINEAR_API_KEY: undefined,
+			JWT_SECRET: "jwt",
+		});
+
+		expect(merged).toContain("LINEAR_API_KEY=old");
+		expect(merged).toContain("KEEP_ME=yes");
+		expect(merged).toContain("JWT_SECRET=jwt");
+	});
+
+	it("writes integration values to sqlite without saving them to env", async () => {
 		const tempDir = await mkdtemp(path.join(process.cwd(), ".tmp-setup-test-"));
 		try {
 			await writeSetupFiles(tempDir, draft);
 			const sqliteEnv = await loadSqliteEnv(tempDir);
 			expect(sqliteEnv?.LINEAR_API_KEY).toBe("lin_secret_123");
+			expect(sqliteEnv?.GITHUB_REPO_OWNER).toBe("octo");
+			expect(sqliteEnv?.GITHUB_REPO_NAME).toBe("demo");
+			expect(sqliteEnv?.GITHUB_BASE_BRANCH).toBe("main");
 			expect(sqliteEnv?.RESEND_API_KEY).toBe("re_secret_123");
 			expect(sqliteEnv?.JWT_SECRET).toMatch(/^[A-Za-z0-9_-]+$/);
 			expect(sqliteEnv?.JWT_SECRET?.length).toBeGreaterThan(40);
 
 			const envPath = path.join(tempDir, ".env");
 			const envContent = await readFile(envPath, "utf8");
-			expect(envContent).toContain("LINEAR_API_KEY=lin_secret_123");
+			expect(envContent).not.toContain("LINEAR_API_KEY");
+			expect(envContent).not.toContain("GITHUB_REPO_OWNER");
+			expect(envContent).not.toContain("GITHUB_REPO_NAME");
+			expect(envContent).not.toContain("GITHUB_BASE_BRANCH");
 			expect(envContent).toContain("RESEND_API_KEY=re_secret_123");
 			expect(envContent).toContain("RESEND_FROM=devos@example.com");
 			expect(envContent).toContain(
@@ -838,22 +861,11 @@ function onboardingPromptAdapter(workspacePath: string): PromptAdapter {
 			"Project name": "Demo Project",
 			"Project ID": "demo-project",
 			"Local repository path": workspacePath,
-			"GitHub owner": "octo",
-			"GitHub repository name": "demo",
-			"GitHub base branch": "main",
-			"Linear project ID filter (optional)": "",
-			"Linear team ID filter (optional; inferred from project when possible)":
-				"",
 			"Planning model": "gpt-5.5",
 			"Implementation model": "gpt-5.3-codex",
 			"Review/testing model": "gpt-5.3-codex",
 		},
-		password: {
-			"Linear API key (create one: https://linear.app/settings/account/security)":
-				"lin_secret_123",
-		},
 		confirm: {
-			"Enable email notifications?": false,
 			"Enable GitHub and Linear Codex plugins?": true,
 		},
 		select: {

@@ -8,11 +8,6 @@ export function renderLocalConfig(draft: SetupDraft): string {
 				name: draft.projectName,
 				workspacePath: draft.workspacePath,
 				executionPath: draft.executionPath,
-				repo: {
-					owner: draft.repoOwner,
-					name: draft.repoName,
-					baseBranch: draft.baseBranch,
-				},
 				linear: {
 					projectId: draft.linearProjectId,
 					teamId: draft.linearTeamId,

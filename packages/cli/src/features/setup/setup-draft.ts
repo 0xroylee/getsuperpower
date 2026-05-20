@@ -5,17 +5,14 @@ import {
 	DEFAULT_LABEL_MAP,
 	DEFAULT_PROJECT_NAME,
 	DEFAULT_REASONING_EFFORTS,
-	LINEAR_API_KEY_SETTINGS_URL,
+	DEFAULT_STATUS_MAP,
 } from "./constants";
 import { normalizeProjectId } from "./normalize";
-import { promptStatusMap } from "./setup-status-prompts";
 import type { SetupDraft, SetupDraftPromptDeps } from "./setup.types";
 import {
-	emptyToUndefined,
 	inferGitHubDefaults,
 	normalizeReasoningEffort,
 	normalizeSandbox,
-	parseRecipients,
 	resolveUserPath,
 } from "./wizard-helpers";
 
@@ -53,50 +50,6 @@ export async function collectSetupDraft(
 		await promptText(prompts, "Local repository path", cwd),
 	);
 	const defaults = await inferDefaults(executionPath);
-	const repoOwner = await promptText(
-		prompts,
-		"GitHub owner",
-		defaults.owner ?? "",
-	);
-	const repoName = await promptText(
-		prompts,
-		"GitHub repository name",
-		defaults.name ?? "",
-	);
-	const baseBranch = await promptText(
-		prompts,
-		"GitHub base branch",
-		defaults.baseBranch ?? DEFAULT_BASE_BRANCH,
-	);
-	const linearApiKey = await prompts.password({
-		message: `Linear API key (create one: ${LINEAR_API_KEY_SETTINGS_URL})`,
-	});
-	const linearProjectId = emptyToUndefined(
-		await promptText(prompts, "Linear project ID filter (optional)", ""),
-	);
-	const linearTeamId = emptyToUndefined(
-		await promptText(
-			prompts,
-			"Linear team ID filter (optional; inferred from project when possible)",
-			"",
-		),
-	);
-	const enableEmailNotifications = await prompts.confirm({
-		message: "Enable email notifications?",
-		initialValue: false,
-	});
-	const resendApiKey = enableEmailNotifications
-		? emptyToUndefined(await prompts.password({ message: "Resend API key" }))
-		: undefined;
-	const resendFrom = enableEmailNotifications
-		? emptyToUndefined(await promptText(prompts, "Resend sender email", ""))
-		: undefined;
-	const resendTo = enableEmailNotifications
-		? parseRecipients(
-				await promptText(prompts, "Resend recipients (comma-separated)", ""),
-			)
-		: [];
-	const statusMap = await promptStatusMap(prompts);
 	const sandbox = normalizeSandbox(
 		await prompts.select({
 			message: "Codex sandbox",
@@ -149,21 +102,17 @@ export async function collectSetupDraft(
 		projectName: projectName.trim() || DEFAULT_PROJECT_NAME,
 		workspacePath: executionPath,
 		executionPath,
-		repoOwner,
-		repoName,
-		baseBranch,
-		linearApiKey,
-		linearProjectId,
-		linearTeamId,
+		repoOwner: defaults.owner ?? "",
+		repoName: defaults.name ?? "",
+		baseBranch: defaults.baseBranch ?? DEFAULT_BASE_BRANCH,
+		linearApiKey: process.env.LINEAR_API_KEY ?? "",
 		notifications: {
 			email: {
-				enabled: enableEmailNotifications,
-				resendApiKey,
-				from: resendFrom,
-				to: resendTo,
+				enabled: false,
+				to: [],
 			},
 		},
-		statusMap,
+		statusMap: { ...DEFAULT_STATUS_MAP },
 		labelMap: DEFAULT_LABEL_MAP,
 		codex: {
 			reasoningEfforts: {

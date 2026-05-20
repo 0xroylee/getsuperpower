@@ -9,6 +9,9 @@ import {
 } from "../src/features/config";
 
 const envKeys = [
+	"GITHUB_REPO_OWNER",
+	"GITHUB_REPO_NAME",
+	"GITHUB_BASE_BRANCH",
 	"LINEAR_API_KEY",
 	"LINEAR_PROJECT_ID",
 	"LINEAR_TEAM_ID",
@@ -126,6 +129,9 @@ describe("loadConfig", () => {
 		);
 		try {
 			const config = await loadConfig(tempDir);
+			expect(config.projects[0]?.repo.owner).toBe("github_repo_owner");
+			expect(config.projects[0]?.repo.name).toBe("github_repo_name");
+			expect(config.projects[0]?.repo.baseBranch).toBe("github_base_branch");
 			expect(config.projects[0]?.linear.apiKey).toBe("linear_api_key");
 			expect(config.projects[0]?.linear.projectId).toBe("linear_project_id");
 			expect(config.projects[0]?.linear.teamId).toBe("linear_team_id");
@@ -224,12 +230,18 @@ describe("loadConfig", () => {
 			path.join(process.cwd(), ".tmp-config-test-"),
 		);
 		await saveSqliteEnv(tempDir, {
+			GITHUB_REPO_OWNER: "octo",
+			GITHUB_REPO_NAME: "demo",
+			GITHUB_BASE_BRANCH: "trunk",
 			LINEAR_API_KEY: "lin_sqlite_key",
 			PIV_POLL_INTERVAL_MS: "45000",
 			RESEND_API_KEY: "re_sqlite",
 			RESEND_FROM: "devos.ing <ops@example.com>",
 			RESEND_TO: "a@example.com,b@example.com",
 		});
+		process.env.GITHUB_REPO_OWNER = undefined;
+		process.env.GITHUB_REPO_NAME = undefined;
+		process.env.GITHUB_BASE_BRANCH = undefined;
 		process.env.LINEAR_API_KEY = undefined;
 		process.env.PIV_POLL_INTERVAL_MS = undefined;
 		process.env.RESEND_API_KEY = undefined;
@@ -238,6 +250,11 @@ describe("loadConfig", () => {
 
 		try {
 			const config = await loadConfig(tempDir);
+			expect(config.projects[0]?.repo).toEqual({
+				owner: "octo",
+				name: "demo",
+				baseBranch: "trunk",
+			});
 			expect(config.projects[0]?.linear.apiKey).toBe("lin_sqlite_key");
 			expect(config.polling.intervalMs).toBe(45000);
 			expect(config.notifications.email.enabled).toBe(true);
