@@ -486,55 +486,71 @@ describe("loadConfig", () => {
 
 	it("loads agent backend from AGENT_BACKEND env", async () => {
 		process.env.AGENT_BACKEND = "claude-code";
-		const config = await loadConfig(process.cwd());
-		expect(config.projects[0]?.agent?.backend).toBe("claude-code");
+		await withTempConfig(async (tempDir) => {
+			const config = await loadConfig(tempDir);
+			expect(config.projects[0]?.agent?.backend).toBe("claude-code");
+		});
 	});
 
 	it("defaults agent backend to undefined when not set", async () => {
 		process.env.AGENT_BACKEND = "";
-		const config = await loadConfig(process.cwd());
-		expect(config.projects[0]?.agent?.backend).toBeUndefined();
+		await withTempConfig(async (tempDir) => {
+			const config = await loadConfig(tempDir);
+			expect(config.projects[0]?.agent?.backend).toBeUndefined();
+		});
 	});
 
 	it("rejects invalid AGENT_BACKEND value", async () => {
 		process.env.AGENT_BACKEND = "invalid-backend";
-		await expect(loadConfig(process.cwd())).rejects.toThrow(
-			"Invalid AGENT_BACKEND value: 'invalid-backend'",
-		);
+		await withTempConfig(async (tempDir) => {
+			await expect(loadConfig(tempDir)).rejects.toThrow(
+				"Invalid AGENT_BACKEND value: 'invalid-backend'",
+			);
+		});
 	});
 
 	it("loads Claude Code model from CLAUDE_CODE_MODEL env", async () => {
 		process.env.CLAUDE_CODE_MODEL = "claude-sonnet-4-20250514";
-		const config = await loadConfig(process.cwd());
-		expect(config.projects[0]?.agent?.model).toBe("claude-sonnet-4-20250514");
+		await withTempConfig(async (tempDir) => {
+			const config = await loadConfig(tempDir);
+			expect(config.projects[0]?.agent?.model).toBe("claude-sonnet-4-20250514");
+		});
 	});
 
 	it("loads Claude Code max turns from CLAUDE_CODE_MAX_TURNS env", async () => {
 		process.env.CLAUDE_CODE_MAX_TURNS = "50";
-		const config = await loadConfig(process.cwd());
-		expect(config.projects[0]?.agent?.maxTurns).toBe(50);
+		await withTempConfig(async (tempDir) => {
+			const config = await loadConfig(tempDir);
+			expect(config.projects[0]?.agent?.maxTurns).toBe(50);
+		});
 	});
 
 	it("ignores non-positive CLAUDE_CODE_MAX_TURNS", async () => {
 		process.env.CLAUDE_CODE_MAX_TURNS = "0";
-		const config = await loadConfig(process.cwd());
-		expect(config.projects[0]?.agent?.maxTurns).toBeUndefined();
+		await withTempConfig(async (tempDir) => {
+			const config = await loadConfig(tempDir);
+			expect(config.projects[0]?.agent?.maxTurns).toBeUndefined();
+		});
 	});
 
 	it("loads Claude Code allowed tools from CLAUDE_CODE_ALLOWED_TOOLS env", async () => {
 		process.env.CLAUDE_CODE_ALLOWED_TOOLS = "Read,Write,Bash";
-		const config = await loadConfig(process.cwd());
-		expect(config.projects[0]?.agent?.allowedTools).toEqual([
-			"Read",
-			"Write",
-			"Bash",
-		]);
+		await withTempConfig(async (tempDir) => {
+			const config = await loadConfig(tempDir);
+			expect(config.projects[0]?.agent?.allowedTools).toEqual([
+				"Read",
+				"Write",
+				"Bash",
+			]);
+		});
 	});
 
 	it("returns undefined allowed tools when env is empty", async () => {
 		process.env.CLAUDE_CODE_ALLOWED_TOOLS = "";
-		const config = await loadConfig(process.cwd());
-		expect(config.projects[0]?.agent?.allowedTools).toBeUndefined();
+		await withTempConfig(async (tempDir) => {
+			const config = await loadConfig(tempDir);
+			expect(config.projects[0]?.agent?.allowedTools).toBeUndefined();
+		});
 	});
 
 	it("allows config file to override agent settings", async () => {
@@ -573,3 +589,14 @@ describe("loadConfig", () => {
 		}
 	});
 });
+
+async function withTempConfig(
+	run: (tempDir: string) => Promise<void>,
+): Promise<void> {
+	const tempDir = await mkdtemp(path.join(process.cwd(), ".tmp-config-test-"));
+	try {
+		await run(tempDir);
+	} finally {
+		await rm(tempDir, { recursive: true, force: true });
+	}
+}

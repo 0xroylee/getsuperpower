@@ -25,9 +25,9 @@ describe("runCliCommandDaemonOnly", () => {
 		expect(harness.calls).toEqual([
 			{ cwd: "/repo", env: { DEVOS_CLI_DAEMON_PORT: "4103" } },
 		]);
-		expect(messages).toEqual([
-			"CLI daemon websocket listening on ws://127.0.0.1:4103\n",
-		]);
+		expect(messages[0]).toContain("Starting devos CLI daemon");
+		expect(messages[0]).toContain("ws://127.0.0.1:4103");
+		expect(messages[0]).toContain("standby");
 
 		signalTarget.emitSignal("SIGTERM");
 
@@ -73,9 +73,8 @@ describe("runCliCommandDaemonOnly", () => {
 		await expect(done).resolves.toBe(0);
 		expect(harness.stopped).toBe(true);
 		expect(pollerHarness.poller.signals).toEqual(["SIGINT"]);
-		expect(messages).toContain(
-			"CLI daemon workflow poller attached with default run polling\n",
-		);
+		expect(messages[0]).toContain("attached");
+		expect(messages[0]).toContain("forever, all projects");
 	});
 
 	it("stops cli-only daemon when attached poller exits", async () => {

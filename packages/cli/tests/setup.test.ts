@@ -297,13 +297,17 @@ describe("setup helpers", () => {
 			expect(output).toContain("Onboarding files written:");
 			expect(output).toContain(renderDevosBanner());
 			expect(output).toContain("Running doctor checks...\n");
-			expect(output).toContain("PASS: Config file - ok\n");
+			expect(output).toContain("Summary");
+			expect(output).toContain("1 passed");
+			expect(output).toContain("Config file");
+			expect(output).toContain("ok");
+			expect(output).toContain("All checks passed!");
 			expect(output).not.toContain(jwtSecret);
 
 			const successIndex = output.indexOf("Onboarding files written:");
 			const bannerIndex = output.indexOf(renderDevosBanner());
 			const doctorIndex = output.indexOf("Running doctor checks...");
-			const resultsIndex = output.indexOf("PASS: Config file - ok");
+			const resultsIndex = output.indexOf("Config file");
 			expect(successIndex).toBeLessThan(bannerIndex);
 			expect(bannerIndex).toBeLessThan(doctorIndex);
 			expect(doctorIndex).toBeLessThan(resultsIndex);
@@ -403,12 +407,16 @@ describe("setup helpers", () => {
 	});
 
 	it("formats setup checks", () => {
-		expect(
-			formatSetupChecks([
-				{ name: "Config", status: "pass", message: "ok" },
-				{ name: "Codex", status: "fail", message: "missing" },
-			]),
-		).toBe("PASS: Config - ok\nFAIL: Codex - missing\n");
+		const output = formatSetupChecks([
+			{ name: "Config", status: "pass", message: "ok" },
+			{ name: "Codex", status: "fail", message: "missing" },
+		]);
+		expect(output).toContain("Summary");
+		expect(output).toContain("1 passed");
+		expect(output).toContain("1 failed");
+		expect(output).toContain("Config");
+		expect(output).toContain("Codex");
+		expect(output).toContain("1 check failed");
 	});
 
 	it("reports successful minimal setup checks", async () => {

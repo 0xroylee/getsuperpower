@@ -125,6 +125,7 @@ describe("runProductionDaemon", () => {
 			spawnChild: harness.spawnChild,
 			signalTarget: harness.signalTarget,
 			startCommandDaemon: harness.startCommandDaemon,
+			write: () => {},
 		});
 
 		expect(harness.calls).toEqual([
@@ -162,6 +163,7 @@ describe("runProductionDaemon", () => {
 			spawnChild: harness.spawnChild,
 			signalTarget: harness.signalTarget,
 			startCommandDaemon: harness.startCommandDaemon,
+			write: () => {},
 		});
 
 		harness.children[0]?.emit("close", 7, null);
@@ -182,6 +184,7 @@ describe("runProductionDaemon", () => {
 			spawnChild: harness.spawnChild,
 			signalTarget: harness.signalTarget,
 			startCommandDaemon: harness.startCommandDaemon,
+			write: () => {},
 		});
 
 		harness.signalTarget.emitSignal("SIGINT");
@@ -202,6 +205,7 @@ describe("runProductionDaemon", () => {
 			spawnChild: harness.spawnChild,
 			signalTarget: harness.signalTarget,
 			startCommandDaemon: harness.startCommandDaemon,
+			write: () => {},
 		});
 
 		harness.children[0]?.emit("error", new Error("spawn EACCES"));

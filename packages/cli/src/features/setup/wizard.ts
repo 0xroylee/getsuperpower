@@ -1,4 +1,5 @@
 import { runCommand } from "../../utils/shell";
+import { renderCliHeading } from "../../utils/terminal-format";
 import { clackPromptAdapter } from "../prompts";
 import { renderDevosBanner } from "./banner";
 import {
@@ -32,10 +33,10 @@ export async function runSetupWizard(
 	});
 	await writeFiles(cwd, draft);
 	process.stdout.write(
-		`Onboarding files written: ${ENV_FILE}, ${LOCAL_CONFIG_FILE}, ${INSTANCE_CONFIG_FILE}; secrets saved to .devos/config/env.sqlite\n`,
+		`${renderCliHeading("Onboarding files written:")}\n${ENV_FILE}, ${LOCAL_CONFIG_FILE}, ${INSTANCE_CONFIG_FILE}\nSecrets saved to .devos/config/env.sqlite\n\n`,
 	);
 	process.stdout.write(`${renderDevosBanner()}\n`);
-	process.stdout.write("Running doctor checks...\n");
+	process.stdout.write(`\n${renderCliHeading("Running doctor checks...")}\n`);
 	const checks = await collectChecks(cwd);
 	process.stdout.write(formatSetupChecks(checks));
 	if (checks.some((check) => check.status === "fail")) {
