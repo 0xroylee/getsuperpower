@@ -1,11 +1,22 @@
 import { spawn } from "node:child_process";
 import { formatCliDaemonWsUrl, startCliCommandDaemon } from "./command-daemon";
 import {
+	renderCliOnlyDaemonStartup,
+	renderProductionDaemonStartup,
+} from "./daemon-output";
+import {
+	buildWorkflowPollerInvocation,
 	startAttachedWorkflowPoller,
 	superviseCliCommandDaemonWithPoller,
 } from "./daemon-poller";
 import { resolveDaemonPorts } from "./daemon-ports";
 import { scheduleDaemonReadyMessage } from "./daemon-readiness";
+import {
+	resolveServerBaseUrl,
+	resolveServerEventsWsUrl,
+	resolveWebUrl,
+	resolveWorkflowWsUrl,
+} from "./daemon-urls";
 import type {
 	DaemonChild,
 	DaemonReadinessHandle,
@@ -33,6 +44,7 @@ export function buildDaemonCommands(
 		env.NEXT_PUBLIC_DEVOS_SERVER_WS_URL ??
 		`ws://127.0.0.1:${serverPort}/api/cli/stream`;
 	const baseEnv = { ...env, NODE_ENV: "production" };
+	const pollerInvocation = buildWorkflowPollerInvocation();
 
 	return [
 		{
@@ -58,8 +70,8 @@ export function buildDaemonCommands(
 		},
 		{
 			name: "workflow-poller",
-			command: "npx",
-			args: ["devos", "run", "--all-projects", "--poll-forever"],
+			command: pollerInvocation.command,
+			args: pollerInvocation.args,
 			env: {
 				...baseEnv,
 				DEVOS_SERVER_BASE_URL: serverBaseUrl,
@@ -78,6 +90,7 @@ export async function runProductionDaemon(
 	const signalTarget = options.signalTarget ?? process;
 	const env = options.env ?? process.env;
 	const serverBaseUrl = resolveServerBaseUrl(env);
+	const write = options.write ?? process.stdout.write.bind(process.stdout);
 	const services = buildDaemonCommands(env);
 	const commandDaemon = (options.startCommandDaemon ?? startCliCommandDaemon)({
 		cwd,
@@ -91,6 +104,15 @@ export async function runProductionDaemon(
 				env.DEVOS_WORKFLOW_WS_URL ?? resolveWorkflowWsUrl(serverBaseUrl),
 		},
 	});
+	write(
+		renderProductionDaemonStartup({
+			cliDaemonUrl: formatCliDaemonWsUrl(commandDaemon.port),
+			serverBaseUrl,
+			webUrl: resolveWebUrl(env),
+			workflowUrl:
+				env.DEVOS_WORKFLOW_WS_URL ?? resolveWorkflowWsUrl(serverBaseUrl),
+		}),
+	);
 	const children = services.map((service) =>
 		spawnChild(service.command, service.args, {
 			cwd,
@@ -100,7 +122,7 @@ export async function runProductionDaemon(
 	);
 	const ready = scheduleDaemonReadyMessage({
 		scheduler: options.readinessScheduler,
-		write: options.write,
+		write,
 	});
 
 	return superviseDaemonChildren(children, signalTarget, commandDaemon, ready);
@@ -120,23 +142,22 @@ export function runCliCommandDaemonOnly(
 		scheduler: options.readinessScheduler,
 		write,
 	});
+	const pollerAttached =
+		options.pollForever === true && options.allProjects === true;
 	write(
-		`CLI daemon websocket listening on ${formatCliDaemonWsUrl(commandDaemon.port)}\n`,
+		renderCliOnlyDaemonStartup({
+			cliDaemonUrl: formatCliDaemonWsUrl(commandDaemon.port),
+			pollerAttached,
+		}),
 	);
-	const poller =
-		options.pollForever && options.allProjects
-			? startAttachedWorkflowPoller({
-					cwd,
-					env: options.env,
-					write,
-					spawnPoller: options.spawnPoller,
-				})
-			: undefined;
-	if (poller) {
-		write(
-			"CLI daemon workflow poller attached with --all-projects --poll-forever\n",
-		);
-	}
+	const poller = pollerAttached
+		? startAttachedWorkflowPoller({
+				cwd,
+				env: options.env,
+				write,
+				spawnPoller: options.spawnPoller,
+			})
+		: undefined;
 
 	return superviseCliCommandDaemonWithPoller(
 		commandDaemon,
@@ -217,30 +238,3 @@ function superviseDaemonChildren(
 
 const spawnDaemonChild: DaemonSpawn = (command, args, options) =>
 	spawn(command, args, options);
-
-function resolveServerBaseUrl(env: NodeJS.ProcessEnv): string {
-	const { serverPort } = resolveDaemonPorts(env);
-	return env.DEVOS_SERVER_BASE_URL ?? `http://127.0.0.1:${serverPort}`;
-}
-
-function resolveServerEventsWsUrl(serverBaseUrl: string): string {
-	const url = new URL("/daemon/events", serverBaseUrl);
-	if (url.protocol === "http:") {
-		url.protocol = "ws:";
-	}
-	if (url.protocol === "https:") {
-		url.protocol = "wss:";
-	}
-	return url.toString();
-}
-
-function resolveWorkflowWsUrl(serverBaseUrl: string): string {
-	const url = new URL("/api/workflow", serverBaseUrl);
-	if (url.protocol === "http:") {
-		url.protocol = "ws:";
-	}
-	if (url.protocol === "https:") {
-		url.protocol = "wss:";
-	}
-	return url.toString();
-}

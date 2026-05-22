@@ -1,4 +1,3 @@
-import path from "node:path";
 import type {
 	DeepPartial,
 	DevosRootConfig,
@@ -6,6 +5,7 @@ import type {
 	ProjectRuntimeConfig,
 	ResolvedProjectConfig,
 } from "../../features/types";
+import { normalizeOptionalPath } from "./path-resolution";
 import { resolveSkillsConfig } from "./skills-resolution";
 
 export function resolveProjects(
@@ -13,8 +13,7 @@ export function resolveProjects(
 	base: ProjectRuntimeConfig,
 	root: DevosRootConfig,
 ): ResolvedProjectConfig[] {
-	const projectSpecs =
-		root.projects.length > 0 ? root.projects : [{ id: "default" }];
+	const projectSpecs = root.projects;
 	const rootDefaults = stripProjects(root);
 	return projectSpecs.map((project) =>
 		resolveProject(configCwd, base, rootDefaults, project),
@@ -195,20 +194,4 @@ function mergeRuntime(
 		},
 		dryRun: project.dryRun ?? rootDefaults.dryRun ?? base.dryRun,
 	};
-}
-
-function normalizeOptionalPath(
-	input: unknown,
-	baseDir: string,
-): string | undefined {
-	if (typeof input !== "string") {
-		return undefined;
-	}
-	const trimmed = input.trim();
-	if (!trimmed) {
-		return undefined;
-	}
-	return path.isAbsolute(trimmed)
-		? trimmed
-		: path.resolve(baseDir || process.cwd(), trimmed);
 }

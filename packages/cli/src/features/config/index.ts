@@ -18,6 +18,7 @@ import {
 } from "./overrides";
 import { applyDatabaseProjectMetadata } from "./project-metadata";
 import { resolveProjects } from "./project-resolution";
+import { resolveRootServerConfig } from "./server-resolution";
 import { loadSqliteEnv, saveSqliteEnv, sqliteEnvDbPath } from "./sqlite-env";
 import {
 	validateNotifications,
@@ -37,18 +38,20 @@ export async function loadConfig(cwd: string): Promise<LoadedConfig> {
 
 	const projects = await applyDatabaseProjectMetadata(
 		resolveProjects(cwd, envBase, root),
+		{ configCwd: cwd, base: envBase, root },
 	);
 	const polling = resolvePolling(envPolling, root.polling);
 	const notifications = resolveNotifications(
 		envNotifications,
 		root.notifications,
 	);
+	const server = resolveRootServerConfig(cwd, envBase, root);
 
 	validateProjects(projects);
 	validatePolling(polling);
 	validateNotifications(notifications);
 
-	return { projects, polling, notifications };
+	return { projects, server, polling, notifications };
 }
 
 export function getProjectById(

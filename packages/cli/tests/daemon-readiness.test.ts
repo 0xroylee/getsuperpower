@@ -27,9 +27,8 @@ describe("daemon delayed readiness", () => {
 		});
 
 		expect(readiness.delayMs).toBe(DAEMON_READY_DELAY_MS);
-		expect(messages).toEqual([
-			"CLI daemon websocket listening on ws://127.0.0.1:4103\n",
-		]);
+		expect(messages[0]).toContain("Starting devos CLI daemon");
+		expect(messages[0]).toContain("ws://127.0.0.1:4103");
 
 		readiness.fire();
 		expect(messages).toContain(DAEMON_READY_MESSAGE);
@@ -74,10 +73,10 @@ describe("daemon delayed readiness", () => {
 		});
 
 		expect(readiness.delayMs).toBe(DAEMON_READY_DELAY_MS);
-		expect(messages).toEqual([]);
+		expect(messages[0]).toContain("Starting devos server");
 
 		readiness.fire();
-		expect(messages).toEqual([DAEMON_READY_MESSAGE]);
+		expect(messages).toContain(DAEMON_READY_MESSAGE);
 
 		harness.children[0]?.emit("close", 0, null);
 		await expect(done).resolves.toBe(0);
@@ -102,7 +101,8 @@ describe("daemon delayed readiness", () => {
 
 		expect(readiness.cancelled).toBe(true);
 		readiness.fire();
-		expect(messages).toEqual([]);
+		expect(messages[0]).toContain("Starting devos server");
+		expect(messages).not.toContain(DAEMON_READY_MESSAGE);
 	});
 });
 
