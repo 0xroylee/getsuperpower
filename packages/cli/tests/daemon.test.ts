@@ -114,6 +114,7 @@ describe("runProductionDaemon", () => {
 		expect(harness.workflowWorkerEnv).toMatchObject({
 			DEVOS_SERVER_BASE_URL: "http://127.0.0.1:3001",
 			DEVOS_WORKFLOW_WS_URL: "ws://127.0.0.1:3001/api/workflow",
+			PIV_WORKSPACE_PATH: "/repo",
 		});
 		harness.children[0]?.emit("close", 0, null);
 		await expect(done).resolves.toBe(0);
@@ -157,6 +158,23 @@ describe("runProductionDaemon", () => {
 			["SIGINT"],
 			["SIGINT"],
 		]);
+	});
+
+	it("returns failure and stops siblings when a child spawn errors", async () => {
+		const harness = createDaemonHarness();
+		const done = runProductionDaemon({
+			cwd: "/repo",
+			env: {},
+			spawnChild: harness.spawnChild,
+			signalTarget: harness.signalTarget,
+			startWorkflowWorker: harness.startWorkflowWorker,
+		});
+
+		harness.children[0]?.emit("error", new Error("spawn EACCES"));
+
+		await expect(done).resolves.toBe(1);
+		expect(harness.children[1]?.signals).toEqual(["SIGTERM"]);
+		expect(harness.workflowWorkerStopped).toBe(true);
 	});
 });
 

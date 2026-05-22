@@ -1,3 +1,4 @@
+import { renderDaemonReadyMessage } from "./daemon-output";
 import type {
 	DaemonReadinessHandle,
 	DaemonReadinessOptions,
@@ -5,7 +6,7 @@ import type {
 } from "./daemon.types";
 
 export const DAEMON_READY_DELAY_MS = 60_000;
-export const DAEMON_READY_MESSAGE = "All ready\n";
+export const DAEMON_READY_MESSAGE = renderDaemonReadyMessage();
 
 export function scheduleDaemonReadyMessage(
 	options: DaemonReadinessOptions = {},

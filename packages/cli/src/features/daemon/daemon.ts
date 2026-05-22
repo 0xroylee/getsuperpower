@@ -1,7 +1,9 @@
 import { spawn } from "node:child_process";
+import { buildWorkflowPollerInvocation } from "./daemon-poller";
 import { resolveDaemonPorts } from "./daemon-ports";
 import { scheduleDaemonReadyMessage } from "./daemon-readiness";
 import { resolveServerBaseUrl, resolveWorkflowWsUrl } from "./daemon-urls";
+import { resolveDaemonWorkspaceEnv } from "./daemon-workspace-env";
 import type {
 	DaemonChild,
 	DaemonReadinessHandle,
@@ -16,12 +18,17 @@ const SIGNALS = ["SIGINT", "SIGTERM"] as const;
 
 export function buildDaemonCommands(
 	env: NodeJS.ProcessEnv = process.env,
+	cwd?: string,
 ): DaemonServiceCommand[] {
 	const { serverPort, webPort } = resolveDaemonPorts(env);
 	const serverBaseUrl = resolveServerBaseUrl(env);
 	const workflowWsUrl =
 		env.DEVOS_WORKFLOW_WS_URL ?? resolveWorkflowWsUrl(serverBaseUrl);
-	const baseEnv = { ...env, NODE_ENV: "production" };
+	const baseEnv = {
+		...resolveDaemonWorkspaceEnv(env, cwd),
+		NODE_ENV: "production",
+	};
+	const pollerInvocation = buildWorkflowPollerInvocation();
 
 	return [
 		{
@@ -46,14 +53,8 @@ export function buildDaemonCommands(
 		},
 		{
 			name: "workflow-poller",
-			command: "bun",
-			args: [
-				"run",
-				"packages/cli/src/index.ts",
-				"run",
-				"--all-projects",
-				"--poll-forever",
-			],
+			command: pollerInvocation.command,
+			args: pollerInvocation.args,
 			env: {
 				...baseEnv,
 				DEVOS_SERVER_BASE_URL: serverBaseUrl,
@@ -71,13 +72,14 @@ export async function runProductionDaemon(
 	const signalTarget = options.signalTarget ?? process;
 	const env = options.env ?? process.env;
 	const serverBaseUrl = resolveServerBaseUrl(env);
-	const services = buildDaemonCommands(env);
+	const workspaceEnv = resolveDaemonWorkspaceEnv(env, cwd);
+	const services = buildDaemonCommands(env, cwd);
 	const workflowWorker = (
 		options.startWorkflowWorker ?? startWorkflowCommandWorker
 	)({
 		cwd,
 		env: {
-			...env,
+			...workspaceEnv,
 			DEVOS_SERVER_BASE_URL: serverBaseUrl,
 			DEVOS_WORKFLOW_WS_URL:
 				env.DEVOS_WORKFLOW_WS_URL ?? resolveWorkflowWsUrl(serverBaseUrl),

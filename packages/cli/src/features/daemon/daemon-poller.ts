@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import type { Readable } from "node:stream";
 import { createDaemonProgressPrinter } from "./daemon-progress-printer";
 import { resolveServerBaseUrl, resolveWorkflowWsUrl } from "./daemon-urls";
+import { resolveDaemonWorkspaceEnv } from "./daemon-workspace-env";
 
 export interface AttachedPoller {
 	killed: boolean;
@@ -38,26 +39,30 @@ export type AttachedPollerSpawn = (
 	options: AttachedPollerSpawnOptions,
 ) => AttachedPoller;
 
-export function startAttachedWorkflowPoller(
-	options: AttachedPollerOptions,
-): AttachedPoller {
-	const env = buildAttachedPollerEnv(options.env ?? process.env);
-	const spawnPoller = options.spawnPoller ?? spawnAttachedPoller;
-	const child = spawnPoller(
-		"bun",
-		[
+export function buildWorkflowPollerInvocation() {
+	return {
+		command: "bun",
+		args: [
 			"run",
 			"packages/cli/src/index.ts",
 			"run",
 			"--all-projects",
 			"--poll-forever",
 		],
-		{
-			cwd: options.cwd,
-			env,
-			stdio: ["ignore", "pipe", "pipe"],
-		},
-	);
+	};
+}
+
+export function startAttachedWorkflowPoller(
+	options: AttachedPollerOptions,
+): AttachedPoller {
+	const env = buildAttachedPollerEnv(options.env ?? process.env, options.cwd);
+	const spawnPoller = options.spawnPoller ?? spawnAttachedPoller;
+	const invocation = buildWorkflowPollerInvocation();
+	const child = spawnPoller(invocation.command, invocation.args, {
+		cwd: options.cwd,
+		env,
+		stdio: ["ignore", "pipe", "pipe"],
+	});
 	const write = options.write ?? process.stdout.write.bind(process.stdout);
 	const stdoutPrinter = createDaemonProgressPrinter(write);
 	child.stdout?.on("data", (chunk) => stdoutPrinter.push(String(chunk)));
@@ -68,10 +73,12 @@ export function startAttachedWorkflowPoller(
 
 export function buildAttachedPollerEnv(
 	env: NodeJS.ProcessEnv,
+	cwd?: string,
 ): NodeJS.ProcessEnv {
+	const workspaceEnv = resolveDaemonWorkspaceEnv(env, cwd);
 	const serverBaseUrl = resolveServerBaseUrl(env);
 	return {
-		...env,
+		...workspaceEnv,
 		DEVOS_SERVER_BASE_URL: serverBaseUrl,
 		DEVOS_WORKFLOW_WS_URL:
 			env.DEVOS_WORKFLOW_WS_URL ?? resolveWorkflowWsUrl(serverBaseUrl),

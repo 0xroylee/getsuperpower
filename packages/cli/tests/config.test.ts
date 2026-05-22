@@ -67,6 +67,10 @@ const envKeys = [
 	"CLAUDE_CODE_MODEL",
 	"CLAUDE_CODE_MAX_TURNS",
 	"CLAUDE_CODE_ALLOWED_TOOLS",
+	"CURSOR_AGENT_BINARY",
+	"CURSOR_AGENT_MODEL",
+	"CURSOR_AGENT_FORCE",
+	"CURSOR_API_KEY",
 	"PIV_SERVER_DATABASE_PATH",
 ] as const;
 
@@ -99,6 +103,8 @@ describe("loadConfig", () => {
 								key === "CODEX_DOCKER_CODEX_HOME_PATH" ||
 								key === "CLAUDE_CODE_MODEL" ||
 								key === "CLAUDE_CODE_ALLOWED_TOOLS" ||
+								key === "CURSOR_AGENT_MODEL" ||
+								key === "CURSOR_API_KEY" ||
 								key === "PIV_SERVER_DATABASE_PATH"
 							? ""
 							: key === "PIV_POLL_INTERVAL_MS"
@@ -108,17 +114,21 @@ describe("loadConfig", () => {
 									? ""
 									: key === "PIV_DEV_MODE" || key === "PIV_PRINT_CODEX_LOGS"
 										? "0"
-										: key === "PIV_EXIT_WHEN_IDLE"
-											? "1"
-											: key === "PIV_STALE_RUN_TIMEOUT_MS"
-												? "3600000"
-												: key === "PIV_ISSUE_CONCURRENCY"
+										: key === "CURSOR_AGENT_BINARY"
+											? "cursor-agent"
+											: key === "CURSOR_AGENT_FORCE"
+												? ""
+												: key === "PIV_EXIT_WHEN_IDLE"
 													? "1"
-													: key === "PIV_ISOLATED_WORKTREES"
-														? "0"
-														: key === "AGENT_BACKEND"
-															? ""
-															: key.toLowerCase();
+													: key === "PIV_STALE_RUN_TIMEOUT_MS"
+														? "3600000"
+														: key === "PIV_ISSUE_CONCURRENCY"
+															? "1"
+															: key === "PIV_ISOLATED_WORKTREES"
+																? "0"
+																: key === "AGENT_BACKEND"
+																	? ""
+																	: key.toLowerCase();
 		}
 	});
 
@@ -186,6 +196,9 @@ describe("loadConfig", () => {
 			expect(config.projects[0]?.server.database.databasePath).toBe(
 				path.join(tempDir, ".devos", "config", "server-db"),
 			);
+			expect(config.server.database.databasePath).toBe(
+				path.join(tempDir, ".devos", "config", "server-db"),
+			);
 		} finally {
 			await rm(tempDir, { recursive: true, force: true });
 		}
@@ -225,6 +238,53 @@ describe("loadConfig", () => {
 			expect(config.projects[0]?.server.database.databasePath).toBe(
 				path.resolve(tempDir, "./project/server-db"),
 			);
+			expect(config.server.database.databasePath).toBe(
+				path.resolve(tempDir, "./root/server-db"),
+			);
+		} finally {
+			await rm(tempDir, { recursive: true, force: true });
+		}
+	});
+
+	it("preserves explicit empty project lists", async () => {
+		const tempDir = await mkdtemp(
+			path.join(process.cwd(), ".tmp-config-test-"),
+		);
+		await writeFile(
+			path.join(tempDir, "devos.config.ts"),
+			["export default {", "  projects: []", "};", ""].join("\n"),
+		);
+
+		try {
+			const config = await loadConfig(tempDir);
+			expect(config.projects).toEqual([]);
+			expect(config.server.database.databasePath).toBe(
+				path.join(tempDir, ".devos", "config", "server-db"),
+			);
+		} finally {
+			await rm(tempDir, { recursive: true, force: true });
+		}
+	});
+
+	it("keeps the default project fallback for legacy configs without projects", async () => {
+		const tempDir = await mkdtemp(
+			path.join(process.cwd(), ".tmp-config-test-"),
+		);
+		await writeFile(
+			path.join(tempDir, "devos.config.ts"),
+			[
+				"export default {",
+				"  repo: { owner: 'octo', name: 'legacy-repo' }",
+				"};",
+				"",
+			].join("\n"),
+		);
+
+		try {
+			const config = await loadConfig(tempDir);
+			expect(config.projects[0]?.id).toBe("default");
+			expect(config.projects[0]?.repo.owner).toBe("octo");
+			expect(config.projects[0]?.repo.name).toBe("legacy-repo");
 		} finally {
 			await rm(tempDir, { recursive: true, force: true });
 		}
@@ -329,6 +389,65 @@ describe("loadConfig", () => {
 		}
 	});
 
+	it("loads web-created projects from the server database when config projects are empty", async () => {
+		const tempDir = await mkdtemp(
+			path.join(process.cwd(), ".tmp-config-test-"),
+		);
+		await writeFile(
+			path.join(tempDir, "devos.config.ts"),
+			["export default {", "  projects: []", "};", ""].join("\n"),
+		);
+		const database = await initializeServerDatabase(
+			path.join(tempDir, ".devos", "config", "server-db"),
+		);
+		try {
+			await database.db.insert(projectBoardsTable).values({
+				id: "board-1",
+				name: "Demo Workspace",
+				description: null,
+				ownerId: "owner-1",
+				createdAt: "2026-05-20T00:00:00.000Z",
+				updatedAt: "2026-05-20T00:00:00.000Z",
+			});
+			await database.db.insert(boardProjectsTable).values({
+				id: "project-1",
+				boardId: "board-1",
+				externalProjectId: "external-1",
+				name: "Web Project",
+				description: "Created from UI",
+				repoOwner: "octo",
+				repoName: "web-repo",
+				baseBranch: "trunk",
+				localFolder: path.join(tempDir, "web-repo"),
+				lead: "Roy",
+				category: "platform",
+				priority: 2,
+				ownerId: "owner-1",
+				createdAt: "2026-05-20T00:00:00.000Z",
+				updatedAt: "2026-05-20T00:00:00.000Z",
+			});
+			await database.close();
+
+			const config = await loadConfig(tempDir);
+			expect(config.projects).toHaveLength(1);
+			expect(config.projects[0]?.id).toBe("project-1");
+			expect(config.projects[0]?.name).toBe("Web Project");
+			expect(config.projects[0]?.workspacePath).toBe(
+				path.join(tempDir, "web-repo"),
+			);
+			expect(config.projects[0]?.repo).toEqual({
+				owner: "octo",
+				name: "web-repo",
+				baseBranch: "trunk",
+			});
+		} finally {
+			if (!database.client.closed) {
+				await database.close();
+			}
+			await rm(tempDir, { recursive: true, force: true });
+		}
+	});
+
 	it("prefers process env over sqlite values", async () => {
 		const tempDir = await mkdtemp(
 			path.join(process.cwd(), ".tmp-config-test-"),
@@ -386,55 +505,97 @@ describe("loadConfig", () => {
 
 	it("loads agent backend from AGENT_BACKEND env", async () => {
 		process.env.AGENT_BACKEND = "claude-code";
-		const config = await loadConfig(process.cwd());
-		expect(config.projects[0]?.agent?.backend).toBe("claude-code");
+		await withTempConfig(async (tempDir) => {
+			const config = await loadConfig(tempDir);
+			expect(config.projects[0]?.agent?.backend).toBe("claude-code");
+		});
+	});
+
+	it("loads Cursor Agent backend from AGENT_BACKEND env", async () => {
+		process.env.AGENT_BACKEND = "cursor-agent";
+		await withTempConfig(async (tempDir) => {
+			const config = await loadConfig(tempDir);
+			expect(config.projects[0]?.agent?.backend).toBe("cursor-agent");
+		});
 	});
 
 	it("defaults agent backend to undefined when not set", async () => {
 		process.env.AGENT_BACKEND = "";
-		const config = await loadConfig(process.cwd());
-		expect(config.projects[0]?.agent?.backend).toBeUndefined();
+		await withTempConfig(async (tempDir) => {
+			const config = await loadConfig(tempDir);
+			expect(config.projects[0]?.agent?.backend).toBeUndefined();
+		});
 	});
 
 	it("rejects invalid AGENT_BACKEND value", async () => {
 		process.env.AGENT_BACKEND = "invalid-backend";
-		await expect(loadConfig(process.cwd())).rejects.toThrow(
-			"Invalid AGENT_BACKEND value: 'invalid-backend'",
-		);
+		await withTempConfig(async (tempDir) => {
+			await expect(loadConfig(tempDir)).rejects.toThrow(
+				"Invalid AGENT_BACKEND value: 'invalid-backend'",
+			);
+		});
+	});
+
+	it("loads Cursor Agent settings from env", async () => {
+		process.env.CURSOR_AGENT_BINARY = "custom-cursor-agent";
+		process.env.CURSOR_AGENT_MODEL = "gpt-5";
+		process.env.CURSOR_AGENT_FORCE = "true";
+		process.env.CURSOR_API_KEY = "cursor_secret";
+
+		await withTempConfig(async (tempDir) => {
+			const config = await loadConfig(tempDir);
+			expect(config.projects[0]?.cursor).toEqual({
+				binary: "custom-cursor-agent",
+				streamLogs: false,
+				model: "gpt-5",
+				force: true,
+				apiKey: "cursor_secret",
+			});
+		});
 	});
 
 	it("loads Claude Code model from CLAUDE_CODE_MODEL env", async () => {
 		process.env.CLAUDE_CODE_MODEL = "claude-sonnet-4-20250514";
-		const config = await loadConfig(process.cwd());
-		expect(config.projects[0]?.agent?.model).toBe("claude-sonnet-4-20250514");
+		await withTempConfig(async (tempDir) => {
+			const config = await loadConfig(tempDir);
+			expect(config.projects[0]?.agent?.model).toBe("claude-sonnet-4-20250514");
+		});
 	});
 
 	it("loads Claude Code max turns from CLAUDE_CODE_MAX_TURNS env", async () => {
 		process.env.CLAUDE_CODE_MAX_TURNS = "50";
-		const config = await loadConfig(process.cwd());
-		expect(config.projects[0]?.agent?.maxTurns).toBe(50);
+		await withTempConfig(async (tempDir) => {
+			const config = await loadConfig(tempDir);
+			expect(config.projects[0]?.agent?.maxTurns).toBe(50);
+		});
 	});
 
 	it("ignores non-positive CLAUDE_CODE_MAX_TURNS", async () => {
 		process.env.CLAUDE_CODE_MAX_TURNS = "0";
-		const config = await loadConfig(process.cwd());
-		expect(config.projects[0]?.agent?.maxTurns).toBeUndefined();
+		await withTempConfig(async (tempDir) => {
+			const config = await loadConfig(tempDir);
+			expect(config.projects[0]?.agent?.maxTurns).toBeUndefined();
+		});
 	});
 
 	it("loads Claude Code allowed tools from CLAUDE_CODE_ALLOWED_TOOLS env", async () => {
 		process.env.CLAUDE_CODE_ALLOWED_TOOLS = "Read,Write,Bash";
-		const config = await loadConfig(process.cwd());
-		expect(config.projects[0]?.agent?.allowedTools).toEqual([
-			"Read",
-			"Write",
-			"Bash",
-		]);
+		await withTempConfig(async (tempDir) => {
+			const config = await loadConfig(tempDir);
+			expect(config.projects[0]?.agent?.allowedTools).toEqual([
+				"Read",
+				"Write",
+				"Bash",
+			]);
+		});
 	});
 
 	it("returns undefined allowed tools when env is empty", async () => {
 		process.env.CLAUDE_CODE_ALLOWED_TOOLS = "";
-		const config = await loadConfig(process.cwd());
-		expect(config.projects[0]?.agent?.allowedTools).toBeUndefined();
+		await withTempConfig(async (tempDir) => {
+			const config = await loadConfig(tempDir);
+			expect(config.projects[0]?.agent?.allowedTools).toBeUndefined();
+		});
 	});
 
 	it("allows config file to override agent settings", async () => {
@@ -473,3 +634,14 @@ describe("loadConfig", () => {
 		}
 	});
 });
+
+async function withTempConfig(
+	run: (tempDir: string) => Promise<void>,
+): Promise<void> {
+	const tempDir = await mkdtemp(path.join(process.cwd(), ".tmp-config-test-"));
+	try {
+		await run(tempDir);
+	} finally {
+		await rm(tempDir, { recursive: true, force: true });
+	}
+}

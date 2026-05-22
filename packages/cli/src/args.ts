@@ -76,13 +76,15 @@ function registerRunCommand(program: Command, runtime: CliRuntime): void {
 				);
 			}
 			const isolatedWorktrees = options.isolatedWorktrees ? true : undefined;
+			const pollForever =
+				options.maxPollCycles === undefined ? true : undefined;
 			await withConfig(runtime, (config) =>
 				runtime.handleRunCommand(config, {
 					issueArg: options.issue,
 					projectId: options.project,
-					allProjects: options.allProjects === true,
-					poll: options.poll === true || options.pollForever === true,
-					pollForever: options.pollForever ? true : undefined,
+					allProjects: !options.project,
+					poll: true,
+					pollForever,
 					concurrency: options.concurrency,
 					exitWhenIdle: options.exitWhenIdle === false ? false : undefined,
 					pollIntervalMs: options.pollIntervalMs,

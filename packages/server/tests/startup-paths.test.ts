@@ -25,6 +25,30 @@ describe("server startup paths", () => {
 		).toBe(workspacePath);
 	});
 
+	it("keeps repo-root database resolution when launched from a package cwd", () => {
+		const workspacePath = path.join("/tmp", "repo");
+		const packageCwd = path.join(workspacePath, "packages", "server");
+		const databasePath = path.join(
+			workspacePath,
+			".devos",
+			"config",
+			"server-db",
+		);
+		const resolvedWorkspacePath = resolveServerWorkspacePath(
+			{ PIV_WORKSPACE_PATH: workspacePath },
+			packageCwd,
+		);
+
+		expect(resolvedWorkspacePath).toBe(workspacePath);
+		expect(
+			resolveServerDatabasePath(
+				{},
+				resolvedWorkspacePath,
+				createConfig(databasePath, []),
+			),
+		).toBe(databasePath);
+	});
+
 	it("uses the resolved default project database path without env override", () => {
 		const databasePath = path.join("/tmp", "workspace", ".devos", "server-db");
 
@@ -33,6 +57,18 @@ describe("server startup paths", () => {
 				{},
 				"/tmp/workspace",
 				createConfig(databasePath),
+			),
+		).toBe(databasePath);
+	});
+
+	it("uses the root server database path when projects are empty", () => {
+		const databasePath = path.join("/tmp", "workspace", ".devos", "server-db");
+
+		expect(
+			resolveServerDatabasePath(
+				{},
+				"/tmp/workspace",
+				createConfig(databasePath, []),
 			),
 		).toBe(databasePath);
 	});
@@ -50,12 +86,12 @@ describe("server startup paths", () => {
 	});
 });
 
-function createConfig(databasePath: string): ServerStartupConfig {
+function createConfig(
+	databasePath: string,
+	projects: unknown[] = [{ server: { database: { databasePath } } }],
+): ServerStartupConfig {
 	return {
-		projects: [
-			{
-				server: { database: { databasePath } },
-			},
-		],
+		projects,
+		server: { database: { databasePath } },
 	} as ServerStartupConfig;
 }

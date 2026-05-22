@@ -10,8 +10,16 @@ export function resolveWebUrl(env: NodeJS.ProcessEnv): string {
 	return `http://127.0.0.1:${webPort}`;
 }
 
+export function resolveServerEventsWsUrl(serverBaseUrl: string): string {
+	return resolveWsUrl(serverBaseUrl, "/daemon/events");
+}
+
 export function resolveWorkflowWsUrl(serverBaseUrl: string): string {
-	const url = new URL("/api/workflow", serverBaseUrl);
+	return resolveWsUrl(serverBaseUrl, "/api/workflow");
+}
+
+function resolveWsUrl(baseUrl: string, pathname: string): string {
+	const url = new URL(pathname, baseUrl);
 	if (url.protocol === "http:") {
 		url.protocol = "ws:";
 	}

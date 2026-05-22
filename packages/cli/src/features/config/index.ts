@@ -18,6 +18,7 @@ import {
 } from "./overrides";
 import { applyDatabaseProjectMetadata } from "./project-metadata";
 import { resolveProjects } from "./project-resolution";
+import { resolveRootServerConfig } from "./server-resolution";
 import { loadSqliteEnv, saveSqliteEnv, sqliteEnvDbPath } from "./sqlite-env";
 import {
 	validateNotifications,
@@ -25,7 +26,26 @@ import {
 	validateProjects,
 } from "./validation";
 
+interface LoadConfigOptions {
+	applyDatabaseProjectMetadata: boolean;
+}
+
 export async function loadConfig(cwd: string): Promise<LoadedConfig> {
+	return loadConfigWithOptions(cwd, { applyDatabaseProjectMetadata: true });
+}
+
+export async function loadServerStartupConfig(
+	cwd: string,
+): Promise<LoadedConfig> {
+	return loadConfigWithOptions(cwd, {
+		applyDatabaseProjectMetadata: false,
+	});
+}
+
+async function loadConfigWithOptions(
+	cwd: string,
+	options: LoadConfigOptions,
+): Promise<LoadedConfig> {
 	const env = await loadResolvedEnv(cwd);
 	const envBase = buildEnvBase(cwd, env);
 	const envPolling = buildEnvPolling(env);
@@ -35,20 +55,26 @@ export async function loadConfig(cwd: string): Promise<LoadedConfig> {
 	assertNoProjectPolling(root.projects);
 	assertNoProjectNotifications(root.projects);
 
-	const projects = await applyDatabaseProjectMetadata(
-		resolveProjects(cwd, envBase, root),
-	);
+	const resolvedProjects = resolveProjects(cwd, envBase, root);
+	const projects = options.applyDatabaseProjectMetadata
+		? await applyDatabaseProjectMetadata(resolvedProjects, {
+				configCwd: cwd,
+				base: envBase,
+				root,
+			})
+		: resolvedProjects;
 	const polling = resolvePolling(envPolling, root.polling);
 	const notifications = resolveNotifications(
 		envNotifications,
 		root.notifications,
 	);
+	const server = resolveRootServerConfig(cwd, envBase, root);
 
 	validateProjects(projects);
 	validatePolling(polling);
 	validateNotifications(notifications);
 
-	return { projects, polling, notifications };
+	return { projects, server, polling, notifications };
 }
 
 export function getProjectById(

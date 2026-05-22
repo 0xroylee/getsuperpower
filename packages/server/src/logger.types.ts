@@ -1,7 +1,13 @@
+import type { HttpLogger } from "pino-http";
+
 export type ServerLogContext = Record<string, unknown>;
 
-export interface ServerLogger {
-	info(context: ServerLogContext, message: string): void;
-	error(context: ServerLogContext, message: string): void;
-	fatal(context: ServerLogContext, message: string): void;
+export type ServerLogger = HttpLogger["logger"];
+
+export interface ServerLoggerOptions {
+	context?: ServerLogContext;
+	env?: { PIV_LOG_LEVEL?: string };
+	destination?: string | number | NodeJS.WritableStream;
+	color?: boolean;
+	sync?: boolean;
 }

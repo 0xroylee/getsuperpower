@@ -1,27 +1,46 @@
-import pino from "pino";
-import type { ServerLogger } from "./logger.types";
+import pinoHttp from "pino-http";
+import pretty from "pino-pretty";
+import type { ServerLogger, ServerLoggerOptions } from "./logger.types";
 
-const prettyEnabled =
-	process.env.PIV_LOG_PRETTY === "1" ||
-	(process.stdout.isTTY && process.env.PIV_LOG_PRETTY !== "0");
+const DEFAULT_LOG_LEVEL = "info";
+const LOG_LEVEL_VALUES = [
+	"trace",
+	"debug",
+	"info",
+	"warn",
+	"error",
+	"fatal",
+	"silent",
+] as const;
 
-const level = process.env.PIV_LOG_LEVEL ?? "info";
+type ServerLogLevel = (typeof LOG_LEVEL_VALUES)[number];
 
-export const logger: ServerLogger = pino({
-	level,
-	base: undefined,
-	timestamp: pino.stdTimeFunctions.isoTime,
-	transport: prettyEnabled
-		? {
-				target: "pino-pretty",
-				options: {
-					colorize: true,
-					translateTime: "SYS:standard",
-					ignore: "pid,hostname",
-				},
-			}
-		: undefined,
-});
+const LOG_LEVELS = new Set<ServerLogLevel>(LOG_LEVEL_VALUES);
+
+export const logger: ServerLogger = createServerLogger();
+
+export function createServerLogger(
+	options: ServerLoggerOptions = {},
+): ServerLogger {
+	const env = options.env ?? { PIV_LOG_LEVEL: process.env.PIV_LOG_LEVEL };
+	const stream = pretty({
+		colorize: options.color,
+		destination: options.destination ?? 2,
+		ignore: "pid,hostname",
+		singleLine: true,
+		sync: options.sync ?? true,
+	});
+
+	return pinoHttp(
+		{
+			autoLogging: false,
+			base: options.context ?? {},
+			level: resolveLogLevel(env.PIV_LOG_LEVEL),
+			timestamp: isoTimestamp,
+		},
+		stream,
+	).logger;
+}
 
 export function setupServerProcessErrorHandlers(): void {
 	process.on("unhandledRejection", (reason) => {
@@ -74,4 +93,19 @@ function normalizeServerDatabaseInitializationFields(
 		};
 	}
 	return undefined;
+}
+
+function resolveLogLevel(value: string | undefined): ServerLogLevel {
+	if (isServerLogLevel(value)) {
+		return value;
+	}
+	return DEFAULT_LOG_LEVEL;
+}
+
+function isServerLogLevel(value: string | undefined): value is ServerLogLevel {
+	return value !== undefined && LOG_LEVELS.has(value as ServerLogLevel);
+}
+
+function isoTimestamp(): string {
+	return `,"time":"${new Date().toISOString()}"`;
 }
