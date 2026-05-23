@@ -39,14 +39,6 @@ export function createCliProgram(
 	registerDaemonCommand(program, runtime);
 	registerOnboardCommand(program, runtime);
 	registerStatusCommand(program, runtime);
-	program
-		.command("projects")
-		.description("list configured projects")
-		.action(async () => {
-			await withConfig(runtime, (config) =>
-				runtime.handleProjectsCommand(config),
-			);
-		});
 	registerTaskCommand(program, runtime);
 	registerSkillsCommand(program, runtime);
 	registerPluginsCommand(program, runtime);

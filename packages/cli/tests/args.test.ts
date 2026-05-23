@@ -94,15 +94,6 @@ describe("createCliProgram help and core commands", () => {
 		]);
 	});
 
-	it("runs projects command with loaded config", async () => {
-		const result = await captureWithRuntime(["bun", "devos", "projects"]);
-
-		expect(result.calls).toEqual([
-			{ name: "loadConfig" },
-			{ name: "projects" },
-		]);
-	});
-
 	it("rejects unknown commands", async () => {
 		const unknown = await expectCommanderError([
 			"bun",
@@ -111,11 +102,15 @@ describe("createCliProgram help and core commands", () => {
 			"--option",
 		]);
 		const legacySetup = await expectCommanderError(["bun", "devos", "setup"]);
+		const projects = await expectCommanderError(["bun", "devos", "projects"]);
 
 		expect(unknown.error.message).toBe("error: unknown command 'unknown'");
 		expect(unknown.stderr).toContain("Usage: devos [options] [command]");
 		expect(legacySetup.error.message).toContain(
 			"error: unknown command 'setup'",
+		);
+		expect(projects.error.message).toContain(
+			"error: unknown command 'projects'",
 		);
 	});
 });

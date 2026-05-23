@@ -11,7 +11,7 @@ import {
 
 describe("cli executor boundary export", () => {
 	it("allows server to consume executor and boundary types", async () => {
-		const request: CliCommandRequest = { action: "projects" };
+		const request: CliCommandRequest = { action: "onboard" };
 		const invocation: CliCommandInvocation = {
 			command: "npx",
 			args: ["devos"],

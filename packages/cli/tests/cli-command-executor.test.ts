@@ -67,7 +67,7 @@ describe("CliCommandExecutor", () => {
 			runCommandFn,
 		});
 
-		const result = await executor.execute({ action: "projects" });
+		const result = await executor.execute({ action: "onboard" });
 		const history = executor.getHistory();
 
 		expect(result.status).toBe("failed");
@@ -75,7 +75,7 @@ describe("CliCommandExecutor", () => {
 		expect(history).toHaveLength(1);
 		expect(history[0]?.status).toBe("failed");
 		expect(history[0]?.error).toBe("spawn EACCES");
-		expect(history[0]?.args).toEqual(["devos", "projects"]);
+		expect(history[0]?.args).toEqual(["devos", "onboard"]);
 	});
 
 	it("streams invocation, output, and completion events", async () => {
@@ -91,7 +91,7 @@ describe("CliCommandExecutor", () => {
 		});
 
 		const result = await executor.executeStream(
-			{ action: "projects" },
+			{ action: "onboard" },
 			(event) => events.push(event),
 		);
 
@@ -104,7 +104,7 @@ describe("CliCommandExecutor", () => {
 		]);
 		expect(events[0]).toMatchObject({
 			type: "start",
-			invocation: { command: "npx", args: ["devos", "projects"] },
+			invocation: { command: "npx", args: ["devos", "onboard"] },
 		});
 		expect(events[1]).toEqual({ type: "stdout", text: "hello\n" });
 		expect(events[2]).toEqual({ type: "stderr", text: "warn\n" });
@@ -139,7 +139,7 @@ describe("CliCommandExecutor", () => {
 		});
 
 		const result = await executor.executeStream(
-			{ action: "projects" },
+			{ action: "onboard" },
 			(event) => events.push(event),
 		);
 
@@ -165,7 +165,7 @@ describe("CliCommandExecutor", () => {
 			runCommandFn,
 		});
 
-		await executor.executeStream({ action: "projects" }, (event) =>
+		await executor.executeStream({ action: "onboard" }, (event) =>
 			events.push(event),
 		);
 

@@ -11,7 +11,7 @@ describe("workflow command broker", () => {
 		const frames: WorkflowCommandStreamFrame[] = [];
 
 		await broker.dispatchCommand(
-			{ type: "command", requestId: "req-1", request: { action: "projects" } },
+			{ type: "command", requestId: "req-1", request: { action: "onboard" } },
 			(frame) => frames.push(frame),
 		);
 
@@ -26,7 +26,7 @@ describe("workflow command broker", () => {
 				requestId: "req-1",
 				result: {
 					status: "failed",
-					request: { action: "projects" },
+					request: { action: "onboard" },
 					error: "No CLI worker connected to /api/workflow",
 				},
 			},
@@ -41,14 +41,14 @@ describe("workflow command broker", () => {
 		broker.registerWorker(worker, "worker-1");
 
 		const done = broker.dispatchCommand(
-			{ type: "command", requestId: "req-2", request: { action: "projects" } },
+			{ type: "command", requestId: "req-2", request: { action: "onboard" } },
 			(frame) => frames.push(frame),
 		);
 
 		expect(JSON.parse(worker.sent[0] ?? "")).toEqual({
 			type: "cli.dispatch",
 			requestId: "req-2",
-			request: { action: "projects" },
+			request: { action: "onboard" },
 		});
 		broker.handleWorkerFrame({
 			type: "stdout",
@@ -58,7 +58,7 @@ describe("workflow command broker", () => {
 		broker.handleWorkerFrame({
 			type: "complete",
 			requestId: "req-2",
-			result: { status: "succeeded", request: { action: "projects" } },
+			result: { status: "succeeded", request: { action: "onboard" } },
 		});
 
 		await done;
@@ -67,11 +67,11 @@ describe("workflow command broker", () => {
 			{
 				type: "complete",
 				requestId: "req-2",
-				result: { status: "succeeded", request: { action: "projects" } },
+				result: { status: "succeeded", request: { action: "onboard" } },
 			},
 		]);
 		expect(broker.getHistory()[0]).toMatchObject({
-			request: { action: "projects" },
+			request: { action: "onboard" },
 			status: "succeeded",
 		});
 	});

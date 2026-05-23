@@ -334,15 +334,6 @@ function resolveInvocation(
 			},
 		};
 	}
-	if (request.action === "projects") {
-		return {
-			status: "ok",
-			invocation: {
-				command,
-				args: [...baseArgs, "projects"],
-			},
-		};
-	}
 	if (request.action === "onboard") {
 		if (request.check !== undefined && typeof request.check !== "boolean") {
 			return {

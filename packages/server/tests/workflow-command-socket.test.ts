@@ -25,7 +25,7 @@ describe("workflow command websocket routing", () => {
 			JSON.stringify({
 				type: "command",
 				requestId: "cmd-1",
-				request: { action: "projects" },
+				request: { action: "onboard" },
 			}),
 		);
 		expect(JSON.parse(await socket.nextSend())).toEqual({

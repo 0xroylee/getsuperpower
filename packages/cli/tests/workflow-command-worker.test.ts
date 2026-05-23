@@ -32,7 +32,7 @@ describe("workflow command worker", () => {
 			JSON.stringify({
 				type: "cli.dispatch",
 				requestId: "req-1",
-				request: { action: "projects" },
+				request: { action: "onboard" },
 			}),
 			socket,
 			{
@@ -50,7 +50,7 @@ describe("workflow command worker", () => {
 			{
 				type: "complete",
 				requestId: "req-1",
-				result: { status: "succeeded", request: { action: "projects" } },
+				result: { status: "succeeded", request: { action: "onboard" } },
 			},
 		]);
 	});

@@ -4,7 +4,6 @@ import type { WorkflowProgressEvent } from "./workflow-progress.types";
 export type SupportedCliAction =
 	| "run"
 	| "status"
-	| "projects"
 	| "onboard"
 	| "skills"
 	| "task";
@@ -27,10 +26,6 @@ export interface StatusActionRequest {
 	action: "status";
 	projectId: string;
 	issueKey: string;
-}
-
-export interface ProjectsActionRequest {
-	action: "projects";
 }
 
 export interface OnboardActionRequest {
@@ -90,7 +85,6 @@ export interface TaskCreateActionRequest {
 export type SupportedCliCommandRequest =
 	| RunActionRequest
 	| StatusActionRequest
-	| ProjectsActionRequest
 	| OnboardActionRequest
 	| SkillsActionRequest
 	| TaskCreateActionRequest;

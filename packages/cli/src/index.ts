@@ -4,7 +4,6 @@ import { type CliRuntime, createCliProgram } from "./args";
 import {
 	handleOnboardCommand,
 	handlePluginsCommand,
-	handleProjectsCommand,
 	handleRunCommand,
 	handleSkillsCommand,
 	handleStatusCommand,
@@ -28,7 +27,6 @@ async function main(): Promise<void> {
 		handleOnboardCommand,
 		runProductionDaemon,
 		handleRunCommand,
-		handleProjectsCommand,
 		handleStatusCommand,
 		handleSkillsCommand,
 		handlePluginsCommand,

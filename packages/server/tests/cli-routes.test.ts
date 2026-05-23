@@ -8,10 +8,10 @@ describe("CLI server routes", () => {
 			{
 				requestedAt: "2026-05-12T00:00:00.000Z",
 				finishedAt: "2026-05-12T00:00:01.000Z",
-				request: { action: "projects" as const },
+				request: { action: "onboard" as const },
 				status: "succeeded" as const,
 				command: "bun",
-				args: ["run", "devos", "projects"],
+				args: ["run", "devos", "onboard"],
 				exitCode: 0,
 				stdout: "ok",
 				stderr: "",
@@ -45,7 +45,7 @@ describe("CLI server routes", () => {
 			new Request("http://localhost/api/cli/dispatch", {
 				method: "POST",
 				headers: { "content-type": "application/json" },
-				body: JSON.stringify({ action: "projects" }),
+				body: JSON.stringify({ action: "onboard" }),
 			}),
 		);
 

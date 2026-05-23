@@ -104,7 +104,6 @@ export type CliRuntime = {
 	handleOnboardCommand(command: OnboardCommand, cwd: string): Promise<void>;
 	runProductionDaemon(options: { cwd: string }): Promise<number>;
 	handleRunCommand(config: LoadedConfig, options: RunOptions): Promise<void>;
-	handleProjectsCommand(config: LoadedConfig): Promise<void>;
 	handleStatusCommand(
 		config: LoadedConfig,
 		command: StatusCommand,

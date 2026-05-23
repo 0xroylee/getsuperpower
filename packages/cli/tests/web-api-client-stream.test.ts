@@ -12,7 +12,7 @@ describe("web api client command streams", () => {
 		});
 		const events: unknown[] = [];
 
-		await client.streamCliCommand({ action: "projects" }, (event) =>
+		await client.streamCliCommand({ action: "onboard" }, (event) =>
 			events.push(event),
 		);
 
@@ -20,13 +20,13 @@ describe("web api client command streams", () => {
 		expect(calls[0]?.body).toEqual({
 			type: "command",
 			requestId: expect.any(String),
-			request: { action: "projects" },
+			request: { action: "onboard" },
 		});
 		expect(events).toEqual([
 			{ type: "stdout", text: "hello" },
 			{
 				type: "complete",
-				result: { status: "succeeded", request: { action: "projects" } },
+				result: { status: "succeeded", request: { action: "onboard" } },
 			},
 		]);
 	});
@@ -74,7 +74,7 @@ function createMockWebSocket(
 					requestId: parsed.requestId,
 					result: {
 						status: "succeeded",
-						request: { action: "projects" },
+						request: { action: "onboard" },
 					},
 				}),
 			});
