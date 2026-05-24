@@ -43,7 +43,7 @@ describe("BoardTaskWorkflowClient", () => {
 		]);
 	});
 
-	it("routes stage, comment, and PR mutations through workflow websocket", async () => {
+	it("routes stage, cancellation, comment, and PR mutations through workflow websocket", async () => {
 		const calls = installWorkflowSocket();
 		const config = project("project-1");
 		config.repo.owner = "acme";
@@ -52,6 +52,7 @@ describe("BoardTaskWorkflowClient", () => {
 
 		await client.markStage("task-1", "implementing");
 		await client.markStage("task-1", "pr_created");
+		await client.markCanceled("task-1");
 		await client.comment("task-1", "Implementation started.");
 		await client.linkPullRequest?.("task-1", {
 			number: 42,
@@ -68,6 +69,10 @@ describe("BoardTaskWorkflowClient", () => {
 			{
 				action: "tasks.update",
 				payload: { taskId: "task-1", values: { status: "reviewing" } },
+			},
+			{
+				action: "tasks.update",
+				payload: { taskId: "task-1", values: { status: "planning" } },
 			},
 			{
 				action: "tasks.addComment",

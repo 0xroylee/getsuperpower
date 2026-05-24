@@ -74,7 +74,7 @@ class BoardTaskWorkflowClient implements WorkflowLinearClient {
 	}
 
 	async markCanceled(issueId: string): Promise<void> {
-		await this.store.updateTask(issueId, { status: "blocked" });
+		await this.store.updateTask(issueId, { status: BACKLOG_STATUS });
 	}
 
 	async updateIssueDetails(

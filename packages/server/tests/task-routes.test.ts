@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, it } from "bun:test";
-import { boardTasksTable, taskTagsTable } from "devos-db";
+import {
+	boardTasksTable,
+	inboxMessagesTable,
+	taskExecutionLogsTable,
+	taskExecutionStepsTable,
+	taskPullRequestsTable,
+	taskTagsTable,
+	tokenUsageTable,
+} from "devos-db";
 import type { RealtimeEventPayload } from "../src/realtime";
 import {
 	type DrizzleServerTestDatabase,
@@ -208,7 +216,7 @@ describe("task routes", () => {
 		expect(notFoundDelete.status).toBe(404);
 	});
 
-	it("returns JSON not-found errors for missing IDs and FK-protected deletes", async () => {
+	it("returns JSON not-found errors and deletes task-owned child records", async () => {
 		testDatabase = await createDrizzleServerTestDatabase();
 		const app = createTaskRouteTestApp(testDatabase.db);
 		await seedTaskRouteProject(testDatabase.db, "project-1");
@@ -235,6 +243,55 @@ describe("task routes", () => {
 			taskId: task.id,
 			tag: "bug",
 		});
+		await testDatabase.db.insert(taskPullRequestsTable).values({
+			id: "pr-1",
+			taskId: task.id,
+			repository: "acme/project",
+			prNumber: "42",
+			prUrl: "https://github.com/acme/project/pull/42",
+			createdAt: "2026-05-13T00:00:00.000Z",
+		});
+		await testDatabase.db.insert(inboxMessagesTable).values({
+			id: "message-1",
+			workspaceId: "workspace-1",
+			userId: "user-1",
+			runId: "run-1",
+			source: "system",
+			kind: "task",
+			body: "Task message",
+			taskId: task.id,
+			agentId: null,
+			metadata: null,
+			createdAt: "2026-05-13T00:00:00.000Z",
+		});
+		await testDatabase.db.insert(taskExecutionLogsTable).values({
+			id: "execution-1",
+			taskId: task.id,
+			status: "running",
+			startedAt: "2026-05-13T00:00:00.000Z",
+			finishedAt: null,
+			log: "",
+		});
+		await testDatabase.db.insert(taskExecutionStepsTable).values({
+			id: "step-1",
+			executionLogId: "execution-1",
+			stepNumber: 1,
+			action: "plan",
+			status: "completed",
+			detail: null,
+			recordedAt: "2026-05-13T00:01:00.000Z",
+		});
+		await testDatabase.db.insert(tokenUsageTable).values({
+			id: "usage-1",
+			runId: "run-1",
+			taskId: task.id,
+			taskExecutionLogId: "execution-1",
+			stage: "planning",
+			inputTokens: 1,
+			outputTokens: 2,
+			totalTokens: 3,
+			recordedAt: "2026-05-13T00:02:00.000Z",
+		});
 
 		for (const method of ["GET", "PATCH", "DELETE"] as const) {
 			const response = await app(
@@ -253,15 +310,25 @@ describe("task routes", () => {
 			});
 		}
 
-		const fkDelete = await app(
+		const deleteResponse = await app(
 			new Request(`http://localhost/api/tasks/${task.id}`, {
 				method: "DELETE",
 			}),
 		);
-		expect(fkDelete.status).toBe(400);
-		expect((await fkDelete.json()) as { error: string }).toEqual({
-			error: "Foreign key constraint failed",
-		});
+		expect(deleteResponse.status).toBe(200);
+		expect(await testDatabase.db.select().from(boardTasksTable)).toEqual([]);
+		expect(await testDatabase.db.select().from(taskTagsTable)).toEqual([]);
+		expect(await testDatabase.db.select().from(taskPullRequestsTable)).toEqual(
+			[],
+		);
+		expect(await testDatabase.db.select().from(inboxMessagesTable)).toEqual([]);
+		expect(await testDatabase.db.select().from(taskExecutionLogsTable)).toEqual(
+			[],
+		);
+		expect(
+			await testDatabase.db.select().from(taskExecutionStepsTable),
+		).toEqual([]);
+		expect(await testDatabase.db.select().from(tokenUsageTable)).toEqual([]);
 	});
 
 	it("publishes realtime issue events only for successful mutations", async () => {

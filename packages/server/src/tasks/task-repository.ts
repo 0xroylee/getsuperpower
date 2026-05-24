@@ -4,12 +4,17 @@ import {
 	boardProjectsTable,
 	boardTasksTable,
 	generateBoardTaskKey,
+	inboxMessagesTable,
 	taskAssigneesTable,
 	taskCommentsTable,
 	taskExecutionLogsTable,
 	taskExecutionStepsTable,
+	taskPullRequestsTable,
+	taskTagsTable,
+	tokenUsageTable,
 } from "devos-db";
 import type { BoardTaskRow, NewBoardTaskRow } from "devos-db";
+import { or } from "drizzle-orm";
 import type { BoardTaskApiRecord, TaskRepository } from "./task-service.types";
 
 const HUMAN_ASSIGNEE_TYPE = "human";
@@ -106,6 +111,40 @@ export function createTaskRepository(db: ServerDatabase["db"]): TaskRepository {
 				await tx
 					.delete(taskCommentsTable)
 					.where(eq(taskCommentsTable.taskId, id));
+				await tx.delete(taskTagsTable).where(eq(taskTagsTable.taskId, id));
+				await tx
+					.delete(taskPullRequestsTable)
+					.where(eq(taskPullRequestsTable.taskId, id));
+				await tx
+					.delete(inboxMessagesTable)
+					.where(eq(inboxMessagesTable.taskId, id));
+				const executionLogs = await tx
+					.select({ id: taskExecutionLogsTable.id })
+					.from(taskExecutionLogsTable)
+					.where(eq(taskExecutionLogsTable.taskId, id));
+				const executionLogIds = executionLogs.map((log) => log.id);
+				if (executionLogIds.length > 0) {
+					await tx
+						.delete(tokenUsageTable)
+						.where(
+							or(
+								eq(tokenUsageTable.taskId, id),
+								inArray(tokenUsageTable.taskExecutionLogId, executionLogIds),
+							),
+						);
+					await tx
+						.delete(taskExecutionStepsTable)
+						.where(
+							inArray(taskExecutionStepsTable.executionLogId, executionLogIds),
+						);
+				} else {
+					await tx
+						.delete(tokenUsageTable)
+						.where(eq(tokenUsageTable.taskId, id));
+				}
+				await tx
+					.delete(taskExecutionLogsTable)
+					.where(eq(taskExecutionLogsTable.taskId, id));
 				await tx.delete(boardTasksTable).where(eq(boardTasksTable.id, id));
 				return existing;
 			});
