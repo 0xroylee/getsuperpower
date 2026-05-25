@@ -24,23 +24,13 @@ export function useCreateBoardTaskMutation(): UseMutationResult<
 	return useMutation({
 		mutationKey: ["board-task", "create"] as const,
 		mutationFn: (input) => apiClient.createBoardTask(input),
-		onSuccess: async (updatedTask) => {
-			queryClient.setQueryData<ProjectBoardTaskRecord>(
-				serverStateQueryKeys.boardTask(updatedTask.id),
-				updatedTask,
-			);
-			queryClient.setQueryData<ProjectBoardTaskRecord[] | undefined>(
-				serverStateQueryKeys.boardTasks,
-				(current) =>
-					current?.map((task) =>
-						task.id === updatedTask.id ? updatedTask : task,
-					),
-			);
+		onSuccess: async (createdTask) => {
+			upsertBoardTask(queryClient, createdTask);
 			await queryClient.invalidateQueries({
 				queryKey: serverStateQueryKeys.boardTasks,
 			});
 			await queryClient.invalidateQueries({
-				queryKey: serverStateQueryKeys.boardTask(updatedTask.id),
+				queryKey: serverStateQueryKeys.boardTask(createdTask.id),
 			});
 		},
 	});
@@ -55,15 +45,35 @@ export function useUpdateBoardTaskMutation(): UseMutationResult<
 	return useMutation({
 		mutationKey: ["board-task", "update"] as const,
 		mutationFn: (input) => apiClient.updateBoardTask(input.taskId, input.task),
-		onSuccess: async (_updatedTask, input) => {
+		onSuccess: async (updatedTask, input) => {
+			upsertBoardTask(queryClient, updatedTask);
 			await queryClient.invalidateQueries({
 				queryKey: serverStateQueryKeys.boardTasks,
+			});
+			await queryClient.invalidateQueries({
+				queryKey: serverStateQueryKeys.boardTask(updatedTask.id),
 			});
 			await queryClient.invalidateQueries({
 				queryKey: serverStateQueryKeys.taskActivity(input.taskId),
 			});
 		},
 	});
+}
+
+function upsertBoardTask(
+	queryClient: ReturnType<typeof useQueryClient>,
+	task: ProjectBoardTaskRecord,
+): void {
+	queryClient.setQueryData(serverStateQueryKeys.boardTask(task.id), task);
+	queryClient.setQueryData<ProjectBoardTaskRecord[]>(
+		serverStateQueryKeys.boardTasks,
+		(current = []) => {
+			const exists = current.some((item) => item.id === task.id);
+			return exists
+				? current.map((item) => (item.id === task.id ? task : item))
+				: [...current, task];
+		},
+	);
 }
 
 export function useDeleteBoardTaskMutation(): UseMutationResult<

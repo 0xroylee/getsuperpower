@@ -4,6 +4,44 @@ This repository orchestrates multi-project agent workflows across CLI, server,
 database, adapter, landing, and web UI packages. Keep behavior project-agnostic
 and avoid coupling workflow logic to a single workspace.
 
+## Harness Operating Loop
+
+Use this loop for every coding-agent session so work starts from repo truth,
+stays scoped, and ends with evidence the next session can trust.
+
+1. Start from current state:
+   - Confirm the working directory and read this root `AGENTS.md`.
+   - Check `git status --short --branch`; identify unrelated dirty files and
+     do not modify, stage, revert, or explain them away as part of your work.
+   - Before implementation edits, sync `main` according to the Shared
+     Must-Follow Rules below. If the sync cannot complete, stop and report the
+     blocker instead of building on stale code.
+   - Read the closest package-local `AGENTS.md` before changing package code.
+   - Consult existing repo records when relevant: `docs/PLANS.md` for active
+     execution plans, `docs/QUALITY_SCORE.md` for quality posture, and nearby
+     README or domain docs for package-specific behavior.
+2. Scope one change:
+   - Work on one user request, feature, or fix at a time.
+   - Before editing, state the goal, success criteria, and expected files or
+     modules to change.
+   - Keep supporting fixes narrow and directly tied to the scoped goal; record
+     adjacent cleanup or unrelated risk instead of silently expanding scope.
+3. Implement with verification in mind:
+   - Preserve public contracts, parser markers, package boundaries, and
+     project-agnostic workflow behavior unless the request explicitly changes
+     them.
+   - Add or update focused tests when behavior changes, and choose the smallest
+     validation path that proves the scoped change before wider gates.
+   - Do not treat code edits as completion; completion requires evidence from
+     checks, inspected output, or a clearly documented blocker.
+4. Close cleanly:
+   - Re-check `git status --short --branch` and confirm the changed files match
+     the scoped work plus any pre-existing unrelated changes.
+   - Report verification commands run, commands skipped, failures, blockers,
+     and residual risk.
+   - Leave enough context in the final response for the next session to continue
+     without guessing.
+
 ## Shared Must-Follow Rules
 
 1. Before executing agent workflow work, pull the latest code from `main` so runs
@@ -47,6 +85,21 @@ and avoid coupling workflow logic to a single workspace.
 - After testing or checks, report pass/fail/blocker status, including skipped
   commands and remaining risk.
 
+## Definition Of Done
+
+A change is done only when:
+
+1. The requested behavior or documentation update is complete within the scoped
+   files.
+2. Relevant package-level or repo-level checks have actually run, or any skipped
+   checks are named with the reason.
+3. Evidence is summarized in the handoff: commands, inspected output, browser
+   verification, or explicit blocker details.
+4. Parser contracts, package boundaries, TypeScript file-size/type-placement
+   rules, and Bun-only tooling remain intact.
+5. The repository is left handoff-ready: no undocumented half-finished work, no
+   accidental artifact churn, and unrelated dirty files preserved.
+
 ## Package Ownership Map
 
 - `packages/cli/`: CLI parsing, config resolution, workflow orchestration,
@@ -87,3 +140,5 @@ Run all checks before finalizing changes:
   [docs/RELIABILITY.md](docs/RELIABILITY.md)
 - Security and secrets handling:
   [docs/SECURITY.md](docs/SECURITY.md)
+- Quality posture:
+  [docs/QUALITY_SCORE.md](docs/QUALITY_SCORE.md)

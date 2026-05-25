@@ -18,9 +18,11 @@ import { useChatClarificationState } from "./chat-clarification-state";
 import { createChatClarificationSubmitters } from "./chat-clarification-submitters";
 import { parseChatCommand } from "./chat-command-utils";
 import { executeCommandInput } from "./chat-room-command-actions";
+import { useChatRoomMission } from "./chat-room-mission";
+import { useChatRoomDraftState } from "./chat-room-panel-draft-state";
 import { ChatRoomPanelView } from "./chat-room-panel-view";
+import { selectChatSession } from "./chat-room-selection";
 import { chatStreamLinesForSession } from "./chat-room-stream-utils";
-import { findActiveTaskId } from "./chat-task-utils";
 import { shouldShowChatThinkingIndicator } from "./chat-thinking-state";
 import { useWorkingSectionState } from "./chat-working-section-state";
 import type * as CRT from "./types/chat-room.types";
@@ -39,10 +41,14 @@ export function ChatRoomPanel({
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 	const [isTaskDetailSheetOpen, setIsTaskDetailSheetOpen] = useState(false);
 	const clarificationState = useChatClarificationState();
-	const handledCommandDraftRequest = useRef(0);
 	const handledNewSessionRequest = useRef(0);
 	const sidebarToggleRef = useRef<HTMLInputElement>(null);
 	const { runWithWorkingLabel, workingStartedAt } = useWorkingSectionState();
+	const { handleDraftChange, markCommandDraftHandled } = useChatRoomDraftState({
+		commandDraftRequest,
+		setDraft,
+		setErrorMessage,
+	});
 
 	const currentWorkspaceQuery = useCurrentWorkspaceQuery(NO_REFETCH);
 	const workspaceId = currentWorkspaceQuery.data?.workspaceId ?? "";
@@ -54,26 +60,21 @@ export function ChatRoomPanel({
 	const sendMessage = useSendChatMessageMutation();
 
 	const sessions = sessionsQuery.data ?? [];
-	const selectedSessionId =
-		sessions.find((session) => session.id === activeSessionId)?.id ??
-		sessions[0]?.id ??
-		"";
-	const selectedSession = useMemo(
-		() => sessions.find((session) => session.id === selectedSessionId) ?? null,
-		[sessions, selectedSessionId],
+	const { selectedSession, selectedSessionId } = selectChatSession(
+		sessions,
+		activeSessionId,
 	);
 	const messagesQuery = useChatMessagesQuery(selectedSessionId, {
 		enabled: Boolean(selectedSessionId),
 		refetchIntervalMs: false,
 	});
 	const messages = messagesQuery.data ?? [];
-	const activeTaskId = findActiveTaskId(selectedSession, messages);
-	const pendingAnswers = selectedSessionId
-		? (clarificationState.answerDrafts[selectedSessionId] ?? [])
-		: [];
-	const pendingQuestionIndex = selectedSessionId
-		? (clarificationState.answerStepBySession[selectedSessionId] ?? 0)
-		: 0;
+	const { activeTaskId, missionProgress } = useChatRoomMission(
+		selectedSession,
+		messages,
+	);
+	const { pendingAnswers, pendingQuestionIndex } =
+		clarificationState.readPending(selectedSessionId);
 	const chatStreamsByRunId = useRealtimeStore(
 		(state) => state.chatStreamsByRunId,
 	);
@@ -82,7 +83,6 @@ export function ChatRoomPanel({
 		...chatStreamLinesForSession(chatStreamsByRunId, selectedSessionId),
 	];
 	const isThinking = shouldShowChatThinkingIndicator({
-		hasPendingQuestions: Boolean(selectedSession?.pendingQuestions.length),
 		isSending: sendMessage.isPending,
 		selectedSessionId,
 		sendingSessionId: sendMessage.variables?.sessionId,
@@ -127,8 +127,7 @@ export function ChatRoomPanel({
 	}
 
 	function closeMobileSidebar(): void {
-		const toggle = sidebarToggleRef.current;
-		if (toggle) toggle.checked = false;
+		if (sidebarToggleRef.current) sidebarToggleRef.current.checked = false;
 	}
 	async function ensureSession() {
 		if (selectedSession) return selectedSession;
@@ -209,6 +208,7 @@ export function ChatRoomPanel({
 			isSending={sendMessage.isPending}
 			isTaskDetailSheetOpen={isTaskDetailSheetOpen}
 			isThinking={isThinking}
+			missionProgress={missionProgress}
 			messages={messages}
 			messagesError={messagesQuery.error}
 			pendingAnswers={pendingAnswers}

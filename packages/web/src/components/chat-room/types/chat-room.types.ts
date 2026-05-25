@@ -9,6 +9,7 @@ import type {
 	WorkspaceProjectRecord,
 } from "@/lib/api";
 import type { RefObject } from "react";
+import type { ChatMissionProgressViewModel } from "./chat-mission-progress.types";
 
 export interface ChatRoomPanelProps {
 	commandDraftRequest: CommandDraftRequest | null;
@@ -50,6 +51,7 @@ export interface ChatTranscriptProps {
 	error: Error | null;
 	isLoading: boolean;
 	isThinking: boolean;
+	missionProgress: ChatMissionProgressViewModel | null;
 	messages: ChatMessageRecord[];
 	session: ChatSessionRecord | null;
 	streamLines: ChatStreamLine[];
@@ -73,6 +75,7 @@ export interface ChatRoomPanelViewProps {
 	isSending: boolean;
 	isTaskDetailSheetOpen: boolean;
 	isThinking: boolean;
+	missionProgress: ChatMissionProgressViewModel | null;
 	messages: ChatMessageRecord[];
 	messagesError: Error | null;
 	pendingAnswers: string[];

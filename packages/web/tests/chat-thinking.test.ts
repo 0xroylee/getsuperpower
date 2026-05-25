@@ -10,7 +10,6 @@ describe("chat thinking indicator", () => {
 	it("shows only for a pending send on the active session without output", () => {
 		expect(
 			shouldShowChatThinkingIndicator({
-				hasPendingQuestions: false,
 				isSending: true,
 				selectedSessionId: "session-1",
 				sendingSessionId: "session-1",
@@ -19,7 +18,6 @@ describe("chat thinking indicator", () => {
 		).toBe(true);
 		expect(
 			shouldShowChatThinkingIndicator({
-				hasPendingQuestions: false,
 				isSending: true,
 				selectedSessionId: "session-1",
 				sendingSessionId: "session-2",
@@ -28,20 +26,10 @@ describe("chat thinking indicator", () => {
 		).toBe(false);
 		expect(
 			shouldShowChatThinkingIndicator({
-				hasPendingQuestions: false,
 				isSending: true,
 				selectedSessionId: "session-1",
 				sendingSessionId: "session-1",
 				streamLineCount: 1,
-			}),
-		).toBe(false);
-		expect(
-			shouldShowChatThinkingIndicator({
-				hasPendingQuestions: true,
-				isSending: true,
-				selectedSessionId: "session-1",
-				sendingSessionId: "session-1",
-				streamLineCount: 0,
 			}),
 		).toBe(false);
 	});
@@ -56,6 +44,16 @@ describe("chat thinking indicator", () => {
 		expect(textContent(html)).toContain("Thinking...");
 		expect(html).toContain("<span");
 		expect(html).toContain("--shimmering-color");
+
+		const answeringClarificationHtml = renderTranscript({
+			isThinking: true,
+			session: chatSession({
+				pendingQuestions: [{ question: "Which agent?" }],
+			}),
+			streamLines: [],
+			workingStartedAt: activeStartedAt(),
+		});
+		expect(textContent(answeringClarificationHtml)).toContain("Thinking...");
 
 		const idleHtml = renderTranscript({ isThinking: false, streamLines: [] });
 		expect(idleHtml).not.toContain("Working for");
@@ -95,6 +93,7 @@ describe("chat thinking indicator", () => {
 				error: null,
 				isLoading: false,
 				isThinking: false,
+				missionProgress: null,
 				messages: [],
 				session: chatSession({
 					pendingQuestions: [
@@ -178,11 +177,13 @@ describe("chat thinking indicator", () => {
 function renderTranscript({
 	isThinking,
 	messages = [],
+	session = chatSession(),
 	streamLines,
 	workingStartedAt = null,
 }: {
 	isThinking: boolean;
 	messages?: ChatMessageRecord[];
+	session?: ChatSessionRecord;
 	streamLines: Array<{
 		id: string;
 		stream: "stdout" | "stderr" | "system";
@@ -195,8 +196,9 @@ function renderTranscript({
 			error: null,
 			isLoading: false,
 			isThinking,
+			missionProgress: null,
 			messages,
-			session: chatSession(),
+			session,
 			streamLines,
 			workingStartedAt,
 		}),

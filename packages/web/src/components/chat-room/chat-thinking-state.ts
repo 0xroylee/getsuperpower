@@ -1,5 +1,4 @@
 export interface ChatThinkingStateInput {
-	hasPendingQuestions: boolean;
 	isSending: boolean;
 	selectedSessionId: string;
 	sendingSessionId?: string;
@@ -7,7 +6,6 @@ export interface ChatThinkingStateInput {
 }
 
 export function shouldShowChatThinkingIndicator({
-	hasPendingQuestions,
 	isSending,
 	selectedSessionId,
 	sendingSessionId,
@@ -17,7 +15,6 @@ export function shouldShowChatThinkingIndicator({
 		isSending &&
 		Boolean(selectedSessionId) &&
 		sendingSessionId === selectedSessionId &&
-		streamLineCount === 0 &&
-		!hasPendingQuestions
+		streamLineCount === 0
 	);
 }

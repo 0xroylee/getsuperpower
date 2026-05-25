@@ -1,6 +1,5 @@
 "use client";
 
-import { CheckCircle2, CircleAlert } from "lucide-react";
 import { type ReactElement, useEffect, useState } from "react";
 
 import { TextShimmer } from "@/components/loading/text-shimmer";
@@ -8,21 +7,20 @@ import type { ChatMessageRecord } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 import { resolveChatMessageDisplay } from "./chat-message-display";
+import { ChatMissionProgress } from "./chat-mission-progress";
 import type { ChatTranscriptProps } from "./types/chat-room.types";
 
 export function ChatTranscript({
 	error,
 	isLoading,
 	isThinking,
+	missionProgress,
 	messages,
 	session,
 	streamLines,
 	workingStartedAt,
 }: ChatTranscriptProps): ReactElement {
-	const pendingQuestions = session?.pendingQuestions ?? [];
-	const hasPendingQuestions = pendingQuestions.length > 0;
-	const showThinking =
-		isThinking && !hasPendingQuestions && streamLines.length === 0;
+	const showThinking = isThinking && streamLines.length === 0;
 	const showWorkingHeader =
 		Boolean(workingStartedAt) && (showThinking || streamLines.length > 0);
 	return (
@@ -41,6 +39,7 @@ export function ChatTranscript({
 				{messages.map((message) => (
 					<ChatMessageBubble key={message.id} message={message} />
 				))}
+				<ChatMissionProgress mission={missionProgress} />
 				{showWorkingHeader ? (
 					<WorkingSectionHeader startedAt={workingStartedAt ?? ""} />
 				) : null}
@@ -121,10 +120,6 @@ function ChatMessageBubble({
 				isError && "border-red-900/60 bg-red-950/30 text-red-100",
 			)}
 		>
-			{/* <div className="flex items-center gap-2 text-xs text-zinc-500">
-				{message.kind === "task" ? <CheckCircle2 size={14} /> : null}
-				{isError ? <CircleAlert size={14} /> : null}
-			</div> */}
 			<p className="m-0 whitespace-pre-wrap leading-6">{message.content}</p>
 		</article>
 	);

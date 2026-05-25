@@ -45,6 +45,10 @@ export type ClarificationAnswerAction =
 export function useChatClarificationState(): {
 	answerDrafts: Record<string, string[]>;
 	answerStepBySession: Record<string, number>;
+	readPending(sessionId: string): {
+		pendingAnswers: string[];
+		pendingQuestionIndex: number;
+	};
 	setAnswerDrafts: Dispatch<SetStateAction<Record<string, string[]>>>;
 	setAnswerStepBySession: Dispatch<SetStateAction<Record<string, number>>>;
 	submitAnswerValue(
@@ -73,6 +77,18 @@ export function useChatClarificationState(): {
 				value,
 			),
 		}));
+	}
+
+	function readPending(sessionId: string): {
+		pendingAnswers: string[];
+		pendingQuestionIndex: number;
+	} {
+		return {
+			pendingAnswers: sessionId ? (answerDrafts[sessionId] ?? []) : [],
+			pendingQuestionIndex: sessionId
+				? (answerStepBySession[sessionId] ?? 0)
+				: 0,
+		};
 	}
 
 	async function submitAnswerValue({
@@ -142,6 +158,7 @@ export function useChatClarificationState(): {
 	return {
 		answerDrafts,
 		answerStepBySession,
+		readPending,
 		setAnswerDrafts,
 		setAnswerStepBySession,
 		submitAnswerValue,
