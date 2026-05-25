@@ -8,6 +8,13 @@ import type {
 
 export interface ChatRoomPanelProps {
 	newSessionRequest: number;
+	onSearchRequest: () => void;
+}
+
+export interface ChatRoomHeaderProps {
+	projectId: string;
+	sidebarControlId: string;
+	title: string;
 }
 
 export interface ChatCommandContext {
