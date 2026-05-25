@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import type { ChatMessageRecord, TaskClarificationQuestion } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
+import { resolveChatMessageDisplay } from "./chat-message-display";
 import type { ChatTranscriptProps } from "./types/chat-room.types";
 
 export function ChatTranscript({
@@ -88,9 +89,17 @@ function ChatMessageBubble({
 	message: ChatMessageRecord;
 }): ReactElement {
 	const isUser = message.role === "user";
-	const isError = message.kind === "error";
+	const display = resolveChatMessageDisplay(message);
+	if (display === "assistant-note") {
+		return <AssistantNote message={message} />;
+	}
+	if (display === "plan") {
+		return <PlanMessage message={message} />;
+	}
+	const isError = display === "error";
 	return (
 		<article
+			data-chat-message-display={display}
 			className={cn(
 				"grid max-w-[min(42rem,90%)] gap-2 rounded-md border px-3 py-2 text-sm",
 				isUser
@@ -106,14 +115,37 @@ function ChatMessageBubble({
 				<span>{message.kind}</span>
 			</div>
 			<p className="m-0 whitespace-pre-wrap leading-6">{message.content}</p>
-			{message.taskId ? (
-				<a
-					className="text-sm font-medium text-blue-300 underline-offset-4 hover:underline"
-					href={`/issues/${encodeURIComponent(message.taskId)}`}
-				>
-					Open task
-				</a>
-			) : null}
+		</article>
+	);
+}
+
+function AssistantNote({
+	message,
+}: {
+	message: ChatMessageRecord;
+}): ReactElement {
+	return (
+		<article
+			className="grid max-w-[min(42rem,90%)] justify-self-start gap-2 px-1 py-1 text-sm text-zinc-300"
+			data-chat-message-display="assistant-note"
+		>
+			<p className="m-0 whitespace-pre-wrap leading-6">{message.content}</p>
+		</article>
+	);
+}
+
+function PlanMessage({
+	message,
+}: {
+	message: ChatMessageRecord;
+}): ReactElement {
+	return (
+		<article
+			className="grid max-w-[min(46rem,94%)] justify-self-start gap-2 rounded-md border border-blue-900/50 bg-[#121722] px-3 py-2 text-sm text-zinc-200"
+			data-chat-message-display="plan"
+		>
+			<div className="text-xs font-medium uppercase text-blue-300">Plan</div>
+			<p className="m-0 whitespace-pre-wrap leading-6">{message.content}</p>
 		</article>
 	);
 }

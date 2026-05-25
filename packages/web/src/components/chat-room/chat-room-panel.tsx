@@ -19,6 +19,7 @@ import { parseChatCommand } from "./chat-command-utils";
 import { executeCommandInput } from "./chat-room-command-actions";
 import { ChatRoomPanelView } from "./chat-room-panel-view";
 import { chatStreamLinesForSession } from "./chat-room-stream-utils";
+import { findActiveTaskId } from "./chat-task-utils";
 import { shouldShowChatThinkingIndicator } from "./chat-thinking-state";
 import type {
 	ChatRoomPanelProps,
@@ -38,6 +39,7 @@ export function ChatRoomPanel({
 		ChatStreamLine[]
 	>([]);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
+	const [isTaskDetailSheetOpen, setIsTaskDetailSheetOpen] = useState(false);
 	const clarificationState = useChatClarificationState();
 	const handledNewSessionRequest = useRef(0);
 	const sidebarToggleRef = useRef<HTMLInputElement>(null);
@@ -61,6 +63,8 @@ export function ChatRoomPanel({
 		enabled: Boolean(selectedSessionId),
 		refetchIntervalMs: false,
 	});
+	const messages = messagesQuery.data ?? [];
+	const activeTaskId = findActiveTaskId(selectedSession, messages);
 	const pendingAnswers = selectedSessionId
 		? (clarificationState.answerDrafts[selectedSessionId] ?? [])
 		: [];
@@ -188,14 +192,16 @@ export function ChatRoomPanel({
 	return (
 		<ChatRoomPanelView
 			activeSessionId={selectedSessionId}
+			activeTaskId={activeTaskId}
 			draft={draft}
 			errorMessage={errorMessage}
 			isBusy={isBusy}
 			isCreatingSession={createSession.isPending}
 			isMessagesLoading={messagesQuery.isLoading}
 			isSending={sendMessage.isPending}
+			isTaskDetailSheetOpen={isTaskDetailSheetOpen}
 			isThinking={isThinking}
-			messages={messagesQuery.data ?? []}
+			messages={messages}
 			messagesError={messagesQuery.error}
 			pendingAnswers={pendingAnswers}
 			pendingQuestionIndex={pendingQuestionIndex}
@@ -209,8 +215,10 @@ export function ChatRoomPanel({
 				clarificationState.updateAnswerDraft(selectedSessionId, index, value)
 			}
 			onCloseSidebar={closeMobileSidebar}
+			onCloseTaskDetails={() => setIsTaskDetailSheetOpen(false)}
 			onDraftChange={setDraft}
 			onNewSession={() => void startNewSession(true)}
+			onOpenTaskDetails={() => setIsTaskDetailSheetOpen(true)}
 			onSearch={() => {
 				closeMobileSidebar();
 				onSearchRequest();
