@@ -2,6 +2,7 @@
 
 import type { ReactElement } from "react";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { ClarificationOptionButton } from "@/components/clarification/clarification-option-button";
 import {
@@ -29,7 +30,6 @@ export function TaskCreatePanel(): ReactElement {
 	const [submittedAnswers, setSubmittedAnswers] = useState<TaskCreateAnswer[]>(
 		[],
 	);
-	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
 	const canSubmitInitial = request.trim().length > 0 && !createTask.isPending;
 	const clarificationStep = resolveClarificationStep(
@@ -54,17 +54,13 @@ export function TaskCreatePanel(): ReactElement {
 		if (createTask.data?.status === "needs_info") {
 			return "Additional clarification required.";
 		}
-		if (errorMessage) {
-			return errorMessage;
-		}
 		return "Enter a requirement to create a task.";
-	}, [createTask.data, createTask.isPending, errorMessage]);
+	}, [createTask.data, createTask.isPending]);
 
 	async function submitRequest(
 		nextRequest: string,
 		nextAnswers?: TaskCreateAnswer[],
 	): Promise<void> {
-		setErrorMessage(null);
 		try {
 			const response = await createTask.mutateAsync({
 				request: nextRequest,
@@ -90,9 +86,9 @@ export function TaskCreatePanel(): ReactElement {
 				setSubmittedAnswers([]);
 				return;
 			}
-			setErrorMessage(formatTaskCreateError(response));
+			toast.error(formatTaskCreateError(response));
 		} catch (error) {
-			setErrorMessage(
+			toast.error(
 				error instanceof Error ? error.message : "Failed to create task",
 			);
 		}

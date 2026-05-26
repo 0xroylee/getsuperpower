@@ -69,7 +69,7 @@ export function buildPlanSplitComment(
 		`devos.ing plan for ${issueKey}`,
 		"",
 		"Planning marked this task as too complex for a single implementation pass.",
-		"Created split tasks in Todo and moved the parent issue to Backlog.",
+		"Created split tasks and moved the parent issue to Done.",
 		"",
 		formatCodexUsageLine(options?.usage),
 		"",

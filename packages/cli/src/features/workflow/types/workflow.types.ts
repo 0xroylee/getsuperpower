@@ -163,7 +163,7 @@ export interface WorkflowRuntime {
 	sendTaskOutcomeEmail(
 		email: ResolvedNotificationEmailConfig,
 		state: RunState,
-		outcome: "done" | "blocked",
+		outcome: "done" | "canceled" | "failed",
 		errorMessage?: string,
 	): Promise<void>;
 	sendHumanReviewRequiredEmail(

@@ -83,12 +83,12 @@ describe("task lifecycle e2e", () => {
 			"tasks.update",
 			{
 				taskId: created.id,
-				values: { status: "implementing" },
+				values: { status: "in_progress" },
 			},
 		)) as { id: string; status: string };
 		expect(updated).toMatchObject({
 			id: created.id,
-			status: "implementing",
+			status: "in_progress",
 		});
 
 		const finalTask = await requestJson<{
@@ -97,7 +97,7 @@ describe("task lifecycle e2e", () => {
 		}>(testServer.handler, `/api/tasks/${created.id}`);
 		expect(finalTask).toMatchObject({
 			assigneeId: "agent-codex-1",
-			status: "implementing",
+			status: "in_progress",
 		});
 
 		const taskList = await requestJson<Array<{ id: string; status: string }>>(
@@ -108,7 +108,7 @@ describe("task lifecycle e2e", () => {
 			expect.objectContaining({
 				id: created.id,
 				assigneeId: "agent-codex-1",
-				status: "implementing",
+				status: "in_progress",
 			}),
 		]);
 

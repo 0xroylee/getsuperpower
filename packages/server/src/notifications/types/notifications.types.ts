@@ -1,6 +1,6 @@
 import type { RunState } from "devos/features/types";
 
-export type NotificationOutcome = "done" | "blocked";
+export type NotificationOutcome = "done" | "canceled" | "failed";
 
 export interface NotificationEmailPayload {
 	from: string;

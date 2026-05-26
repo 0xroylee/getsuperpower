@@ -30,7 +30,7 @@ function createState(): RunState {
 			title: "Test",
 			url: "https://linear.app/acme/issue/ENG-1/test",
 		},
-		stage: "reviewing",
+		stage: "in_review",
 		bugs: [],
 		pullRequest: {
 			number: 7,
@@ -57,12 +57,11 @@ function createConfig(): ResolvedProjectConfig {
 			statusMap: {
 				backlog: "z",
 				assigned: "a",
-				planning: "b",
-				implementing: "c",
-				pr_created: "d",
-				reviewing: "e",
-				testing: "f",
-				blocked: "g",
+				plan: "b",
+				in_progress: "c",
+				in_review: "e",
+				canceled: "g",
+				failed: "x",
 				done: "h",
 			},
 			labelMap: {
@@ -164,7 +163,7 @@ describe("integration wrappers", () => {
 			safeNotifyTaskOutcome(
 				createNotifications(),
 				createState(),
-				"blocked",
+				"failed",
 				"error",
 				{ sendTaskOutcomeEmail: send },
 			),

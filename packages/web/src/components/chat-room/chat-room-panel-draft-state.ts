@@ -7,11 +7,9 @@ import type { CommandDraftRequest } from "@/components/web-shell/types/operator-
 export function useChatRoomDraftState({
 	commandDraftRequest,
 	setDraft,
-	setErrorMessage,
 }: {
 	commandDraftRequest: CommandDraftRequest | null;
 	setDraft: Dispatch<SetStateAction<string>>;
-	setErrorMessage: Dispatch<SetStateAction<string | null>>;
 }): {
 	handleDraftChange: (value: string) => void;
 	markCommandDraftHandled: () => void;
@@ -27,12 +25,10 @@ export function useChatRoomDraftState({
 		}
 		handledCommandDraftRequest.current = commandDraftRequest.id;
 		setDraft(commandDraftRequest.draft);
-		setErrorMessage(null);
-	}, [commandDraftRequest, setDraft, setErrorMessage]);
+	}, [commandDraftRequest, setDraft]);
 
 	function handleDraftChange(value: string): void {
 		setDraft(value);
-		setErrorMessage(null);
 	}
 
 	function markCommandDraftHandled(): void {

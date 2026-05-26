@@ -6,14 +6,14 @@ export const MAX_AUTOMATED_REVIEW_FIX_PASSES = 3;
 
 export function resolveReviewFailureStage(
 	state: Pick<RunState, "codexSessionId" | "automatedReviewFixPasses">,
-): Extract<RunState["stage"], "implementing" | "human_review"> {
+): Extract<RunState["stage"], "in_progress" | "in_review"> {
 	if (!state.codexSessionId) {
-		return "human_review";
+		return "in_review";
 	}
 	return (state.automatedReviewFixPasses ?? 0) >=
 		MAX_AUTOMATED_REVIEW_FIX_PASSES
-		? "human_review"
-		: "implementing";
+		? "in_review"
+		: "in_progress";
 }
 
 export function incrementAutomatedReviewFixPasses(state: RunState): number {

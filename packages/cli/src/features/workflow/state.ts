@@ -13,6 +13,11 @@ export {
 	appendAgentChatLog,
 } from "./state-chat-log";
 
+type MaybeLegacyRunState = Omit<RunState, "stage" | "failedStage"> & {
+	stage: WorkflowStage | string;
+	failedStage?: WorkflowStage | string;
+};
+
 const LEGACY_STATE_DIR = path.join(".devos", "runs");
 const STATE_ROOT_DIR = path.join(".devos", "projects");
 
@@ -76,7 +81,7 @@ export async function loadRunState(
 	const file = stateFilePath(cwd, projectId, issueKey);
 	try {
 		const raw = await readFile(file, "utf8");
-		return JSON.parse(raw) as RunState;
+		return normalizeLoadedRunState(JSON.parse(raw) as RunState);
 	} catch {
 		if (projectId !== "default") {
 			return null;
@@ -88,7 +93,7 @@ export async function loadRunState(
 		);
 		try {
 			const raw = await readFile(legacy, "utf8");
-			return JSON.parse(raw) as RunState;
+			return normalizeLoadedRunState(JSON.parse(raw) as RunState);
 		} catch {
 			return null;
 		}
@@ -138,14 +143,15 @@ export function transitionStage(
 }
 
 export function normalizeBlockedPlanningFailureForResume(
-	state: RunState,
+	state: MaybeLegacyRunState,
 ): RunState {
 	if (!shouldResumeBlockedPlanningFailure(state)) {
-		return state;
+		return normalizeRunStateStages(state);
 	}
 	return {
 		...state,
-		stage: "planning",
+		stage: "plan",
+		failedStage: "plan",
 		planSummary: undefined,
 		successGoal: undefined,
 		complexityScore: undefined,
@@ -153,11 +159,15 @@ export function normalizeBlockedPlanningFailureForResume(
 	};
 }
 
-export function shouldResumeBlockedPlanningFailure(state: RunState): boolean {
-	if (state.stage !== "blocked") {
+export function shouldResumeBlockedPlanningFailure(
+	state: MaybeLegacyRunState,
+): boolean {
+	const rawStage = String(state.stage);
+	if (rawStage !== "blocked") {
 		return false;
 	}
-	if (state.failedStage === "planning") {
+	const failedStage = String(state.failedStage);
+	if (failedStage === "planning" || failedStage === "plan") {
 		return true;
 	}
 	return (
@@ -166,6 +176,70 @@ export function shouldResumeBlockedPlanningFailure(state: RunState): boolean {
 			state.lastError?.startsWith("Planner output must include SUCCESS_GOAL"),
 		)
 	);
+}
+
+function normalizeLoadedRunState(state: MaybeLegacyRunState): RunState {
+	const legacyStage = String(state.stage);
+	if (shouldResumeBlockedPlanningFailure(state)) {
+		return {
+			...normalizeRunStateStages(state),
+			stage: "plan",
+			failedStage: "plan",
+			planSummary: undefined,
+			successGoal: undefined,
+			complexityScore: undefined,
+			reviewMode: undefined,
+		};
+	}
+	return normalizeRunStateStages({
+		...state,
+		stage: normalizeWorkflowStage(legacyStage),
+		failedStage: state.failedStage
+			? normalizeWorkflowStage(String(state.failedStage))
+			: undefined,
+	});
+}
+
+function normalizeRunStateStages(state: MaybeLegacyRunState): RunState {
+	return {
+		...state,
+		stage: normalizeWorkflowStage(String(state.stage)),
+		failedStage: state.failedStage
+			? normalizeWorkflowStage(String(state.failedStage))
+			: undefined,
+	};
+}
+
+function normalizeWorkflowStage(stage: string): WorkflowStage {
+	if (stage === "received" || stage === "planning") {
+		return "plan";
+	}
+	if (stage === "implementing") {
+		return "in_progress";
+	}
+	if (
+		stage === "pr_created" ||
+		stage === "reviewing" ||
+		stage === "testing" ||
+		stage === "human_review"
+	) {
+		return "in_review";
+	}
+	if (stage === "blocked") {
+		return "failed";
+	}
+	if (
+		stage === "backlog" ||
+		stage === "plan" ||
+		stage === "in_progress" ||
+		stage === "in_review" ||
+		stage === "canceled" ||
+		stage === "done" ||
+		stage === "failed"
+	) {
+		return stage;
+	}
+	return "failed";
 }
 
 export function applyRunLease(

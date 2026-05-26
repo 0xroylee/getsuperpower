@@ -61,6 +61,10 @@ const MIGRATIONS: Migration[] = [
 		id: "0016_chat_session_archive",
 		fileName: "0016_chat_session_archive.sql",
 	},
+	{
+		id: "0017_canonical_workflow_statuses",
+		fileName: "0017_canonical_workflow_statuses.sql",
+	},
 ];
 
 async function ensureMigrationsTable(

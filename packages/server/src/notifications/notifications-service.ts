@@ -12,7 +12,8 @@ export interface NotificationService {
 
 const STATUS_LABEL_EMOJI: Record<string, string> = {
 	done: "✅",
-	blocked: "⛔",
+	canceled: "⛔",
+	failed: "❌",
 	human_review_required: "🙋",
 	human_review: "🙋",
 };
@@ -112,10 +113,10 @@ function buildTaskOutcomeEmailPayload(
 	from: string,
 	to: string[],
 	state: NotificationRequest["state"],
-	outcome: "done" | "blocked",
+	outcome: "done" | "canceled" | "failed",
 	errorMessage?: string,
 ): NotificationEmailPayload {
-	const statusText = outcome === "done" ? "DONE" : "BLOCKED";
+	const statusText = outcome.toUpperCase();
 	const subject = `[devos.ing][${state.projectName}] ${state.issue.key} ${statusText}`;
 	const lines = [
 		`Project: ${state.projectName} (${state.projectId})`,
@@ -135,7 +136,7 @@ function buildTaskOutcomeEmailPayload(
 		);
 	} else {
 		lines.push(
-			`Error: ${errorMessage ?? state.lastError ?? "Workflow blocked"}`,
+			`Error: ${errorMessage ?? state.lastError ?? "Workflow failed"}`,
 		);
 	}
 

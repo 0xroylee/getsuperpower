@@ -106,7 +106,7 @@ function formatIssueAction(
 	if (event.status === "started") {
 		return `workflow: ${issue} taken at stage ${event.stage ?? "unknown"}`;
 	}
-	if (event.status === "blocked") {
+	if (event.status === "canceled") {
 		return `workflow: ${issue} skipped at stage ${event.stage ?? "unknown"}${event.detail ? `: ${event.detail}` : ""}`;
 	}
 	return `workflow: ${issue} ${formatStatus(event.status)} at stage ${event.stage ?? "unknown"}`;

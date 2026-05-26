@@ -76,7 +76,7 @@ const taskMutationRequest: TaskMutationRequest = {
 const createdBoardTaskPromise: Promise<ProjectBoardTaskRecord> =
 	webClient.createBoardTask(taskMutationRequest);
 const updatedBoardTaskPromise: Promise<ProjectBoardTaskRecord> =
-	webClient.updateBoardTask("task-1", { status: "reviewing" });
+	webClient.updateBoardTask("task-1", { status: "in_review" });
 const deletedBoardTaskPromise: Promise<ProjectBoardTaskRecord> =
 	webClient.deleteBoardTask("task-1");
 const runIssueStreamPromise: Promise<void> = webClient.streamCliCommand(

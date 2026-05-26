@@ -19,12 +19,11 @@ function createConfig(): ResolvedProjectConfig {
 			statusMap: {
 				backlog: "backlog",
 				assigned: "assigned",
-				planning: "planning",
-				implementing: "implementing",
-				pr_created: "pr_created",
-				reviewing: "reviewing",
-				testing: "testing",
-				blocked: "blocked",
+				plan: "plan",
+				in_progress: "in_progress",
+				in_review: "in_review",
+				canceled: "canceled",
+				failed: "failed",
 				done: "done",
 			},
 			labelMap: {},
@@ -59,7 +58,7 @@ function createState(fixPasses: number): RunState {
 			title: "Retry cap",
 			url: "https://linear.app/acme/issue/ENG-1/retry-cap",
 		},
-		stage: "reviewing",
+		stage: "in_review",
 		codexSessionId: "implement-session",
 		automatedReviewFixPasses: fixPasses,
 		successGoal: "Stop automated fixes after three passes.",
@@ -131,7 +130,7 @@ describe("review/testing retry cap", () => {
 
 			await runFailedReview(state);
 
-			expect(state.stage).toBe("implementing");
+			expect(state.stage).toBe("in_progress");
 			expect(state.automatedReviewFixPasses).toBe(usedPasses + 1);
 		}
 	});
@@ -141,7 +140,7 @@ describe("review/testing retry cap", () => {
 
 		const result = await runFailedReview(state);
 
-		expect(state.stage).toBe("human_review");
+		expect(state.stage).toBe("in_review");
 		expect(state.automatedReviewFixPasses).toBe(
 			MAX_AUTOMATED_REVIEW_FIX_PASSES,
 		);

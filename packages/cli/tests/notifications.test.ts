@@ -26,15 +26,15 @@ describe("buildTaskOutcomeEmailPayload", () => {
 		expect(payload.text).toContain("PR: https://example.com/pr/1");
 	});
 
-	it("builds blocked payload with error message", () => {
+	it("builds failed payload with error message", () => {
 		const payload = buildTaskOutcomeEmailPayload(
 			"ops@example.com",
 			["dev@example.com"],
 			createRunState(),
-			"blocked",
+			"failed",
 			"codex session failed",
 		);
-		expect(payload.subject).toContain("BLOCKED");
+		expect(payload.subject).toContain("FAILED");
 		expect(payload.text).toContain("Error: codex session failed");
 	});
 });

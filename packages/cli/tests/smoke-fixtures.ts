@@ -38,7 +38,7 @@ export function issue(key: string, projectId = "linear-default"): LinearIssue {
 export function state(
 	project: ResolvedProjectConfig,
 	key: string,
-	stage: WorkflowStage,
+	stage: WorkflowStage | string,
 	score = 3,
 ): RunState {
 	return {
@@ -47,7 +47,7 @@ export function state(
 		workspacePath: project.executionPath,
 		repository: project.repo,
 		issue: { id: `lin_${key}`, key, title: `${key} title`, url: "#" },
-		stage,
+		stage: stage as WorkflowStage,
 		complexityScore: score,
 		reviewMode: "bot",
 		pullRequest: pr(key),
@@ -75,12 +75,11 @@ export function project(
 			statusMap: {
 				backlog: "backlog",
 				assigned: "assigned",
-				planning: "planning",
-				implementing: "implementing",
-				pr_created: "pr_created",
-				reviewing: "reviewing",
-				testing: "testing",
-				blocked: "blocked",
+				plan: "plan",
+				in_progress: "in_progress",
+				in_review: "in_review",
+				canceled: "canceled",
+				failed: "failed",
 				done: "done",
 			},
 			labelMap: {},

@@ -17,12 +17,11 @@ export const LINEAR_API_KEY_SETTINGS_URL =
 export const DEFAULT_STATUS_MAP: SetupDraft["statusMap"] = {
 	backlog: "Backlog",
 	assigned: "Todo",
-	planning: "In Progress",
-	implementing: "In Progress",
-	pr_created: "In Review",
-	reviewing: "In Review",
-	testing: "In Review",
-	blocked: "Canceled",
+	plan: "In Progress",
+	in_progress: "In Progress",
+	in_review: "In Review",
+	canceled: "Canceled",
+	failed: "Failed",
 	done: "Done",
 };
 

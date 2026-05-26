@@ -14,9 +14,9 @@ export function matchesIssueStateConfigValue(
 	);
 }
 
-export function isBlockedLinearIssueState(
+export function isCanceledLinearIssueState(
 	state: WorkflowIssue["state"],
 	statusMap: ResolvedProjectConfig["linear"]["statusMap"],
 ): boolean {
-	return matchesIssueStateConfigValue(state, statusMap.blocked);
+	return matchesIssueStateConfigValue(state, statusMap.canceled);
 }

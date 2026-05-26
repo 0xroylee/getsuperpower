@@ -143,11 +143,11 @@ describe("isLinearIssueReviewOnlyCandidate", () => {
 describe("shouldSkipDoneStageRegression", () => {
 	it("prevents moving a done issue back into active workflow stages", () => {
 		expect(
-			shouldSkipDoneStageRegression("done_id", "implementing", "done_id"),
+			shouldSkipDoneStageRegression("done_id", "in_progress", "done_id"),
 		).toBe(true);
-		expect(shouldSkipDoneStageRegression("done_id", "testing", "done_id")).toBe(
-			true,
-		);
+		expect(
+			shouldSkipDoneStageRegression("done_id", "in_review", "done_id"),
+		).toBe(true);
 		expect(shouldSkipDoneStageRegression("done_id", "done", "done_id")).toBe(
 			false,
 		);
@@ -155,11 +155,7 @@ describe("shouldSkipDoneStageRegression", () => {
 
 	it("allows active issues to move through workflow stages", () => {
 		expect(
-			shouldSkipDoneStageRegression(
-				"in_progress_id",
-				"implementing",
-				"done_id",
-			),
+			shouldSkipDoneStageRegression("in_progress_id", "in_progress", "done_id"),
 		).toBe(false);
 	});
 });
@@ -315,6 +311,7 @@ describe("LinearClient.createBacklogTask", () => {
 					{ id: "state_progress", name: "In Progress", teamId: "team_123" },
 					{ id: "state_review", name: "In Review", teamId: "team_123" },
 					{ id: "state_canceled", name: "Canceled", teamId: "team_123" },
+					{ id: "state_failed", name: "Failed", teamId: "team_123" },
 					{ id: "state_done", name: "Done", teamId: "team_123" },
 				],
 			}),
@@ -689,12 +686,11 @@ function createLinearProject(): ResolvedProjectConfig {
 			statusMap: {
 				backlog: "Backlog",
 				assigned: "Todo",
-				planning: "In Progress",
-				implementing: "In Progress",
-				pr_created: "In Review",
-				reviewing: "In Review",
-				testing: "In Review",
-				blocked: "Canceled",
+				plan: "In Progress",
+				in_progress: "In Progress",
+				in_review: "In Review",
+				canceled: "Canceled",
+				failed: "Failed",
 				done: "Done",
 			},
 			labelMap: {},

@@ -56,7 +56,7 @@ describe("workflow run-state identity refresh", () => {
 				key: "TASK-000000",
 			},
 		});
-		expect(state.stage).toBe("implementing");
+		expect(state.stage).toBe("in_progress");
 		expect(state.planSummary).toBe("keep the plan");
 		expect(state.pullRequest?.url).toBe("https://github.com/acme/repo/pull/7");
 		expect(state.startedAt).toBe("2026-05-13T00:00:00.000Z");
@@ -87,10 +87,10 @@ describe("workflow run-state identity refresh", () => {
 		expect(JSON.stringify(state)).toBe(snapshot);
 	});
 
-	it("does not reuse blocked task-not-found state once the server returns the task", () => {
+	it("does not reuse failed task-not-found state once the server returns the task", () => {
 		const state = createRunState({ issueId: "current-task-id" });
-		state.stage = "blocked";
-		state.failedStage = "blocked";
+		state.stage = "failed";
+		state.failedStage = "failed";
 		state.lastError = "not_found: Task not found";
 		const snapshot = JSON.stringify(state);
 		const refreshed = refreshRunStateIssueIdentity(
@@ -144,7 +144,7 @@ function createRunState(options: { issueId?: string } = {}): RunState {
 			url: "devos://tasks/stale-task-id",
 			projectId: "default",
 		},
-		stage: "implementing",
+		stage: "in_progress",
 		pullRequest: {
 			number: 7,
 			url: "https://github.com/acme/repo/pull/7",

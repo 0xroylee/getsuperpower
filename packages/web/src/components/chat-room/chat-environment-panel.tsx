@@ -89,11 +89,7 @@ export function ChatEnvironmentPanel({
 					>
 						<StatusDot active={source.available} />
 					</EnvironmentRow>
-				)) ?? (
-					<EnvironmentRow icon={<Database size={16} />} label="CodeGraph">
-						<span className="text-sm text-zinc-500">Loading</span>
-					</EnvironmentRow>
-				)}
+				))}
 				<SkillsRows skills={skillsQuery.data} />
 				<CheckpointRows checkpoints={checkpoints} />
 			</div>

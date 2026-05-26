@@ -13,7 +13,7 @@ const PLAN_HEADINGS = [
 export function emitStageProgress(
 	state: RunState,
 	stage: string,
-	status: "started" | "succeeded" | "failed" | "blocked",
+	status: "started" | "succeeded" | "failed" | "canceled",
 	summary?: string,
 ): void {
 	emitWorkflowProgress({
@@ -30,7 +30,7 @@ export function emitActionProgress(
 	state: RunState,
 	stage: string,
 	action: string,
-	status: "started" | "succeeded" | "failed" | "blocked",
+	status: "started" | "succeeded" | "failed" | "canceled",
 	input?: { agentRole?: AgentChatLogRole; detail?: string; error?: string },
 ): void {
 	emitWorkflowProgress({
@@ -59,7 +59,7 @@ export function emitPlanningSummaryProgress(
 		kind: "summary",
 		projectId: state.projectId,
 		issueKey: state.issue.key,
-		stage: "planning",
+		stage: "plan",
 		summary: trimSummary(input.planSummary),
 		successGoal: state.successGoal,
 		checkpoints,
@@ -71,7 +71,7 @@ export function emitPlanningSummaryProgress(
 			kind: "checkpoint",
 			projectId: state.projectId,
 			issueKey: state.issue.key,
-			stage: "planning",
+			stage: "plan",
 			title,
 			status: "pending",
 		});

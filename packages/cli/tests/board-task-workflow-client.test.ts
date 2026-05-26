@@ -30,14 +30,14 @@ describe("BoardTaskWorkflowClient", () => {
 			(await client.fetchWork(undefined, { includeUnprojected: true })).map(
 				(task) => task.identifier,
 			),
-		).toEqual(["TASK(owner-1)-1", "TASK(owner-1)-5"]);
+		).toEqual(["TASK(owner-1)-1", "TASK(owner-1)-2", "TASK(owner-1)-5"]);
 		expect(
 			(await client.fetchWork("TASK(owner-1)-2")).map(
 				(task) => task.identifier,
 			),
 		).toEqual(["TASK(owner-1)-2"]);
 		expect(await client.isAssignedState("todo")).toBe(true);
-		expect(await client.isAssignedState("planning")).toBe(false);
+		expect(await client.isAssignedState("planning")).toBe(true);
 		expect(calls.map((call) => call.body.action)).toEqual([
 			"tasks.list",
 			"tasks.list",
@@ -52,8 +52,8 @@ describe("BoardTaskWorkflowClient", () => {
 		config.repo.name = "project";
 		const client = createBoardTaskWorkflowClient(config);
 
-		await client.markStage("task-1", "implementing");
-		await client.markStage("task-1", "pr_created");
+		await client.markStage("task-1", "in_progress");
+		await client.markStage("task-1", "in_review");
 		await client.markCanceled("task-1");
 		await client.comment("task-1", "Implementation started.");
 		await client.linkPullRequest?.("task-1", {
@@ -66,15 +66,15 @@ describe("BoardTaskWorkflowClient", () => {
 		expect(calls.map((call) => call.body)).toMatchObject([
 			{
 				action: "tasks.update",
-				payload: { taskId: "task-1", values: { status: "implementing" } },
+				payload: { taskId: "task-1", values: { status: "in_progress" } },
 			},
 			{
 				action: "tasks.update",
-				payload: { taskId: "task-1", values: { status: "reviewing" } },
+				payload: { taskId: "task-1", values: { status: "in_review" } },
 			},
 			{
 				action: "tasks.update",
-				payload: { taskId: "task-1", values: { status: "backlog" } },
+				payload: { taskId: "task-1", values: { status: "canceled" } },
 			},
 			{
 				action: "tasks.addComment",

@@ -11,7 +11,6 @@ export function createInitialState(
 		questions: [],
 		submittedAnswers: [],
 		step: "request",
-		errorMessage: null,
 		result: null,
 		logs: [],
 	};

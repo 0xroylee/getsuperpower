@@ -103,7 +103,9 @@ export async function cleanupTerminalIsolatedWorktree(
 	const workspace = state.executionWorkspace;
 	if (
 		workspace?.mode !== "git-worktree" ||
-		(state.stage !== "done" && state.stage !== "blocked")
+		(state.stage !== "done" &&
+			state.stage !== "failed" &&
+			state.stage !== "canceled")
 	) {
 		return false;
 	}

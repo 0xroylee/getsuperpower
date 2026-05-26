@@ -3,10 +3,7 @@ import { buildImplementationComment } from "../../utils/comments";
 import { logger, normalizeError } from "../../utils/logger";
 import { type LoadedConfig, getProjectById } from "../config";
 import { runAgentWithChatLog } from "./agent-chat-log";
-import {
-	safeLinearComment,
-	safeLinearMoveToCanceled,
-} from "./integration-wrappers";
+import { safeLinearComment } from "./integration-wrappers";
 import {
 	handlePlanningStage,
 	shouldSquashMergePullRequestForComplexityScore,
@@ -44,7 +41,7 @@ import {
 	tryAcquireRunLease,
 } from "./workflow-lease";
 import {
-	isBlockedLinearIssueState,
+	isCanceledLinearIssueState,
 	matchesIssueStateConfigValue,
 } from "./workflow-linear-state";
 import {
@@ -543,16 +540,10 @@ export function resolveReviewOnlyBootstrapStage(
 	state: WorkflowIssue["state"],
 	statusMap: ResolvedProjectConfig["linear"]["statusMap"],
 ): WorkflowStage {
-	if (matchesIssueStateConfigValue(state, statusMap.reviewing)) {
-		return "reviewing";
-	}
-	if (matchesIssueStateConfigValue(state, statusMap.pr_created)) {
-		return "pr_created";
-	}
 	if (matchesIssueStateConfigValue(state, statusMap.done)) {
 		return "done";
 	}
-	return "testing";
+	return "in_review";
 }
 
 export async function withExecutionPathLock<T>(
@@ -789,7 +780,7 @@ async function processIssue(
 		return;
 	}
 	const isAssignedState = await linear.isAssignedState(issue.state.id);
-	const isBlockedState = isBlockedLinearIssueState(
+	const isCanceledState = isCanceledLinearIssueState(
 		issue.state,
 		config.linear.statusMap,
 	);
@@ -797,7 +788,7 @@ async function processIssue(
 		!existing &&
 		!isAssignedState &&
 		!options.reviewOnly &&
-		!(options.issueArg && isBlockedState)
+		!(options.issueArg && isCanceledState)
 	) {
 		issueLogger.info(
 			{ issueState: issue.state.name, issueStateId: issue.state.id },
@@ -831,7 +822,7 @@ async function processIssue(
 			},
 			stage: options.reviewOnly
 				? resolveReviewOnlyBootstrapStage(issue.state, config.linear.statusMap)
-				: "received",
+				: "plan",
 			reviewMode: options.reviewOnly ? "bot" : undefined,
 			pullRequest: issue.pullRequest,
 			bugs: [],
@@ -857,11 +848,7 @@ async function processIssue(
 	) {
 		runState.pullRequest = issue.pullRequest;
 	}
-	if (
-		options.reviewOnly &&
-		runState.stage !== "human_review" &&
-		!isReviewOnlyExecutableStage(runState.stage)
-	) {
+	if (options.reviewOnly && !isReviewOnlyExecutableStage(runState.stage)) {
 		runState.stage = resolveReviewOnlyBootstrapStage(
 			issue.state,
 			config.linear.statusMap,
@@ -878,7 +865,7 @@ async function processIssue(
 	);
 	const executionRecorder = createWorkflowExecutionRecorder(config, runState);
 	let executionRecorderStarted = false;
-	let executionStatus: "succeeded" | "failed" | "blocked" = "succeeded";
+	let executionStatus: "succeeded" | "failed" = "succeeded";
 
 	let leaseAcquired = false;
 	const isolatedWorktreesEnabled = shouldUseIsolatedWorktree(
@@ -898,17 +885,17 @@ async function processIssue(
 				{ leaseOwnerId, currentLeaseOwnerId: runState.lease?.ownerId },
 				"Skipping issue because it is already leased by another worker",
 			);
-			emitActionProgress(runState, runState.stage, "issue", "blocked", {
+			emitActionProgress(runState, runState.stage, "issue", "canceled", {
 				detail: "already leased by another worker",
 			});
 			return;
 		}
 		issueLogger.info({ leaseOwnerId }, "Issue lease acquired");
-		if (!options.reviewOnly && isBlockedState) {
-			await linear.markStage(issue.id, "backlog");
+		if (!options.reviewOnly && isCanceledState) {
+			await linear.markStage(issue.id, "plan");
 			issueLogger.info(
 				{ issueState: issue.state.name, issueStateId: issue.state.id },
-				"Moved blocked task back to backlog before execution",
+				"Moved canceled task back to plan before execution",
 			);
 		}
 		const executionConfig =
@@ -957,7 +944,7 @@ async function processIssue(
 			await withExecutionPathLock(config.executionPath, executeIssueWithLease);
 		}
 		if (!leaseAcquired) {
-			executionStatus = "blocked";
+			executionStatus = "failed";
 			return;
 		}
 		issueLogger.info({ stage: runState.stage }, "Issue workflow finished");
@@ -982,15 +969,22 @@ async function processIssue(
 			);
 			return;
 		}
-		executionStatus = "blocked";
+		executionStatus = "failed";
 		runState.failedStage = failedStage;
-		runState.stage = "blocked";
+		runState.stage = "failed";
 		await saveRunState(config.workspacePath, runState);
-		await safeLinearMoveToCanceled(linear, runState.issue.id);
+		try {
+			await linear.markStage(runState.issue.id, "failed");
+		} catch (markError) {
+			issueLogger.error(
+				{ err: normalizeError(markError) },
+				"Failed to move issue to Failed",
+			);
+		}
 		await safeLinearComment(
 			linear,
 			runState.issue.id,
-			`devos.ing failed and moved issue to Canceled.\n\nError:\n${message}`,
+			`devos.ing failed and moved issue to Failed.\n\nError:\n${message}`,
 		);
 		issueLogger.error(
 			{
@@ -1002,7 +996,7 @@ async function processIssue(
 		await safeNotifyTaskOutcome(
 			notifications,
 			runState,
-			"blocked",
+			"failed",
 			message,
 			runtime,
 		);
@@ -1081,10 +1075,13 @@ async function executeIssue(
 
 	while (
 		state.stage !== "done" &&
-		state.stage !== "blocked" &&
-		state.stage !== "human_review"
+		state.stage !== "canceled" &&
+		state.stage !== "failed"
 	) {
 		if (options.reviewOnly && !isReviewOnlyExecutableStage(state.stage)) {
+			break;
+		}
+		if (state.stage === "in_review" && state.humanReviewNotifiedAt) {
 			break;
 		}
 		await heartbeatRunLease(
@@ -1093,12 +1090,12 @@ async function executeIssue(
 			leaseOwnerId,
 			leaseTimeoutMs,
 		);
-		if (state.stage === "received") {
+		if (state.stage === "backlog") {
 			await handleReceivedStage(config, linear, state);
 			continue;
 		}
 
-		if (state.stage === "planning") {
+		if (state.stage === "plan") {
 			await handlePlanningStage(config, agent, notifications, linear, state, {
 				runAgentWithChatLog,
 				appendCodexUsage,
@@ -1120,17 +1117,12 @@ async function executeIssue(
 			continue;
 		}
 
-		if (state.stage === "implementing") {
+		if (state.stage === "in_progress") {
 			await handleImplementingStage(config, agent, linear, state, runtime);
 			continue;
 		}
 
-		if (state.stage === "pr_created") {
-			await handlePrCreatedStage(config, notifications, linear, state);
-			continue;
-		}
-
-		if (state.stage === "reviewing" || state.stage === "testing") {
+		if (state.stage === "in_review") {
 			if (options.reviewOnly) {
 				const parkedForConflict = await maybeParkReviewOnlyConflict(
 					config,
@@ -1177,7 +1169,7 @@ async function maybeParkReviewOnlyConflict(
 	}
 
 	const reason = `PR merge conflict detected for ${state.issue.key}; skipping automated review/testing and requiring human review.`;
-	Object.assign(state, transitionStage(state, "human_review"));
+	Object.assign(state, transitionStage(state, "in_review"));
 	if (!state.humanReviewNotifiedAt) {
 		await linear.comment(
 			state.issue.id,
@@ -1283,9 +1275,9 @@ async function handleReceivedStage(
 	linear: WorkflowLinearClient,
 	state: RunState,
 ): Promise<void> {
-	await linear.markStage(state.issue.id, "planning");
+	await linear.markStage(state.issue.id, "plan");
 	await linear.comment(state.issue.id, "devos.ing started planning.");
-	Object.assign(state, transitionStage(state, "planning"));
+	Object.assign(state, transitionStage(state, "plan"));
 	await saveRunState(config.workspacePath, state);
 }
 
@@ -1314,7 +1306,7 @@ async function handleImplementingStage(
 	}
 	const codexSessionId = state.codexSessionId;
 	logger.info(
-		buildIssueJobLogFields(state, "implementing"),
+		buildIssueJobLogFields(state, "in_progress"),
 		"Implementing issue",
 	);
 
@@ -1378,7 +1370,7 @@ async function handleImplementingStage(
 		);
 		if (!updated) {
 			logger.info(
-				buildIssueJobLogFields(state, "implementing"),
+				buildIssueJobLogFields(state, "in_progress"),
 				"No code changes after feedback; skipping PR update",
 			);
 		}
@@ -1388,7 +1380,7 @@ async function handleImplementingStage(
 	}
 
 	state.bugs = [];
-	const nextStage: WorkflowStage = "reviewing";
+	const nextStage: WorkflowStage = "in_review";
 	Object.assign(state, transitionStage(state, nextStage));
 	await saveRunState(config.workspacePath, state);
 	await linear.markStage(state.issue.id, nextStage);
@@ -1401,7 +1393,7 @@ async function handleImplementingStage(
 		}),
 	);
 	logger.info(
-		buildIssueJobLogFields(state, "implementing"),
+		buildIssueJobLogFields(state, "in_progress"),
 		hasExistingPr
 			? "Implementation feedback pass completed"
 			: "Implementation completed",
@@ -1452,10 +1444,10 @@ async function handlePrCreatedStage(
 	linear: WorkflowLinearClient,
 	state: RunState,
 ): Promise<void> {
-	Object.assign(state, transitionStage(state, "reviewing"));
+	Object.assign(state, transitionStage(state, "in_review"));
 	await saveRunState(config.workspacePath, state);
-	await linear.markStage(state.issue.id, "reviewing");
-	await linear.applyStageLabel(state.issue.id, "reviewing");
+	await linear.markStage(state.issue.id, "in_review");
+	await linear.applyStageLabel(state.issue.id, "in_review");
 }
 
 async function handleDoneReviewMergeStage(
@@ -1616,7 +1608,7 @@ async function safeSquashMergePullRequest(
 async function safeNotifyTaskOutcome(
 	notifications: ResolvedNotificationConfig,
 	state: RunState,
-	outcome: "done" | "blocked",
+	outcome: "done" | "canceled" | "failed",
 	errorMessage?: string,
 	runtime: WorkflowRuntime = createWorkflowRuntime(),
 ): Promise<void> {

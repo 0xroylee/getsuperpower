@@ -23,12 +23,11 @@ export interface SetupDraft {
 	statusMap: {
 		backlog: string;
 		assigned: string;
-		planning: string;
-		implementing: string;
-		pr_created: string;
-		reviewing: string;
-		testing: string;
-		blocked: string;
+		plan: string;
+		in_progress: string;
+		in_review: string;
+		canceled: string;
+		failed: string;
 		done: string;
 	};
 	labelMap: {

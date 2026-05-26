@@ -426,7 +426,7 @@ describe("review-only selection", () => {
 		const now = Date.parse("2026-05-07T12:00:00.000Z");
 		const runStates: RunState[] = [
 			{
-				...createRunState("ROY-1", "pr_created", now),
+				...createRunState("ROY-1", "in_review", now),
 				pullRequest: {
 					branch: "codex/roy-1",
 					title: "PR",
@@ -434,7 +434,7 @@ describe("review-only selection", () => {
 				},
 			},
 			{
-				...createRunState("ROY-2", "reviewing", now),
+				...createRunState("ROY-2", "in_review", now),
 				pullRequest: {
 					branch: "codex/roy-2",
 					title: "PR",
@@ -442,7 +442,7 @@ describe("review-only selection", () => {
 				},
 			},
 			{
-				...createRunState("ROY-3", "testing", now),
+				...createRunState("ROY-3", "in_review", now),
 				pullRequest: {
 					branch: "codex/roy-3",
 					title: "PR",
@@ -450,7 +450,7 @@ describe("review-only selection", () => {
 				},
 			},
 			{
-				...createRunState("ROY-4", "reviewing", now),
+				...createRunState("ROY-4", "in_review", now),
 				pullRequest: { branch: "codex/roy-4", title: "PR" },
 			},
 			{
@@ -470,7 +470,7 @@ describe("review-only selection", () => {
 					url: "https://pr/6",
 				},
 			},
-			createRunState("ROY-7", "implementing", now),
+			createRunState("ROY-7", "in_progress", now),
 		];
 
 		expect(selectReviewOnlyIssueKeys(runStates)).toEqual([
@@ -485,7 +485,7 @@ describe("review-only selection", () => {
 		const now = Date.parse("2026-05-07T12:00:00.000Z");
 		const runStates: RunState[] = [
 			{
-				...createRunState("ROY-1", "reviewing", now),
+				...createRunState("ROY-1", "in_review", now),
 				pullRequest: {
 					branch: "codex/roy-1",
 					title: "PR",
@@ -530,31 +530,29 @@ describe("review-only selection", () => {
 	it("resolves review-only bootstrap stage from issue state mapping", () => {
 		const statusMap = {
 			...createProject("default").linear.statusMap,
-			pr_created: "PR Created",
-			reviewing: "In Review",
-			testing: "Testing",
+			in_review: "In Review",
 		};
 		expect(
 			resolveReviewOnlyBootstrapStage(
 				{ id: "unknown", name: "In Review" },
 				statusMap,
 			),
-		).toBe("reviewing");
+		).toBe("in_review");
 		expect(
 			resolveReviewOnlyBootstrapStage(
 				{ id: "in review", name: "Whatever" },
 				{
 					...statusMap,
-					pr_created: "In Review",
+					in_review: "In Review",
 				},
 			),
-		).toBe("reviewing");
+		).toBe("in_review");
 		expect(
 			resolveReviewOnlyBootstrapStage(
 				{ id: "unknown", name: "Something else" },
 				statusMap,
 			),
-		).toBe("testing");
+		).toBe("in_review");
 		expect(
 			resolveReviewOnlyBootstrapStage(
 				{ id: "unknown", name: "Done" },
@@ -568,7 +566,7 @@ describe("normalizeBlockedPlanningFailureForResume", () => {
 	it("resets blocked planning failures while preserving diagnostic fields", () => {
 		const state = {
 			...createRunState("ROY-70", "blocked", Date.now()),
-			failedStage: "planning" as const,
+			failedStage: "plan" as const,
 			planSummary: "invalid plan",
 			successGoal: "stale goal",
 			complexityScore: 8,
@@ -587,7 +585,7 @@ describe("normalizeBlockedPlanningFailureForResume", () => {
 
 		const normalized = normalizeBlockedPlanningFailureForResume(state);
 
-		expect(normalized.stage).toBe("planning");
+		expect(normalized.stage).toBe("plan");
 		expect(normalized.planSummary).toBeUndefined();
 		expect(normalized.successGoal).toBeUndefined();
 		expect(normalized.complexityScore).toBeUndefined();
@@ -605,32 +603,30 @@ describe("normalizeBlockedPlanningFailureForResume", () => {
 				"Planner output must include SUCCESS_GOAL with a concise acceptance goal.",
 		};
 
-		expect(normalizeBlockedPlanningFailureForResume(state).stage).toBe(
-			"planning",
-		);
+		expect(normalizeBlockedPlanningFailureForResume(state).stage).toBe("plan");
 	});
 
 	it("leaves non-planning blocked failures terminal", () => {
 		const state = {
 			...createRunState("ROY-72", "blocked", Date.now()),
-			failedStage: "implementing" as const,
+			failedStage: "in_progress" as const,
 			lastError: "implementation failed",
 		};
 
-		expect(normalizeBlockedPlanningFailureForResume(state)).toBe(state);
+		expect(normalizeBlockedPlanningFailureForResume(state).stage).toBe(
+			"failed",
+		);
 	});
 });
 
 describe("isReviewOnlyExecutableStage", () => {
 	it("only allows review-related stages", () => {
-		expect(isReviewOnlyExecutableStage("pr_created")).toBe(true);
-		expect(isReviewOnlyExecutableStage("reviewing")).toBe(true);
-		expect(isReviewOnlyExecutableStage("testing")).toBe(true);
+		expect(isReviewOnlyExecutableStage("in_review")).toBe(true);
 		expect(isReviewOnlyExecutableStage("done")).toBe(true);
-		expect(isReviewOnlyExecutableStage("implementing")).toBe(false);
-		expect(isReviewOnlyExecutableStage("human_review")).toBe(false);
-		expect(isReviewOnlyExecutableStage("planning")).toBe(false);
-		expect(isReviewOnlyExecutableStage("received")).toBe(false);
+		expect(isReviewOnlyExecutableStage("in_progress")).toBe(false);
+		expect(isReviewOnlyExecutableStage("canceled")).toBe(false);
+		expect(isReviewOnlyExecutableStage("plan")).toBe(false);
+		expect(isReviewOnlyExecutableStage("backlog")).toBe(false);
 	});
 });
 
@@ -691,7 +687,7 @@ describe("withExecutionPathLock", () => {
 		const leaseTimeoutMs = 5;
 		const waitMs = 20;
 		const startedAtMs = Date.now();
-		const state = createRunState("ROY-6", "reviewing", startedAtMs);
+		const state = createRunState("ROY-6", "in_review", startedAtMs);
 
 		await Promise.all([
 			withExecutionPathLock("/tmp/shared-timeout", async () => {
@@ -923,11 +919,11 @@ describe("runWorkflow parallel issue regression", () => {
 
 		await saveRunState(
 			workspacePath,
-			createRunState("ENG-1", "human_review", Date.now()),
+			createRunState("ENG-1", "in_review", Date.now()),
 		);
 		await saveRunState(
 			workspacePath,
-			createRunState("ENG-2", "human_review", Date.now()),
+			createRunState("ENG-2", "in_review", Date.now()),
 		);
 
 		const issues = [
@@ -1027,7 +1023,7 @@ describe("runWorkflow parallel issue regression", () => {
 		config.executionPath = workspacePath;
 		config.workflow.issueConcurrency = 2;
 
-		const state = createRunState("ENG-9", "human_review", Date.now());
+		const state = createRunState("ENG-9", "in_review", Date.now());
 		state.lease = {
 			ownerId: "other-worker",
 			acquiredAt: new Date(Date.now() - 2000).toISOString(),
@@ -1089,7 +1085,7 @@ describe("runWorkflow parallel issue regression", () => {
 		const config = createProject("default");
 		config.workspacePath = workspacePath;
 		config.executionPath = workspacePath;
-		const state = createRunState("ENG-59", "human_review", Date.now());
+		const state = createRunState("ENG-59", "in_review", Date.now());
 		state.issue.id = "current-task-id";
 		await saveRunState(workspacePath, state);
 		const createAgentAdapter = mock(() => ({}) as AgentAdapter);
@@ -1114,7 +1110,7 @@ describe("runWorkflow parallel issue regression", () => {
 
 		expect(output).toContain("Taking issue job");
 		expect(output).toContain("issueKey=ENG-59");
-		expect(output).toContain("stage=human_review");
+		expect(output).toContain("stage=in_review");
 		expect(output).toContain("resumed=true");
 		expect(output).not.toContain("Discarding stale local run state");
 	});
@@ -1128,7 +1124,7 @@ describe("runWorkflow parallel issue regression", () => {
 		config.executionPath = workspacePath;
 		const state = createRunState("ENG-60", "blocked", Date.now() - 60000);
 		state.issue.id = "old-task-id";
-		state.failedStage = "blocked";
+		state.failedStage = "failed";
 		state.lastError = "not_found: Task not found";
 		state.planSummary = "stale plan";
 		state.pullRequest = {
@@ -1167,10 +1163,9 @@ describe("runWorkflow parallel issue regression", () => {
 		expect(output).toContain("previousIssueId=old-task-id");
 		expect(output).toContain("issueId=new-task-id");
 		expect(output).toContain("Taking issue job");
-		expect(output).toContain("stage=received");
+		expect(output).toContain("stage=plan");
 		expect(output).not.toContain("resumed=true");
-		expect(markStage).toHaveBeenCalledWith("new-task-id", "planning");
-		expect(markStage).toHaveBeenCalledWith("new-task-id", "backlog");
+		expect(markStage).toHaveBeenCalledWith("new-task-id", "canceled");
 
 		const saved = JSON.parse(
 			await readFile(stateFilePath(workspacePath, "default", "ENG-60"), "utf8"),
@@ -1181,8 +1176,8 @@ describe("runWorkflow parallel issue regression", () => {
 			title: "Fresh server title",
 			description: "Fresh server description",
 		});
-		expect(saved.stage).toBe("blocked");
-		expect(saved.failedStage).toBe("planning");
+		expect(saved.stage).toBe("canceled");
+		expect(saved.failedStage).toBe("plan");
 		expect(saved.lastError).toBe(
 			"Planning needs clarification before implementation.",
 		);
@@ -1199,7 +1194,7 @@ describe("runWorkflow parallel issue regression", () => {
 		config.executionPath = workspacePath;
 		const state = createRunState("ENG-61", "blocked", Date.now() - 60000);
 		state.issue.id = "current-task-id";
-		state.failedStage = "blocked";
+		state.failedStage = "failed";
 		state.lastError = "not_found: Task not found";
 		state.planSummary = "stale plan";
 		await saveRunState(workspacePath, state);
@@ -1231,7 +1226,7 @@ describe("runWorkflow parallel issue regression", () => {
 			"WARN  Discarding stale local run state because server task is available again",
 		);
 		expect(output).toContain("issueKey=ENG-61");
-		expect(output).toContain("stage=received");
+		expect(output).toContain("stage=plan");
 		expect(output).not.toContain("resumed=true");
 
 		const saved = JSON.parse(
@@ -1242,7 +1237,7 @@ describe("runWorkflow parallel issue regression", () => {
 			key: "ENG-61",
 			title: "Current server title",
 		});
-		expect(saved.failedStage).toBe("planning");
+		expect(saved.failedStage).toBe("plan");
 		expect(saved.lastError).toBe(
 			"Planning needs clarification before implementation.",
 		);
@@ -1250,8 +1245,8 @@ describe("runWorkflow parallel issue regression", () => {
 	});
 });
 
-describe("runWorkflow blocked Linear issue intake", () => {
-	it("moves an explicitly targeted blocked issue to backlog before continuing", async () => {
+describe("runWorkflow canceled Linear issue intake", () => {
+	it("moves an explicitly targeted canceled issue to plan before continuing", async () => {
 		const workspacePath = await mkdtemp(
 			path.join(os.tmpdir(), "adhd-workflow-blocked-explicit-"),
 		);
@@ -1285,18 +1280,18 @@ describe("runWorkflow blocked Linear issue intake", () => {
 			sendTaskOutcomeEmail: mock(async () => {}),
 		} as unknown as WorkflowRuntime);
 
-		expect(markStage.mock.calls[0]).toEqual(["ENG-55", "backlog"]);
-		expect(markStage).toHaveBeenCalledWith("ENG-55", "planning");
+		expect(markStage.mock.calls[0]).toEqual(["ENG-55", "plan"]);
+		expect(markStage).toHaveBeenCalledWith("ENG-55", "done");
 	});
 
-	it("moves a blocked issue with local run state to backlog", async () => {
+	it("moves a canceled issue with local run state to plan", async () => {
 		const workspacePath = await mkdtemp(
 			path.join(os.tmpdir(), "adhd-workflow-blocked-stale-"),
 		);
 		const config = createProject("default");
 		config.workspacePath = workspacePath;
 		config.executionPath = workspacePath;
-		const state = createRunState("ENG-56", "planning", Date.now() - 60000);
+		const state = createRunState("ENG-56", "plan", Date.now() - 60000);
 		await saveRunState(workspacePath, state);
 		const issue = {
 			...createWorkflowIssue("ENG-56", 1, "Urgent"),
@@ -1326,7 +1321,7 @@ describe("runWorkflow blocked Linear issue intake", () => {
 			sendTaskOutcomeEmail: mock(async () => {}),
 		} as unknown as WorkflowRuntime);
 
-		expect(markStage.mock.calls[0]).toEqual([state.issue.id, "backlog"]);
+		expect(markStage.mock.calls[0]).toEqual([state.issue.id, "plan"]);
 	});
 
 	it("keeps skipping non-blocked in-progress issues without local state", async () => {
@@ -1359,7 +1354,7 @@ describe("runWorkflow blocked Linear issue intake", () => {
 		expect(markStage).not.toHaveBeenCalled();
 	});
 
-	it("does not move review-only blocked candidates back to backlog", async () => {
+	it("does not move review-only canceled candidates back to plan", async () => {
 		const workspacePath = await mkdtemp(
 			path.join(os.tmpdir(), "adhd-workflow-blocked-review-only-"),
 		);
@@ -1396,20 +1391,18 @@ describe("runWorkflow blocked Linear issue intake", () => {
 		} as unknown as WorkflowRuntime);
 
 		expect(markStage).toHaveBeenCalledWith(state.issue.id, "done");
-		expect(markStage).not.toHaveBeenCalledWith(state.issue.id, "backlog");
+		expect(markStage).not.toHaveBeenCalledWith(state.issue.id, "plan");
 	});
 });
 
 describe("stale run retry helpers", () => {
 	it("flags retryable stages", () => {
-		expect(shouldRetryRunStage("received")).toBe(true);
-		expect(shouldRetryRunStage("planning")).toBe(true);
-		expect(shouldRetryRunStage("implementing")).toBe(true);
-		expect(shouldRetryRunStage("pr_created")).toBe(true);
-		expect(shouldRetryRunStage("reviewing")).toBe(true);
-		expect(shouldRetryRunStage("testing")).toBe(true);
-		expect(shouldRetryRunStage("human_review")).toBe(false);
-		expect(shouldRetryRunStage("blocked")).toBe(false);
+		expect(shouldRetryRunStage("backlog")).toBe(true);
+		expect(shouldRetryRunStage("plan")).toBe(true);
+		expect(shouldRetryRunStage("in_progress")).toBe(true);
+		expect(shouldRetryRunStage("in_review")).toBe(true);
+		expect(shouldRetryRunStage("canceled")).toBe(false);
+		expect(shouldRetryRunStage("failed")).toBe(false);
 		expect(shouldRetryRunStage("done")).toBe(false);
 	});
 
@@ -1418,10 +1411,10 @@ describe("stale run retry helpers", () => {
 		const oldMs = nowMs - 3600000;
 		const freshMs = nowMs - 5000;
 		const runStates: RunState[] = [
-			createRunState("ENG-1", "planning", oldMs),
-			createRunState("ENG-2", "implementing", oldMs),
-			createRunState("ENG-3", "testing", oldMs),
-			createRunState("ENG-4", "planning", freshMs),
+			createRunState("ENG-1", "plan", oldMs),
+			createRunState("ENG-2", "in_progress", oldMs),
+			createRunState("ENG-3", "in_review", oldMs),
+			createRunState("ENG-4", "plan", freshMs),
 			createRunState("ENG-5", "done", oldMs),
 		];
 		const keys = selectStaleRunIssueKeys(runStates, nowMs, 600000);
@@ -1432,7 +1425,7 @@ describe("stale run retry helpers", () => {
 		const nowMs = Date.parse("2026-05-07T12:00:00.000Z");
 		const oldMs = nowMs - 3600000;
 		const leaseExpiresAtMs = nowMs + 60000;
-		const state = createRunState("ENG-11", "implementing", oldMs);
+		const state = createRunState("ENG-11", "in_progress", oldMs);
 		state.lease = {
 			ownerId: "worker-a",
 			acquiredAt: new Date(oldMs).toISOString(),
@@ -1446,7 +1439,7 @@ describe("stale run retry helpers", () => {
 	it("marks state as stale when lease has expired", () => {
 		const nowMs = Date.parse("2026-05-07T12:00:00.000Z");
 		const oldMs = nowMs - 3600000;
-		const state = createRunState("ENG-12", "reviewing", oldMs);
+		const state = createRunState("ENG-12", "in_review", oldMs);
 		state.lease = {
 			ownerId: "worker-a",
 			acquiredAt: new Date(oldMs).toISOString(),
@@ -1458,7 +1451,7 @@ describe("stale run retry helpers", () => {
 	});
 
 	it("ignores invalid updatedAt values", () => {
-		const state = createRunState("ENG-9", "planning", Date.now());
+		const state = createRunState("ENG-9", "plan", Date.now());
 		state.updatedAt = "not-a-date";
 		expect(isRunStateStaleForRetry(state, Date.now(), 1000)).toBe(false);
 	});
@@ -1491,12 +1484,12 @@ describe("buildIssueJobLogFields", () => {
 					title: "Improve logging",
 					url: "https://linear.app/acme/issue/ENG-1/improve-logging",
 				},
-				stage: "planning",
+				stage: "plan",
 				bugs: [],
 				startedAt: now,
 				updatedAt: now,
 			},
-			"planning",
+			"plan",
 		);
 
 		expect(fields).toEqual({
@@ -1504,7 +1497,7 @@ describe("buildIssueJobLogFields", () => {
 			issueKey: "ENG-1",
 			issueId: "lin_123",
 			issueTitle: "Improve logging",
-			stage: "planning",
+			stage: "plan",
 		});
 	});
 
@@ -1526,12 +1519,12 @@ describe("buildIssueJobLogFields", () => {
 					title: "Improve logging",
 					url: "https://linear.app/acme/issue/ENG-1/improve-logging",
 				},
-				stage: "implementing",
+				stage: "in_progress",
 				bugs: [],
 				startedAt: now,
 				updatedAt: now,
 			},
-			"implementing",
+			"in_progress",
 			{ resumed: true },
 		);
 
@@ -1540,7 +1533,7 @@ describe("buildIssueJobLogFields", () => {
 			issueKey: "ENG-1",
 			issueId: "lin_123",
 			issueTitle: "Improve logging",
-			stage: "implementing",
+			stage: "in_progress",
 			resumed: true,
 		});
 	});
@@ -1564,7 +1557,7 @@ describe("appendCodexUsage", () => {
 				title: "Improve logging",
 				url: "https://linear.app/acme/issue/ENG-1/improve-logging",
 			},
-			stage: "planning",
+			stage: "plan",
 			bugs: [],
 			startedAt: now,
 			updatedAt: now,
@@ -1603,7 +1596,7 @@ describe("appendCodexUsage", () => {
 				title: "Improve logging",
 				url: "https://linear.app/acme/issue/ENG-1/improve-logging",
 			},
-			stage: "planning",
+			stage: "plan",
 			bugs: [],
 			codexUsage: [],
 			startedAt: now,
@@ -1775,11 +1768,11 @@ describe("readyPullRequestAfterPassingReview", () => {
 });
 
 describe("review pass stage transitions", () => {
-	it("keeps Linear in reviewing after a passing review result", async () => {
+	it("keeps Linear in review after a passing review result", async () => {
 		const workspace = await mkdtemp(
 			path.join(os.tmpdir(), "adhd-review-pass-"),
 		);
-		const state = createRunState("ENG-100", "reviewing", Date.now());
+		const state = createRunState("ENG-100", "in_review", Date.now());
 		state.pullRequest = {
 			branch: "codex/eng-100",
 			title: "ENG-100",
@@ -1828,11 +1821,9 @@ describe("review pass stage transitions", () => {
 		);
 
 		expect(state.stage).toBe("done");
-		expect(markStage).toHaveBeenCalledWith("lin_ENG-100", "testing");
-		expect(markStage).toHaveBeenCalledWith("lin_ENG-100", "reviewing");
+		expect(markStage).toHaveBeenCalledWith("lin_ENG-100", "in_review");
 		expect(markStage).not.toHaveBeenCalledWith("lin_ENG-100", "done");
-		expect(applyStageLabel).toHaveBeenCalledWith("lin_ENG-100", "testing");
-		expect(applyStageLabel).toHaveBeenCalledWith("lin_ENG-100", "reviewing");
+		expect(applyStageLabel).toHaveBeenCalledWith("lin_ENG-100", "in_review");
 		expect(comment).toHaveBeenCalledWith(
 			"lin_ENG-100",
 			"Review/testing passed. PR is ready and issue remains in review until merge.",
@@ -2166,7 +2157,7 @@ describe("handlePlanningStage", () => {
 		parentState.codexSessionId = "parent-session";
 		await saveRunState(workspacePath, parentState);
 
-		const state = createRunState("ROY-81", "planning", Date.now());
+		const state = createRunState("ROY-81", "plan", Date.now());
 		state.issue.parentIssue = {
 			id: parentState.issue.id,
 			key: parentState.issue.key,
@@ -2224,7 +2215,7 @@ describe("handlePlanningStage", () => {
 		);
 		expect(agent.runPlan).not.toHaveBeenCalled();
 		expect(state.codexSessionId).toBe("child-session");
-		expect(markStage).toHaveBeenCalledWith(state.issue.id, "implementing");
+		expect(markStage).toHaveBeenCalledWith(state.issue.id, "in_progress");
 	});
 
 	it("starts a new planning session when no parent session exists", async () => {
@@ -2234,7 +2225,7 @@ describe("handlePlanningStage", () => {
 		const config = createProject("default");
 		config.workspacePath = workspacePath;
 
-		const state = createRunState("ROY-91", "planning", Date.now());
+		const state = createRunState("ROY-91", "plan", Date.now());
 		state.issue.parentIssue = {
 			id: "lin_ROY-90",
 			key: "ROY-90",
@@ -2290,9 +2281,9 @@ describe("handlePlanningStage", () => {
 		expect(state.codexSessionId).toBe("new-child-session");
 	});
 
-	it("parks unclear planner output in backlog with clarification questions", async () => {
+	it("parks unclear planner output as canceled with clarification questions", async () => {
 		const config = createProject("default");
-		const state = createRunState("ROY-95", "planning", Date.now());
+		const state = createRunState("ROY-95", "plan", Date.now());
 		const planSummary = [
 			"PLANNING_RESULT: NEEDS_INFO",
 			"QUESTIONS_JSON:",
@@ -2343,14 +2334,14 @@ describe("handlePlanningStage", () => {
 			},
 		);
 
-		expect(state.stage).toBe("blocked");
-		expect(state.failedStage).toBe("planning");
+		expect(state.stage).toBe("canceled");
+		expect(state.failedStage).toBe("plan");
 		expect(state.successGoal).toBeUndefined();
 		expect(state.planningNeedsInfoQuestions).toEqual([
 			"What acceptance behavior should review verify?",
 		]);
 		expect(saveRunState).toHaveBeenCalledWith(config.workspacePath, state);
-		expect(markStage).toHaveBeenCalledWith(state.issue.id, "backlog");
+		expect(markStage).toHaveBeenCalledWith(state.issue.id, "canceled");
 		expect(clearWorkflowStageLabels).toHaveBeenCalledWith(state.issue.id);
 		const commentCalls = comment.mock.calls as unknown as [string, string][];
 		expect(commentCalls[0]?.[1]).toContain(
@@ -2359,14 +2350,14 @@ describe("handlePlanningStage", () => {
 		expect(safeNotifyTaskOutcome).toHaveBeenCalledWith(
 			{ email: { enabled: false, to: [] } },
 			state,
-			"blocked",
+			"canceled",
 			"Planning needs clarification before implementation.",
 		);
 	});
 
-	it("retries malformed planner output once before parking in backlog", async () => {
+	it("retries malformed planner output once before parking as canceled", async () => {
 		const config = createProject("default");
-		const state = createRunState("ROY-97", "planning", Date.now());
+		const state = createRunState("ROY-97", "plan", Date.now());
 		const agent: AgentAdapter = {
 			runPlan: mock(async () => ({
 				finalMessage: "I cannot tell what this means.",
@@ -2418,19 +2409,19 @@ describe("handlePlanningStage", () => {
 			"malformed-session",
 			expect.stringContaining("previous planning response"),
 		);
-		expect(state.stage).toBe("blocked");
+		expect(state.stage).toBe("canceled");
 		expect(state.planningNeedsInfoQuestions).toEqual([
 			"What outcome should this task accomplish, and how should review/testing verify it?",
 		]);
-		expect(markStage).toHaveBeenCalledWith(state.issue.id, "backlog");
+		expect(markStage).toHaveBeenCalledWith(state.issue.id, "canceled");
 		expect(clearWorkflowStageLabels).toHaveBeenCalledWith(state.issue.id);
 		const commentCalls = comment.mock.calls as unknown as [string, string][];
 		expect(commentCalls[0]?.[1]).toContain("Questions:");
 	});
 
-	it("moves the parent issue to backlog after creating split sub-issues", async () => {
+	it("moves the parent issue to done after creating split sub-issues", async () => {
 		const config = createProject("default");
-		const state = createRunState("ROY-80", "planning", Date.now());
+		const state = createRunState("ROY-80", "plan", Date.now());
 		const planSummary = [
 			"SUCCESS_GOAL: Extract the API layer into a follow-up task.",
 			"COMPLEXITY: COMPLEX",
@@ -2489,11 +2480,10 @@ describe("handlePlanningStage", () => {
 			priority: undefined,
 		});
 		expect(state.stage).toBe("done");
-		expect(markStage).toHaveBeenCalledWith(state.issue.id, "backlog");
-		expect(markStage).not.toHaveBeenCalledWith(state.issue.id, "done");
+		expect(markStage).toHaveBeenCalledWith(state.issue.id, "done");
 		expect(clearWorkflowStageLabels).toHaveBeenCalledWith(state.issue.id);
 		const commentCalls = comment.mock.calls as unknown as [string, string][];
-		expect(commentCalls[0]?.[1]).toContain("moved the parent issue to Backlog");
+		expect(commentCalls[0]?.[1]).toContain("moved the parent issue to Done");
 		expect(safeNotifyTaskOutcome).toHaveBeenCalledWith(
 			{ email: { enabled: false, to: [] } },
 			state,
@@ -2679,31 +2669,28 @@ describe("shouldSquashMergePullRequestForComplexityScore", () => {
 describe("resolveReviewFailureStage", () => {
 	it("routes to implementing when codex session is present", () => {
 		expect(resolveReviewFailureStage({ codexSessionId: "session-1" })).toBe(
-			"implementing",
+			"in_progress",
 		);
 	});
 
-	it("routes to human_review when codex session is missing", () => {
+	it("routes to in_review when codex session is missing", () => {
 		expect(resolveReviewFailureStage({ codexSessionId: undefined })).toBe(
-			"human_review",
+			"in_review",
 		);
 	});
 });
 
 describe("shouldSkipReviewOnlyRunState", () => {
-	it("skips existing human_review states in review-only mode", () => {
+	it("skips canceled states in review-only mode", () => {
 		expect(
-			shouldSkipReviewOnlyRunState(
-				{ stage: "human_review" },
-				{ reviewOnly: true },
-			),
+			shouldSkipReviewOnlyRunState({ stage: "canceled" }, { reviewOnly: true }),
 		).toBe(true);
 	});
 
 	it("does not skip non-human-review states in review-only mode", () => {
 		expect(
 			shouldSkipReviewOnlyRunState(
-				{ stage: "reviewing" },
+				{ stage: "in_review" },
 				{ reviewOnly: true },
 			),
 		).toBe(false);
@@ -2712,7 +2699,7 @@ describe("shouldSkipReviewOnlyRunState", () => {
 	it("does not skip when review-only mode is disabled", () => {
 		expect(
 			shouldSkipReviewOnlyRunState(
-				{ stage: "human_review" },
+				{ stage: "canceled" },
 				{ reviewOnly: false },
 			),
 		).toBe(false);
@@ -2739,7 +2726,7 @@ describe("isolated worktree workflow helpers", () => {
 	it("resolves deterministic project worktree paths", () => {
 		const config = createProject("default");
 		config.workflow.isolatedWorktrees = { enabled: true };
-		const state = createRunState("ENG-42", "implementing", Date.now());
+		const state = createRunState("ENG-42", "in_progress", Date.now());
 		expect(isolatedWorktreePath(config, state)).toBe(
 			"/tmp/workspace/.devos/projects/default/worktrees/eng-42",
 		);
@@ -2753,7 +2740,7 @@ describe("isolated worktree workflow helpers", () => {
 	it("prepares an issue-scoped execution config while preserving shared state path", async () => {
 		const config = createProject("default");
 		config.workflow.isolatedWorktrees = { enabled: true };
-		const state = createRunState("ENG-42", "implementing", Date.now());
+		const state = createRunState("ENG-42", "in_progress", Date.now());
 		const calls: string[] = [];
 		const ensureBaseBranchFresh = mock(async () => {
 			calls.push("ensureBaseBranchFresh");
@@ -2807,7 +2794,7 @@ describe("isolated worktree workflow helpers", () => {
 	it("passes board task branch names into isolated worktree preparation", async () => {
 		const config = createProject("default");
 		config.workflow.isolatedWorktrees = { enabled: true };
-		const state = createRunState("TASK(OWNER-1)-1", "implementing", Date.now());
+		const state = createRunState("TASK(OWNER-1)-1", "in_progress", Date.now());
 		state.issue.branchName = "owner-1/1";
 		const ensureIssueWorktree = mock(async () => "owner-1/1");
 		const runtime = {
@@ -2841,7 +2828,7 @@ describe("isolated worktree workflow helpers", () => {
 		config.workspacePath = ".";
 		config.executionPath = ".";
 		config.workflow.isolatedWorktrees = { enabled: true };
-		const state = createRunState("ENG-42", "implementing", Date.now());
+		const state = createRunState("ENG-42", "in_progress", Date.now());
 		const runtime = {
 			ensureBaseBranchFresh: mock(async () => {}),
 			ensureIssueWorktree: mock(
@@ -2876,7 +2863,7 @@ describe("isolated worktree workflow helpers", () => {
 	it("prepares isolated workspace metadata without installing dependencies", async () => {
 		const config = createProject("default");
 		config.workflow.isolatedWorktrees = { enabled: true };
-		const state = createRunState("ENG-42", "implementing", Date.now());
+		const state = createRunState("ENG-42", "in_progress", Date.now());
 		const ensureBaseBranchFresh = mock(async () => {});
 		const ensureIssueWorktree = mock(async () => "codex/eng-42");
 		const prepareWorktreeDependencies = mock(async () => {});
@@ -2906,7 +2893,7 @@ describe("isolated worktree workflow helpers", () => {
 	it("records isolated execution state before dependency setup and rethrows failures", async () => {
 		const config = createProject("default");
 		config.workflow.isolatedWorktrees = { enabled: true };
-		const state = createRunState("ENG-42", "implementing", Date.now());
+		const state = createRunState("ENG-42", "in_progress", Date.now());
 		const prepareWorktreeDependencies = mock(async () => {
 			throw new Error("bun install --frozen-lockfile failed");
 		});
@@ -2947,7 +2934,7 @@ describe("isolated worktree workflow helpers", () => {
 		).resolves.toBe(true);
 		expect(state.executionWorkspace).toBeUndefined();
 
-		state.stage = "blocked";
+		state.stage = "failed";
 		state.executionWorkspace = {
 			mode: "git-worktree",
 			path: "/tmp/worktrees/eng-42",
@@ -2967,9 +2954,9 @@ describe("isolated worktree workflow helpers", () => {
 		expect(state.executionWorkspace?.path).toBe("/tmp/worktrees/eng-42");
 	});
 
-	it("keeps human review worktrees for follow-up", async () => {
+	it("keeps in-review worktrees for follow-up", async () => {
 		const config = createProject("default");
-		const state = createRunState("ENG-42", "human_review", Date.now());
+		const state = createRunState("ENG-42", "in_review", Date.now());
 		state.executionWorkspace = {
 			mode: "git-worktree",
 			path: "/tmp/worktrees/eng-42",
@@ -2989,7 +2976,7 @@ describe("isolated worktree workflow helpers", () => {
 describe("prepareImplementationBranchForStage", () => {
 	it("passes board task branch names into normal branch preparation", async () => {
 		const config = createProject("default");
-		const state = createRunState("TASK(OWNER-1)-1", "implementing", Date.now());
+		const state = createRunState("TASK(OWNER-1)-1", "in_progress", Date.now());
 		state.issue.branchName = "owner-1/1";
 		const prepareImplementationBranch = mock(async () => "owner-1/1");
 		const runtime = {
@@ -3012,7 +2999,7 @@ describe("prepareImplementationBranchForStage", () => {
 
 	it("does not prepare a branch again inside an isolated worktree", async () => {
 		const config = createProject("default");
-		const state = createRunState("ENG-42", "implementing", Date.now());
+		const state = createRunState("ENG-42", "in_progress", Date.now());
 		state.executionWorkspace = {
 			mode: "git-worktree",
 			path: "/tmp/worktrees/eng-42",
@@ -3035,7 +3022,7 @@ describe("prepareImplementationBranchForStage", () => {
 
 	it("rejects an isolated worktree on a different PR branch", async () => {
 		const config = createProject("default");
-		const state = createRunState("ENG-42", "implementing", Date.now());
+		const state = createRunState("ENG-42", "in_progress", Date.now());
 		state.pullRequest = {
 			branch: "codex/eng-42-fix",
 			title: "ENG-42",
@@ -3136,12 +3123,11 @@ function createProject(
 			statusMap: {
 				backlog: "Backlog",
 				assigned: "Todo",
-				planning: "In Progress",
-				implementing: "In Progress",
-				pr_created: "In Review",
-				reviewing: "In Review",
-				testing: "In Review",
-				blocked: "Canceled",
+				plan: "In Progress",
+				in_progress: "In Progress",
+				in_review: "In Review",
+				canceled: "Canceled",
+				failed: "Failed",
 				done: "Done",
 			},
 			labelMap: {
@@ -3181,7 +3167,7 @@ function createProject(
 
 function createRunState(
 	issueKey: string,
-	stage: RunState["stage"],
+	stage: RunState["stage"] | string,
 	updatedAtMs: number,
 ): RunState {
 	const updatedAt = new Date(updatedAtMs).toISOString();
@@ -3200,7 +3186,7 @@ function createRunState(
 			title: issueKey,
 			url: `https://linear.app/acme/issue/${issueKey}/sample`,
 		},
-		stage,
+		stage: stage as RunState["stage"],
 		bugs: [],
 		startedAt: updatedAt,
 		updatedAt,

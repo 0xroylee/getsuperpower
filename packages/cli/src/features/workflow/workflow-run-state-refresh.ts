@@ -96,7 +96,7 @@ export function canReuseRunStateForIssue(
 
 function isStaleTaskNotFoundBlock(state: RunState): boolean {
 	return (
-		state.stage === "blocked" &&
+		state.stage === "failed" &&
 		state.lastError?.startsWith("not_found: Task not found") === true
 	);
 }

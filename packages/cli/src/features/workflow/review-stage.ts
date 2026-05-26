@@ -43,14 +43,14 @@ export async function handleReviewTestingStage(
 	deps: HandleReviewTestingStageDeps,
 ): Promise<void> {
 	deps.loggerInfo(
-		deps.buildIssueJobLogFields(state, "testing"),
+		deps.buildIssueJobLogFields(state, "in_review"),
 		"Testing issue",
 	);
-	emitStageProgress(state, "testing", "started", "Testing issue");
-	emitActionProgress(state, "testing", "review-testing", "started");
-	await linear.markStage(state.issue.id, "testing");
-	await linear.applyStageLabel(state.issue.id, "testing");
-	Object.assign(state, deps.transitionStage(state, "testing"));
+	emitStageProgress(state, "in_review", "started", "Testing issue");
+	emitActionProgress(state, "in_review", "review-testing", "started");
+	await linear.markStage(state.issue.id, "in_review");
+	await linear.applyStageLabel(state.issue.id, "in_review");
+	Object.assign(state, deps.transitionStage(state, "in_review"));
 	await deps.saveRunState(config.workspacePath, state);
 
 	const prompt = await buildReviewPrompt(
@@ -78,7 +78,7 @@ export async function handleReviewTestingStage(
 	await deps.saveRunState(config.workspacePath, state);
 	emitActionProgress(
 		state,
-		"testing",
+		"in_review",
 		"review-testing",
 		outcome.passed ? "succeeded" : "failed",
 		{
@@ -98,7 +98,7 @@ export async function handleReviewTestingStage(
 	let githubComment = reviewComment;
 	if (!config.dryRun && state.pullRequest) {
 		try {
-			emitActionProgress(state, "testing", "github-comment", "started");
+			emitActionProgress(state, "in_review", "github-comment", "started");
 			const githubCommentPrompt = await buildGithubCommentPrompt(
 				config.skills.githubComment,
 				state.issue,
@@ -126,14 +126,14 @@ export async function handleReviewTestingStage(
 			if (generated) {
 				githubComment = generated;
 			}
-			emitActionProgress(state, "testing", "github-comment", "succeeded");
+			emitActionProgress(state, "in_review", "github-comment", "succeeded");
 		} catch (error) {
-			emitActionProgress(state, "testing", "github-comment", "failed", {
+			emitActionProgress(state, "in_review", "github-comment", "failed", {
 				error: error instanceof Error ? error.message : String(error),
 			});
 			deps.loggerInfo(
 				{
-					...deps.buildIssueJobLogFields(state, "testing"),
+					...deps.buildIssueJobLogFields(state, "in_review"),
 					error: error instanceof Error ? error.message : String(error),
 				},
 				"GitHub comment generation failed; using default review comment",
@@ -160,11 +160,11 @@ export async function handleReviewTestingStage(
 		const nextStage = resolveReviewFailureStage(state);
 		const humanReason = reviewFailureHumanReason(state);
 		Object.assign(state, deps.transitionStage(state, nextStage));
-		if (nextStage === "implementing") {
+		if (nextStage === "in_progress") {
 			incrementAutomatedReviewFixPasses(state);
 		}
 		await deps.saveRunState(config.workspacePath, state);
-		if (nextStage === "implementing") {
+		if (nextStage === "in_progress") {
 			await linear.markStage(state.issue.id, nextStage);
 			await linear.comment(
 				state.issue.id,
@@ -175,8 +175,8 @@ export async function handleReviewTestingStage(
 				state.codexSessionId && state.automatedReviewFixPasses
 					? `${humanReason} Parked for human review and PR updates.`
 					: "Review/testing failed, but no resumable implementation session is available. Parked for manual review and PR updates.";
-			await linear.markStage(state.issue.id, "reviewing");
-			await linear.applyStageLabel(state.issue.id, "reviewing");
+			await linear.markStage(state.issue.id, "in_review");
+			await linear.applyStageLabel(state.issue.id, "in_review");
 			await linear.comment(state.issue.id, humanComment);
 			if (!config.dryRun && state.pullRequest && state.codexSessionId) {
 				await deps.safePrComment(config, state, humanComment);
@@ -187,7 +187,7 @@ export async function handleReviewTestingStage(
 				await deps.saveRunState(config.workspacePath, state);
 			}
 		}
-		emitStageProgress(state, "testing", "failed", outcome.summary);
+		emitStageProgress(state, "in_review", "failed", outcome.summary);
 		return;
 	}
 
@@ -197,17 +197,22 @@ export async function handleReviewTestingStage(
 	)(config, state.pullRequest, true);
 	Object.assign(state, deps.transitionStage(state, "done"));
 	await deps.saveRunState(config.workspacePath, state);
-	await linear.markStage(state.issue.id, "reviewing");
-	await linear.applyStageLabel(state.issue.id, "reviewing");
+	await linear.markStage(state.issue.id, "in_review");
+	await linear.applyStageLabel(state.issue.id, "in_review");
 	await linear.comment(
 		state.issue.id,
 		"Review/testing passed. PR is ready and issue remains in review until merge.",
 	);
 	deps.loggerInfo(
-		deps.buildIssueJobLogFields(state, "testing"),
+		deps.buildIssueJobLogFields(state, "in_review"),
 		"Review/testing completed",
 	);
-	emitStageProgress(state, "testing", "succeeded", "Review/testing completed");
+	emitStageProgress(
+		state,
+		"in_review",
+		"succeeded",
+		"Review/testing completed",
+	);
 }
 
 export async function finalizeIssueAfterReviewMerge(

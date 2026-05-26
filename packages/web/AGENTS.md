@@ -28,7 +28,9 @@ the repository's server/API and realtime contracts.
    shortcuts, or styling mechanics.
 4. Use feature-complete controls for expected workflows, and prefer concise,
    scan-friendly operational UI over decorative presentation.
-5. After meaningful visible UI changes, run the web app locally and verify it in
+5. Do not add shadow effects to web UI. Avoid Tailwind shadow utilities,
+   box-shadow CSS, drop-shadow filters, and decorative glow/shadow treatments.
+6. After meaningful visible UI changes, run the web app locally and verify it in
    a browser.
 
 ## React State And Data Flow

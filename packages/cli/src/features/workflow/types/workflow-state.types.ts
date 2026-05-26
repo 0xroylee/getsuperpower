@@ -1,12 +1,9 @@
 export type WorkflowStage =
-	| "received"
-	| "planning"
-	| "implementing"
-	| "pr_created"
-	| "reviewing"
-	| "testing"
-	| "human_review"
-	| "blocked"
+	| "backlog"
+	| "plan"
+	| "in_progress"
+	| "in_review"
+	| "canceled"
 	| "done"
 	| "failed";
 

@@ -6,15 +6,15 @@ import {
 import type { ProjectBoardTaskRecord } from "../../web/src/lib/api";
 
 describe("issues board status utilities", () => {
-	it("groups legacy PR-created tasks into reviewing", () => {
+	it("groups legacy PR-created tasks into in_review", () => {
 		const columns = buildStatusColumns([
 			task({ id: "task-1", status: "pr_created" }),
 		]);
 
 		expect(columns.map((column) => column.status)).not.toContain("pr_created");
 		expect(
-			columns.find((column) => column.status === "reviewing")?.tasks[0]?.status,
-		).toBe("reviewing");
+			columns.find((column) => column.status === "in_review")?.tasks[0]?.status,
+		).toBe("in_review");
 		expect(getStatusLabel("pr_created")).toBe("In Review");
 	});
 });

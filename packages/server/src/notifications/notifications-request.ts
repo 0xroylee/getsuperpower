@@ -18,7 +18,7 @@ const runStateSchema = z
 const taskOutcomeSchema = z.object({
 	type: z.literal("task_outcome"),
 	state: runStateSchema,
-	outcome: z.enum(["done", "blocked"]),
+	outcome: z.enum(["done", "canceled", "failed"]),
 	errorMessage: z.string().optional(),
 });
 const humanReviewSchema = z.object({
@@ -74,7 +74,8 @@ function parseTaskOutcome(
 	if (
 		!parsed.success &&
 		body.outcome !== "done" &&
-		body.outcome !== "blocked"
+		body.outcome !== "canceled" &&
+		body.outcome !== "failed"
 	) {
 		return {
 			status: "error",

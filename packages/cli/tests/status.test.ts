@@ -6,7 +6,7 @@ import {
 
 describe("formatWorkflowStageDisplay", () => {
 	it("adds an emoji indicator for workflow stage", () => {
-		expect(formatWorkflowStageDisplay("planning")).toBe("planning 🧭");
+		expect(formatWorkflowStageDisplay("plan")).toBe("plan 🧭");
 		expect(formatWorkflowStageDisplay("done")).toBe("done ✅");
 	});
 });

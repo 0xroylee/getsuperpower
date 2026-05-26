@@ -97,27 +97,27 @@ describe("board repository", () => {
 		expect(
 			board?.statusColumns.find((column) => column.status === "backlog")?.tasks
 				.length,
-		).toBe(1);
+		).toBe(0);
 		expect(
 			board?.statusColumns.find((column) => column.status === "plan")?.tasks
 				.length,
-		).toBe(1);
+		).toBe(2);
 		expect(
-			board?.statusColumns.find((column) => column.status === "testing")?.tasks
-				.length,
-		).toBe(0);
+			board?.statusColumns.find((column) => column.status === "in_review")
+				?.tasks.length,
+		).toBe(1);
 		expect(
 			board?.statusColumns.some(
 				(column) => (column.status as string) === "pr_created",
 			),
 		).toBe(false);
 		expect(
-			board?.statusColumns.find((column) => column.status === "reviewing")
+			board?.statusColumns.find((column) => column.status === "in_review")
 				?.tasks[0]?.status,
-		).toBe("reviewing");
+		).toBe("in_review");
 		expect(
-			board?.statusColumns.find((column) => column.status === "backlog")
-				?.tasks[0]?.linearIdentifier,
+			board?.statusColumns.find((column) => column.status === "plan")?.tasks[0]
+				?.linearIdentifier,
 		).toBe("ROY-233");
 	});
 

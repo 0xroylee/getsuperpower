@@ -67,11 +67,7 @@ export interface WorkflowPollingRecordInput {
 	metadata?: Record<string, unknown>;
 }
 
-export type WorkflowExecutionStatus =
-	| "running"
-	| "succeeded"
-	| "failed"
-	| "blocked";
+export type WorkflowExecutionStatus = "running" | "succeeded" | "failed";
 
 export interface WorkflowTaskExecutionStartInput {
 	executionLogId: string;

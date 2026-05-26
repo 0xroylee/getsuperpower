@@ -64,12 +64,21 @@ export function buildEnvBase(
 			statusMap: {
 				backlog: env.LINEAR_STATUS_BACKLOG ?? "Backlog",
 				assigned: env.LINEAR_STATUS_ASSIGNED ?? "Todo",
-				planning: env.LINEAR_STATUS_PLANNING ?? "In Progress",
-				implementing: env.LINEAR_STATUS_IMPLEMENTING ?? "In Progress",
-				pr_created: env.LINEAR_STATUS_PR_CREATED ?? "In Review",
-				reviewing: env.LINEAR_STATUS_REVIEWING ?? "In Review",
-				testing: env.LINEAR_STATUS_TESTING ?? "In Review",
-				blocked: env.LINEAR_STATUS_BLOCKED ?? "Canceled",
+				plan:
+					env.LINEAR_STATUS_PLAN ?? env.LINEAR_STATUS_PLANNING ?? "In Progress",
+				in_progress:
+					env.LINEAR_STATUS_IN_PROGRESS ??
+					env.LINEAR_STATUS_IMPLEMENTING ??
+					"In Progress",
+				in_review:
+					env.LINEAR_STATUS_IN_REVIEW ??
+					env.LINEAR_STATUS_REVIEWING ??
+					env.LINEAR_STATUS_PR_CREATED ??
+					env.LINEAR_STATUS_TESTING ??
+					"In Review",
+				canceled:
+					env.LINEAR_STATUS_CANCELED ?? env.LINEAR_STATUS_BLOCKED ?? "Canceled",
+				failed: env.LINEAR_STATUS_FAILED ?? "Failed",
 				done: env.LINEAR_STATUS_DONE ?? "Done",
 			},
 			labelMap: {

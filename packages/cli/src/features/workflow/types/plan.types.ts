@@ -81,7 +81,7 @@ export interface HandlePlanningStageDeps {
 	safeNotifyTaskOutcome: (
 		notifications: ResolvedNotificationConfig,
 		state: RunState,
-		outcome: "done" | "blocked",
+		outcome: "done" | "canceled" | "failed",
 		errorMessage?: string,
 	) => Promise<void>;
 	loggerInfo: (fields: Record<string, unknown>, message: string) => void;

@@ -31,11 +31,10 @@ describe("deterministic workflow smoke flow", () => {
 		expect(run?.stage).toBe("done");
 		expect(run?.pullRequest?.url).toContain("dry-run");
 		expect(h.linear("default").stageCalls.map((c) => c.stage)).toEqual([
-			"planning",
-			"implementing",
-			"reviewing",
-			"testing",
-			"reviewing",
+			"in_progress",
+			"in_review",
+			"in_review",
+			"in_review",
 		]);
 	});
 
@@ -76,7 +75,7 @@ describe("deterministic workflow smoke flow", () => {
 	it("runs review-only pass for an existing PR", async () => {
 		const h = await createSmokeHarness();
 		const reviewIssue = issue("ENG-4");
-		reviewIssue.state = { id: "reviewing", name: "reviewing" };
+		reviewIssue.state = { id: "in_review", name: "In Review" };
 		h.addIssue("default", reviewIssue);
 		h.agent("default").reviews.push(result(passReview));
 
@@ -125,19 +124,19 @@ describe("deterministic workflow smoke flow", () => {
 	it("parks failed review-only runs without implementation session for manual review", async () => {
 		const h = await createSmokeHarness();
 		const reviewIssue = issue("ENG-7");
-		reviewIssue.state = { id: "reviewing", name: "reviewing" };
+		reviewIssue.state = { id: "in_review", name: "In Review" };
 		h.addIssue("default", reviewIssue);
 		h.agent("default").reviews.push(result(failReview));
 
 		await h.run({ reviewOnly: true });
 
-		expect((await h.state("default", "ENG-7"))?.stage).toBe("human_review");
+		expect((await h.state("default", "ENG-7"))?.stage).toBe("in_review");
 	});
 
 	it("parks merge-conflicted review-only PRs for human review and notifies once", async () => {
 		const h = await createSmokeHarness();
 		const reviewIssue = issue("ENG-11");
-		reviewIssue.state = { id: "reviewing", name: "reviewing" };
+		reviewIssue.state = { id: "in_review", name: "In Review" };
 		h.addIssue("default", reviewIssue);
 		h.runtime.getPullRequestMergeStatus = async () => ({
 			mergeStateStatus: "DIRTY",
@@ -148,7 +147,7 @@ describe("deterministic workflow smoke flow", () => {
 		await h.run({ reviewOnly: true });
 
 		const run = await h.state("default", "ENG-11");
-		expect(run?.stage).toBe("human_review");
+		expect(run?.stage).toBe("in_review");
 		expect(run?.humanReviewNotifiedAt).toBeDefined();
 		expect(h.notifications.filter((n) => n.type === "human")).toHaveLength(1);
 		expect(h.agent("default").reviews).toHaveLength(0);
@@ -157,7 +156,7 @@ describe("deterministic workflow smoke flow", () => {
 		);
 	});
 
-	it("blocks and records outcome when an agent stage fails", async () => {
+	it("fails and records outcome when an agent stage fails", async () => {
 		const h = await createSmokeHarness();
 		h.addIssue("default", issue("ENG-8"));
 		h.agent("default").plans.push(new Error("planner exploded"));
@@ -165,11 +164,10 @@ describe("deterministic workflow smoke flow", () => {
 		await h.run({ issueArg: "ENG-8" });
 
 		const run = await h.state("default", "ENG-8");
-		expect(run?.stage).toBe("blocked");
-		expect(run?.failedStage).toBe("planning");
-		expect(h.linear("default").canceled).toEqual(["lin_ENG-8"]);
+		expect(run?.stage).toBe("failed");
+		expect(run?.failedStage).toBe("plan");
 		expect(h.notifications).toContainEqual({
-			type: "blocked",
+			type: "failed",
 			issueKey: "ENG-8",
 		});
 	});
@@ -178,7 +176,7 @@ describe("deterministic workflow smoke flow", () => {
 		const h = await createSmokeHarness();
 		h.addIssue("default", issue("ENG-12"));
 		const blocked = state(h.project("default"), "ENG-12", "blocked");
-		blocked.failedStage = "planning";
+		blocked.failedStage = "plan";
 		blocked.planSummary = "invalid old plan";
 		blocked.successGoal = "stale goal";
 		blocked.complexityScore = 9;
@@ -222,13 +220,13 @@ describe("deterministic workflow smoke flow", () => {
 		const h = await createSmokeHarness();
 		h.addIssue("default", issue("ENG-14"));
 		const blocked = state(h.project("default"), "ENG-14", "blocked");
-		blocked.failedStage = "implementing";
+		blocked.failedStage = "in_progress";
 		blocked.lastError = "implementation failed";
 		await h.presetState("default", blocked);
 
 		await h.run({ issueArg: "ENG-14" });
 
-		expect((await h.state("default", "ENG-14"))?.stage).toBe("blocked");
+		expect((await h.state("default", "ENG-14"))?.stage).toBe("failed");
 		expect(h.agent("default").plans).toHaveLength(0);
 	});
 
@@ -250,8 +248,8 @@ describe("deterministic workflow smoke flow", () => {
 		const h = await createSmokeHarness();
 		const reviewA = issue("ENG-9");
 		const reviewB = issue("ENG-10");
-		reviewA.state = { id: "reviewing", name: "reviewing" };
-		reviewB.state = { id: "reviewing", name: "reviewing" };
+		reviewA.state = { id: "in_review", name: "In Review" };
+		reviewB.state = { id: "in_review", name: "In Review" };
 		h.addIssue("default", reviewA);
 		h.addIssue("default", reviewB);
 		const agent = h.agent("default");

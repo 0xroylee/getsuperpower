@@ -19,10 +19,11 @@ export interface ChatRoomPanelProps {
 
 export interface ChatRoomHeaderProps {
 	activeTaskId: string | null;
+	isTaskDetailPanelOpen: boolean;
 	projectId: string;
 	sidebarControlId: string;
 	title: string;
-	onOpenTaskDetails: () => void;
+	onToggleTaskDetails: () => void;
 }
 
 export interface ChatCommandContext {
@@ -59,7 +60,7 @@ export interface ChatTranscriptProps {
 	onDraftCommand: (draft: string) => void;
 }
 
-export interface ChatTaskDetailSheetProps {
+export interface ChatTaskDetailPanelProps {
 	isOpen: boolean;
 	taskId: string | null;
 	onClose: () => void;
@@ -69,12 +70,11 @@ export interface ChatRoomPanelViewProps {
 	activeSessionId: string;
 	activeTaskId: string | null;
 	draft: string;
-	errorMessage: string | null;
 	isBusy: boolean;
 	isCreatingSession: boolean;
 	isMessagesLoading: boolean;
 	isSending: boolean;
-	isTaskDetailSheetOpen: boolean;
+	isTaskDetailPanelOpen: boolean;
 	isThinking: boolean;
 	missionProgress: ChatMissionProgressViewModel | null;
 	messages: ChatMessageRecord[];
@@ -94,7 +94,7 @@ export interface ChatRoomPanelViewProps {
 	onCloseTaskDetails: () => void;
 	onDraftChange: (value: string) => void;
 	onNewSession: () => void;
-	onOpenTaskDetails: () => void;
+	onToggleTaskDetails: () => void;
 	onSearch: () => void;
 	onSelectCommand: (value: string) => void;
 	onSelectOption: (index: number, value: string) => void;

@@ -19,11 +19,15 @@ import type {
 
 const BACKLOG_STATUS = "backlog";
 const READY_STATUS = "plan";
+const IN_PROGRESS_STATUS = "in_progress";
+const REVIEW_STATUS = "in_review";
+const CANCELED_STATUS = "canceled";
 const LEGACY_PR_CREATED_STATUS = "pr_created";
-const LEGACY_BACKLOG_STATUS = "planning";
+const LEGACY_PLANNING_STATUS = "planning";
 const LEGACY_READY_STATUS = "todo";
-const REVIEW_STATUS = "reviewing";
-const REVIEW_STATUSES = new Set(["pr_created", "reviewing", "testing", "done"]);
+const LEGACY_IN_PROGRESS_STATUS = "implementing";
+const LEGACY_REVIEW_STATUSES = ["reviewing", "testing"] as const;
+const REVIEW_STATUSES = new Set([REVIEW_STATUS, "done"]);
 const DEFAULT_CREATOR_ID = "member-1";
 
 export function createBoardTaskWorkflowClient(
@@ -80,7 +84,7 @@ class BoardTaskWorkflowClient implements WorkflowLinearClient {
 	}
 
 	async markCanceled(issueId: string): Promise<void> {
-		await this.store.updateTask(issueId, { status: BACKLOG_STATUS });
+		await this.store.updateTask(issueId, { status: CANCELED_STATUS });
 	}
 
 	async updateIssueDetails(
@@ -189,13 +193,19 @@ function mapTaskToWorkflowIssue(
 }
 
 function normalizeBoardStatus(status: string): string {
-	if (status === LEGACY_BACKLOG_STATUS) {
-		return BACKLOG_STATUS;
+	if (status === LEGACY_PLANNING_STATUS) {
+		return READY_STATUS;
 	}
 	if (status === LEGACY_READY_STATUS) {
 		return READY_STATUS;
 	}
-	return status === LEGACY_PR_CREATED_STATUS ? REVIEW_STATUS : status;
+	if (status === LEGACY_IN_PROGRESS_STATUS) {
+		return IN_PROGRESS_STATUS;
+	}
+	return status === LEGACY_PR_CREATED_STATUS ||
+		(LEGACY_REVIEW_STATUSES as readonly string[]).includes(status)
+		? REVIEW_STATUS
+		: status;
 }
 
 function toCreatedRef(

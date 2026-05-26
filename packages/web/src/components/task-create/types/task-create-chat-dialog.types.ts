@@ -25,7 +25,6 @@ export interface TaskCreateChatState {
 	questions: TaskClarificationQuestion[];
 	submittedAnswers: TaskCreateAnswer[];
 	step: TaskCreateChatStep;
-	errorMessage: string | null;
 	result: Extract<TaskCreateResponse, { status: "created" }> | null;
 	logs: TaskCreateLogLine[];
 }

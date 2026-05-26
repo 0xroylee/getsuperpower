@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactElement, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import {
 	useAppendChatMessageMutation,
@@ -26,6 +27,7 @@ import { chatStreamLinesForSession } from "./chat-room-stream-utils";
 import { shouldShowChatThinkingIndicator } from "./chat-thinking-state";
 import { useWorkingSectionState } from "./chat-working-section-state";
 import type * as CRT from "./types/chat-room.types";
+import { useChatTaskDetailPanelState } from "./use-chat-task-detail-panel-state";
 
 const SIDEBAR_CONTROL_ID = "chat-sidebar-toggle";
 const NO_REFETCH = { refetchIntervalMs: false } as const;
@@ -38,8 +40,6 @@ export function ChatRoomPanel({
 	const [activeSessionId, setActiveSessionId] = useState("");
 	const [draft, setDraft] = useState("");
 	const [commandLines, setCommandLines] = useState<CRT.ChatStreamLine[]>([]);
-	const [errorMessage, setErrorMessage] = useState<string | null>(null);
-	const [isTaskDetailSheetOpen, setIsTaskDetailSheetOpen] = useState(false);
 	const clarificationState = useChatClarificationState();
 	const handledNewSessionRequest = useRef(0);
 	const sidebarToggleRef = useRef<HTMLInputElement>(null);
@@ -47,7 +47,6 @@ export function ChatRoomPanel({
 	const { handleDraftChange, markCommandDraftHandled } = useChatRoomDraftState({
 		commandDraftRequest,
 		setDraft,
-		setErrorMessage,
 	});
 
 	const currentWorkspaceQuery = useCurrentWorkspaceQuery(NO_REFETCH);
@@ -73,6 +72,10 @@ export function ChatRoomPanel({
 		selectedSession,
 		messages,
 	);
+	const taskDetails = useChatTaskDetailPanelState({
+		activeTaskId,
+		selectedSessionId,
+	});
 	const { pendingAnswers, pendingQuestionIndex } =
 		clarificationState.readPending(selectedSessionId);
 	const chatStreamsByRunId = useRealtimeStore(
@@ -115,26 +118,19 @@ export function ChatRoomPanel({
 	}, [newSessionRequest, workspaceId]);
 
 	async function startNewSession(closeSidebar = false): Promise<void> {
-		setErrorMessage(null);
 		if (!workspaceId) {
-			setErrorMessage("Workspace is still loading.");
+			toast.error("Workspace is still loading.");
 			return;
 		}
 		const session = await createSession.mutateAsync({ workspaceId });
 		setActiveSessionId(session.id);
 		setDraft("");
+		taskDetails.close();
 		if (closeSidebar) closeMobileSidebar();
 	}
 
 	function closeMobileSidebar(): void {
 		if (sidebarToggleRef.current) sidebarToggleRef.current.checked = false;
-	}
-	async function ensureSession() {
-		if (selectedSession) return selectedSession;
-		if (!workspaceId) throw new Error("Workspace is still loading.");
-		const session = await createSession.mutateAsync({ workspaceId });
-		setActiveSessionId(session.id);
-		return session;
 	}
 
 	async function handleSubmit(): Promise<void> {
@@ -142,17 +138,21 @@ export function ChatRoomPanel({
 		if (!content || isBusy) return;
 		markCommandDraftHandled();
 		setDraft("");
-		setErrorMessage(null);
 		try {
 			await runWithWorkingLabel(async () => {
-				const session = await ensureSession();
+				if (!selectedSession && !workspaceId) {
+					throw new Error("Workspace is still loading.");
+				}
+				const session =
+					selectedSession ?? (await createSession.mutateAsync({ workspaceId }));
+				if (!selectedSession) setActiveSessionId(session.id);
 				const command = parseChatCommand(content, {
 					projectId: session.projectId,
 				});
 				await executeInput(session.id, content, command);
 			});
 		} catch (error) {
-			setErrorMessage(error instanceof Error ? error.message : "Send failed");
+			toast.error(error instanceof Error ? error.message : "Send failed");
 		}
 	}
 
@@ -183,30 +183,30 @@ export function ChatRoomPanel({
 	}
 
 	async function archiveSession(sessionId: string): Promise<void> {
-		setErrorMessage(null);
 		try {
 			await updateSession.mutateAsync({
 				sessionId,
 				session: { archived: true },
 			});
-			if (sessionId === selectedSessionId) setActiveSessionId("");
+			if (sessionId === selectedSessionId) {
+				setActiveSessionId("");
+				taskDetails.close();
+			}
 		} catch (error) {
-			setErrorMessage(
-				error instanceof Error ? error.message : "Archive failed",
-			);
+			toast.error(error instanceof Error ? error.message : "Archive failed");
 		}
 	}
+
 	return (
 		<ChatRoomPanelView
 			activeSessionId={selectedSessionId}
 			activeTaskId={activeTaskId}
 			draft={draft}
-			errorMessage={errorMessage}
 			isBusy={isBusy}
 			isCreatingSession={createSession.isPending}
 			isMessagesLoading={messagesQuery.isLoading}
 			isSending={sendMessage.isPending}
-			isTaskDetailSheetOpen={isTaskDetailSheetOpen}
+			isTaskDetailPanelOpen={taskDetails.isOpen}
 			isThinking={isThinking}
 			missionProgress={missionProgress}
 			messages={messages}
@@ -225,10 +225,10 @@ export function ChatRoomPanel({
 			}
 			onArchiveSession={(sessionId) => void archiveSession(sessionId)}
 			onCloseSidebar={closeMobileSidebar}
-			onCloseTaskDetails={() => setIsTaskDetailSheetOpen(false)}
+			onCloseTaskDetails={taskDetails.close}
 			onDraftChange={handleDraftChange}
 			onNewSession={() => void startNewSession(true)}
-			onOpenTaskDetails={() => setIsTaskDetailSheetOpen(true)}
+			onToggleTaskDetails={taskDetails.toggle}
 			onSearch={() => {
 				closeMobileSidebar();
 				onSearchRequest();
@@ -239,6 +239,7 @@ export function ChatRoomPanel({
 			}
 			onSelectSession={(sessionId) => {
 				setActiveSessionId(sessionId);
+				taskDetails.close();
 				closeMobileSidebar();
 			}}
 			onSubmit={() => void handleSubmit()}

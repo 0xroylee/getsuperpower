@@ -14,8 +14,10 @@ import type {
 } from "./types/app.types";
 
 const LEGACY_PR_CREATED_STATUS = "pr_created";
-const LEGACY_BACKLOG_STATUS = "planning";
+const LEGACY_PLANNING_STATUS = "planning";
 const LEGACY_PLAN_STATUS = "todo";
+const LEGACY_IN_PROGRESS_STATUS = "implementing";
+const LEGACY_REVIEW_STATUSES = ["reviewing", "testing"] as const;
 
 export function createBoardReadModels(db: ServerDb): BoardReadModels {
 	return {
@@ -149,13 +151,19 @@ export function createBoardReadModels(db: ServerDb): BoardReadModels {
 }
 
 function normalizeBoardStatus(status: string): string {
-	if (status === LEGACY_BACKLOG_STATUS) {
-		return "backlog";
+	if (status === LEGACY_PLANNING_STATUS) {
+		return "plan";
 	}
 	if (status === LEGACY_PLAN_STATUS) {
 		return "plan";
 	}
-	return status === LEGACY_PR_CREATED_STATUS ? "reviewing" : status;
+	if (status === LEGACY_IN_PROGRESS_STATUS) {
+		return "in_progress";
+	}
+	return status === LEGACY_PR_CREATED_STATUS ||
+		(LEGACY_REVIEW_STATUSES as readonly string[]).includes(status)
+		? "in_review"
+		: status;
 }
 
 async function readHumanAssignees(

@@ -177,7 +177,7 @@ export class FakeLinear {
 		return this.issues.get(key) ?? null;
 	}
 	async fetchReviewOnlyWork(): Promise<LinearIssue[]> {
-		const stages = new Set(["pr_created", "reviewing", "testing", "done"]);
+		const stages = new Set(["in_review", "done"]);
 		return [...this.ownedIssueKeys]
 			.map((key) => this.issues.get(key))
 			.filter((issue): issue is LinearIssue =>

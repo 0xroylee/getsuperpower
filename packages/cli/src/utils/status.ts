@@ -1,21 +1,19 @@
 import type { WorkflowStage } from "../features/types";
 
 const WORKFLOW_STAGE_EMOJI: Record<WorkflowStage, string> = {
-	received: "📥",
-	planning: "🧭",
-	implementing: "🛠️",
-	pr_created: "🔀",
-	reviewing: "👀",
-	testing: "🧪",
-	human_review: "🙋",
-	blocked: "⛔",
+	backlog: "📥",
+	plan: "🧭",
+	in_progress: "🛠️",
+	in_review: "👀",
+	canceled: "⛔",
 	done: "✅",
 	failed: "❌",
 };
 
 const STATUS_LABEL_EMOJI: Record<string, string> = {
 	done: "✅",
-	blocked: "⛔",
+	canceled: "⛔",
+	failed: "❌",
 	human_review_required: "🙋",
 	human_review: "🙋",
 };

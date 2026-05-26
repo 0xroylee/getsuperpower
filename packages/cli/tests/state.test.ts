@@ -37,13 +37,13 @@ describe("state helpers", () => {
 				baseBranch: "main",
 			},
 			issue: { id: "1", key: "ENG-1", title: "t", url: "u" },
-			stage: "planning",
+			stage: "plan",
 			bugs: [],
 			startedAt: now,
 			updatedAt: now,
 		};
-		const next = transitionStage(state, "implementing");
-		expect(next.stage).toBe("implementing");
+		const next = transitionStage(state, "in_progress");
+		expect(next.stage).toBe("in_progress");
 	});
 
 	it("applies and clears lease metadata", () => {
@@ -58,7 +58,7 @@ describe("state helpers", () => {
 				baseBranch: "main",
 			},
 			issue: { id: "1", key: "ENG-1", title: "t", url: "u" },
-			stage: "planning",
+			stage: "plan",
 			bugs: [],
 			startedAt: now,
 			updatedAt: now,
@@ -85,7 +85,7 @@ describe("state helpers", () => {
 				baseBranch: "main",
 			},
 			issue: { id: "1", key: "ENG-1", title: "t", url: "u" },
-			stage: "planning",
+			stage: "plan",
 			bugs: [],
 			lease: {
 				ownerId: "worker-a",

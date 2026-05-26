@@ -1,10 +1,11 @@
 export const REQUIRED_BOARD_STATUSES = [
 	"backlog",
 	"plan",
-	"implementing",
-	"reviewing",
-	"testing",
+	"in_progress",
+	"in_review",
 	"done",
+	"canceled",
+	"failed",
 ] as const;
 
 export type BoardStatus = (typeof REQUIRED_BOARD_STATUSES)[number];

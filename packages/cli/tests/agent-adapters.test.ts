@@ -21,12 +21,11 @@ function createConfig(
 			statusMap: {
 				backlog: "z",
 				assigned: "a",
-				planning: "b",
-				implementing: "c",
-				pr_created: "d",
-				reviewing: "e",
-				testing: "f",
-				blocked: "g",
+				plan: "b",
+				in_progress: "c",
+				in_review: "e",
+				canceled: "g",
+				failed: "x",
 				done: "h",
 			},
 			labelMap: {

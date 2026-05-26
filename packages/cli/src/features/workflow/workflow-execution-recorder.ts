@@ -7,7 +7,7 @@ import type { ResolvedProjectConfig, RunState } from "../types";
 import { createReliableWorkflowDataClient } from "./reliable-workflow-data-client";
 import type { WorkflowDataAction } from "./workflow-data-protocol";
 
-type ExecutionFinishStatus = "succeeded" | "failed" | "blocked";
+type ExecutionFinishStatus = "succeeded" | "failed";
 
 export interface WorkflowExecutionRecorder {
 	executionLogId: string;

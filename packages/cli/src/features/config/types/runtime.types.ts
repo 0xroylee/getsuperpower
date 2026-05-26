@@ -3,14 +3,25 @@ import type { ServerRuntimeConfig } from "./server.types";
 export interface LinearStatusMap {
 	backlog: string;
 	assigned: string;
-	planning: string;
-	implementing: string;
-	pr_created: string;
-	reviewing: string;
-	testing: string;
-	blocked: string;
+	plan: string;
+	in_progress: string;
+	in_review: string;
+	canceled: string;
+	failed: string;
 	done: string;
 }
+
+export interface LegacyLinearStatusMap {
+	planning?: string;
+	implementing?: string;
+	pr_created?: string;
+	reviewing?: string;
+	testing?: string;
+	blocked?: string;
+}
+
+export type LinearStatusMapInput = Partial<LinearStatusMap> &
+	LegacyLinearStatusMap;
 
 export interface LinearLabelMap {
 	pr_created?: string;
@@ -157,9 +168,13 @@ export interface ProjectRuntimeConfig {
 	dryRun: boolean;
 }
 
-export interface ProjectConfig extends Partial<ProjectRuntimeConfig> {
+export interface ProjectConfig
+	extends Partial<Omit<ProjectRuntimeConfig, "linear">> {
 	id: string;
 	name?: string;
+	linear?: Partial<Omit<ProjectRuntimeConfig["linear"], "statusMap">> & {
+		statusMap?: LinearStatusMapInput;
+	};
 }
 
 export interface ResolvedProjectConfig extends ProjectRuntimeConfig {
@@ -196,7 +211,12 @@ export interface ResolvedNotificationConfig {
 	email: ResolvedNotificationEmailConfig;
 }
 
-export type DevosRootConfig = DeepPartial<ProjectRuntimeConfig> & {
+export type DevosRootConfig = DeepPartial<
+	Omit<ProjectRuntimeConfig, "linear">
+> & {
+	linear?: DeepPartial<Omit<ProjectRuntimeConfig["linear"], "statusMap">> & {
+		statusMap?: LinearStatusMapInput;
+	};
 	polling?: DeepPartial<PollingConfig>;
 	notifications?: DeepPartial<NotificationConfig>;
 	projects: ProjectConfig[];

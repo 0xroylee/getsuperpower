@@ -7,14 +7,14 @@ export type WorkflowProgressStatus =
 	| "running"
 	| "succeeded"
 	| "failed"
-	| "blocked";
+	| "canceled";
 
 export type WorkflowCheckpointStatus =
 	| "pending"
 	| "running"
 	| "succeeded"
 	| "failed"
-	| "blocked";
+	| "canceled";
 
 export interface WorkflowProgressBase {
 	schema: typeof WORKFLOW_PROGRESS_SCHEMA;

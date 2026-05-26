@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactElement, useState } from "react";
+import { toast } from "sonner";
 
 import {
 	buildClarificationAnswers,
@@ -58,7 +59,6 @@ export function TaskCreateChatDialog({
 		setIsStreaming(true);
 		setState((current) => ({
 			...current,
-			errorMessage: null,
 			logs: [
 				...current.logs,
 				createLogLine("system", "Started task creation stream."),
@@ -102,16 +102,11 @@ export function TaskCreateChatDialog({
 				}));
 				return;
 			}
-			setState((current) => ({
-				...current,
-				errorMessage: formatTaskCreateError(response),
-			}));
+			toast.error(formatTaskCreateError(response));
 		} catch (error) {
-			setState((current) => ({
-				...current,
-				errorMessage:
-					error instanceof Error ? error.message : "Failed to create task",
-			}));
+			toast.error(
+				error instanceof Error ? error.message : "Failed to create task",
+			);
 		} finally {
 			setIsStreaming(false);
 		}
@@ -178,11 +173,6 @@ export function TaskCreateChatDialog({
 				) : null}
 				<TaskCreateDialogResult state={state} />
 				<TaskCreateLogPanel logs={state.logs} />
-				{state.errorMessage ? (
-					<p className="m-0 rounded-md border border-red-900/60 bg-red-950/40 px-3 py-2 text-sm text-red-200">
-						{state.errorMessage}
-					</p>
-				) : null}
 				<TaskCreateDialogFooter
 					canSubmitAnswers={canSubmitAnswers}
 					canSubmitRequest={canSubmitRequest}

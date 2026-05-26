@@ -103,7 +103,7 @@ export async function safeSquashMergePullRequest(
 export async function safeNotifyTaskOutcome(
 	notifications: ResolvedNotificationConfig,
 	state: RunState,
-	outcome: "done" | "blocked",
+	outcome: "done" | "canceled" | "failed",
 	errorMessage?: string,
 	deps: IntegrationWrapperDeps = {},
 ): Promise<void> {

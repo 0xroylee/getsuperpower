@@ -48,15 +48,14 @@ describe("chat mission progress", () => {
 		expect(isActiveMissionStatus("plan")).toBe(false);
 		expect(isActiveMissionStatus("done")).toBe(false);
 		expect(isActiveMissionStatus("blocked")).toBe(false);
-		expect(isActiveMissionStatus("implementing")).toBe(true);
-		expect(isActiveMissionStatus("reviewing")).toBe(true);
-		expect(isActiveMissionStatus("testing")).toBe(true);
+		expect(isActiveMissionStatus("in_progress")).toBe(true);
+		expect(isActiveMissionStatus("in_review")).toBe(true);
 	});
 
 	it("maps task activity into status, notes, logs, steps, and result", () => {
 		const mission = missionModel();
 
-		expect(mission.statusLabel).toBe("Implementing");
+		expect(mission.statusLabel).toBe("In Progress");
 		expect(mission.notes[0]?.body).toContain("changed status");
 		expect(mission.executions[0]?.logLines).toEqual([
 			expect.objectContaining({ stream: "stdout", text: "Planning complete" }),
@@ -69,7 +68,7 @@ describe("chat mission progress", () => {
 
 		const html = renderTranscript({ missionProgress: mission });
 		const text = textContent(html);
-		expect(text).toContain("Implementing");
+		expect(text).toContain("In Progress");
 		expect(html).toContain('data-mission-section="status"');
 		expect(html).toContain('data-mission-section="plan-updates"');
 		expect(html).toContain('data-mission-section="progress-steps"');
@@ -79,18 +78,18 @@ describe("chat mission progress", () => {
 		expect(text).toContain("Progress steps");
 		expect(text).toContain("Execution logs");
 		expect(text).not.toContain("Progress logs");
-		expect(text).toContain("changed status from `plan` to `implementing`");
+		expect(text).toContain("changed status from `plan` to `in_progress`");
 		expect(text).toContain("implementation succeeded");
 		expect(text).toContain("Planning complete");
 		expect(text).toContain("Needs retry");
 		expect(text).toContain("Result: succeeded");
 	});
 
-	it("renders blocked mission results as warning instead of success", () => {
-		const mission = missionModel("blocked");
+	it("renders canceled mission results as warning instead of success", () => {
+		const mission = missionModel("canceled");
 
 		expect(mission.latestResult).toEqual({
-			label: "blocked",
+			label: "canceled",
 			tone: "warning",
 		});
 
@@ -145,7 +144,7 @@ function statusComment(): TaskActivityRecord {
 		actorId: "system",
 		actorType: "system",
 		title: "updated this issue",
-		body: "changed status from `plan` to `implementing`",
+		body: "changed status from `plan` to `in_progress`",
 		status: null,
 		createdAt: "2026-05-20T00:01:00.000Z",
 	};
@@ -185,7 +184,7 @@ function boardTask(): ProjectBoardTaskRecord {
 		title: "Show mission progress",
 		content: "Display progress in the chat transcript.",
 		priority: 2,
-		status: "implementing",
+		status: "in_progress",
 		dueDate: null,
 		creatorId: "owner-1",
 		assigneeId: null,

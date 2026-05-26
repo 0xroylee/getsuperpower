@@ -61,8 +61,8 @@ describe("handleStatusCommand status output", () => {
 			stage: string;
 			stageDisplay?: string;
 		};
-		expect(parsed.stage).toBe("planning");
-		expect(parsed.stageDisplay).toBe("planning 🧭");
+		expect(parsed.stage).toBe("plan");
+		expect(parsed.stageDisplay).toBe("plan 🧭");
 	});
 });
 
@@ -111,12 +111,11 @@ function createProject(
 			statusMap: {
 				backlog: "Backlog",
 				assigned: "Todo",
-				planning: "In Progress",
-				implementing: "In Progress",
-				pr_created: "In Review",
-				reviewing: "In Review",
-				testing: "In Review",
-				blocked: "Canceled",
+				plan: "In Progress",
+				in_progress: "In Progress",
+				in_review: "In Review",
+				canceled: "Canceled",
+				failed: "Failed",
 				done: "Done",
 			},
 			labelMap: {
@@ -154,7 +153,10 @@ function createProject(
 	};
 }
 
-function createRunState(issueKey: string, stage: RunState["stage"]): RunState {
+function createRunState(
+	issueKey: string,
+	stage: RunState["stage"] | string,
+): RunState {
 	const now = new Date().toISOString();
 	return {
 		projectId: "default",
@@ -171,7 +173,7 @@ function createRunState(issueKey: string, stage: RunState["stage"]): RunState {
 			title: issueKey,
 			url: `https://linear.app/acme/issue/${issueKey}/sample`,
 		},
-		stage,
+		stage: stage as RunState["stage"],
 		bugs: [],
 		startedAt: now,
 		updatedAt: now,

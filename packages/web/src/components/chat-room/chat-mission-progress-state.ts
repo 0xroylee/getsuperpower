@@ -15,11 +15,7 @@ import type {
 	ChatMissionResult,
 } from "./types/chat-mission-progress.types";
 
-const ACTIVE_MISSION_STATUSES = new Set([
-	"implementing",
-	"reviewing",
-	"testing",
-]);
+const ACTIVE_MISSION_STATUSES = new Set(["in_progress", "in_review"]);
 
 export function useChatMissionProgress(
 	taskId: string | null,
@@ -166,7 +162,7 @@ function createLatestResult(
 	if (["failed", "failure", "error", "rejected"].includes(status)) {
 		return { label: latest.status, tone: "error" };
 	}
-	if (["blocked", "canceled", "cancelled"].includes(status)) {
+	if (["canceled", "cancelled"].includes(status)) {
 		return { label: latest.status, tone: "warning" };
 	}
 	if (["running", "started", "queued"].includes(status)) {

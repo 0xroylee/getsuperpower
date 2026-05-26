@@ -1,4 +1,4 @@
-export type NotificationOutcome = "done" | "blocked";
+export type NotificationOutcome = "done" | "canceled" | "failed";
 
 export type {
 	HumanReviewRequiredNotificationServerRequest,

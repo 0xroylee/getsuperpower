@@ -8,10 +8,11 @@ import type { ChatRoomHeaderProps } from "./types/chat-room.types";
 
 export function ChatRoomHeader({
 	activeTaskId,
+	isTaskDetailPanelOpen,
 	projectId,
 	sidebarControlId,
 	title,
-	onOpenTaskDetails,
+	onToggleTaskDetails,
 }: ChatRoomHeaderProps): ReactElement {
 	return (
 		<header className="flex items-center justify-between gap-3 border-b border-border bg-surface-inset px-4 py-3">
@@ -35,8 +36,9 @@ export function ChatRoomHeader({
 			</div>
 			{activeTaskId ? (
 				<Button
+					aria-pressed={isTaskDetailPanelOpen}
 					className="shrink-0"
-					onClick={onOpenTaskDetails}
+					onClick={onToggleTaskDetails}
 					type="button"
 					variant="secondary"
 				>

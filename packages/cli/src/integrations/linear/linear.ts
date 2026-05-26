@@ -263,9 +263,7 @@ export class LinearClient {
 			}),
 		);
 		const reviewStateIds = new Set([
-			this.requiredStatusMap().pr_created,
-			this.requiredStatusMap().reviewing,
-			this.requiredStatusMap().testing,
+			this.requiredStatusMap().in_review,
 			this.requiredStatusMap().done,
 		]);
 		const testingLabelName = this.config.linear.labelMap.testing?.trim();
@@ -464,11 +462,12 @@ export class LinearClient {
 	}
 
 	async applyStageLabel(issueId: string, stage: WorkflowStage): Promise<void> {
-		if (!isWorkflowLabelStage(stage)) {
+		const labelStage = workflowLabelStageForStatus(stage);
+		if (!labelStage) {
 			return;
 		}
 		await this.ensureResolvedWorkflowLabels();
-		const nextLabelId = this.resolvedWorkflowLabelIds[stage];
+		const nextLabelId = this.resolvedWorkflowLabelIds[labelStage];
 		if (!nextLabelId || this.config.dryRun) {
 			return;
 		}
@@ -701,24 +700,19 @@ export class LinearClient {
 		this.resolvedStatusMap = {
 			backlog: this.resolveStatusValue("backlog", statusMap.backlog, states),
 			assigned: this.resolveStatusValue("assigned", statusMap.assigned, states),
-			planning: this.resolveStatusValue("planning", statusMap.planning, states),
-			implementing: this.resolveStatusValue(
-				"implementing",
-				statusMap.implementing,
+			plan: this.resolveStatusValue("plan", statusMap.plan, states),
+			in_progress: this.resolveStatusValue(
+				"in_progress",
+				statusMap.in_progress,
 				states,
 			),
-			pr_created: this.resolveStatusValue(
-				"pr_created",
-				statusMap.pr_created,
+			in_review: this.resolveStatusValue(
+				"in_review",
+				statusMap.in_review,
 				states,
 			),
-			reviewing: this.resolveStatusValue(
-				"reviewing",
-				statusMap.reviewing,
-				states,
-			),
-			testing: this.resolveStatusValue("testing", statusMap.testing, states),
-			blocked: this.resolveStatusValue("blocked", statusMap.blocked, states),
+			canceled: this.resolveStatusValue("canceled", statusMap.canceled, states),
+			failed: this.resolveStatusValue("failed", statusMap.failed, states),
 			done: this.resolveStatusValue("done", statusMap.done, states),
 		};
 	}
@@ -743,7 +737,7 @@ export class LinearClient {
 		}
 
 		// Fallback for customized workflows without a literal "Canceled" state name.
-		this.resolvedCanceledStateId = this.requiredStatusMap().blocked;
+		this.resolvedCanceledStateId = this.requiredStatusMap().canceled;
 		return this.resolvedCanceledStateId;
 	}
 
@@ -1201,10 +1195,10 @@ function uniqueTrimmed(values: Array<string | null | undefined>): string[] {
 	) as string[];
 }
 
-function isWorkflowLabelStage(
+function workflowLabelStageForStatus(
 	stage: WorkflowStage,
-): stage is WorkflowLabelStage {
-	return stage === "pr_created" || stage === "reviewing" || stage === "testing";
+): WorkflowLabelStage | undefined {
+	return stage === "in_review" ? "reviewing" : undefined;
 }
 
 const PRIORITY_SORT_ORDER: Record<number, number> = {

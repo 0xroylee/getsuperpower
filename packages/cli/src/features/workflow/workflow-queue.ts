@@ -82,9 +82,7 @@ export function selectIssueQueueForCycle<T extends WorkflowQueueIssue>(
 
 export function isReviewOnlyEligibleRunState(state: RunState): boolean {
 	return (
-		(state.stage === "pr_created" ||
-			state.stage === "reviewing" ||
-			state.stage === "testing" ||
+		(state.stage === "in_review" ||
 			(state.stage === "done" &&
 				!state.pullRequestApprovedAt &&
 				!state.humanReviewNotifiedAt)) &&
@@ -99,29 +97,22 @@ export function selectReviewOnlyIssueKeys(runStates: RunState[]): string[] {
 }
 
 export function isReviewOnlyExecutableStage(stage: WorkflowStage): boolean {
-	return (
-		stage === "pr_created" ||
-		stage === "reviewing" ||
-		stage === "testing" ||
-		stage === "done"
-	);
+	return stage === "in_review" || stage === "done";
 }
 
 export function shouldSkipReviewOnlyRunState(
 	state: Pick<RunState, "stage"> | null,
 	options: Pick<RunOptions, "reviewOnly">,
 ): boolean {
-	return options.reviewOnly === true && state?.stage === "human_review";
+	return options.reviewOnly === true && state?.stage === "canceled";
 }
 
 export function shouldRetryRunStage(stage: WorkflowStage): boolean {
 	return (
-		stage === "received" ||
-		stage === "planning" ||
-		stage === "implementing" ||
-		stage === "pr_created" ||
-		stage === "reviewing" ||
-		stage === "testing"
+		stage === "backlog" ||
+		stage === "plan" ||
+		stage === "in_progress" ||
+		stage === "in_review"
 	);
 }
 

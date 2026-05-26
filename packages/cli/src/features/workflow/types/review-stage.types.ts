@@ -66,7 +66,7 @@ export interface FinalizeReviewMergeDeps {
 	safeNotifyTaskOutcome: (
 		notifications: ResolvedNotificationConfig,
 		state: RunState,
-		outcome: "done" | "blocked",
+		outcome: "done" | "canceled" | "failed",
 		errorMessage?: string,
 	) => Promise<void>;
 }

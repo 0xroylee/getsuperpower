@@ -39,12 +39,9 @@ export async function handlePlanningStage(
 	state: RunState,
 	deps: HandlePlanningStageDeps,
 ): Promise<void> {
-	deps.loggerInfo(
-		deps.buildIssueJobLogFields(state, "planning"),
-		"Planning issue",
-	);
-	emitStageProgress(state, "planning", "started", "Planning issue");
-	emitActionProgress(state, "planning", "plan", "started");
+	deps.loggerInfo(deps.buildIssueJobLogFields(state, "plan"), "Planning issue");
+	emitStageProgress(state, "plan", "started", "Planning issue");
+	emitActionProgress(state, "plan", "plan", "started");
 	const supplemental = await selectPlanningSupplementalSkills(
 		config,
 		state.issue,
@@ -117,11 +114,11 @@ export async function handlePlanningStage(
 		state.complexityScore = undefined;
 		state.reviewMode = undefined;
 		state.planningNeedsInfoQuestions = parsedPlan.questions;
-		state.failedStage = "planning";
+		state.failedStage = "plan";
 		state.lastError = "Planning needs clarification before implementation.";
-		Object.assign(state, deps.transitionStage(state, "blocked"));
+		Object.assign(state, deps.transitionStage(state, "canceled"));
 		await deps.saveRunState(config.workspacePath, state);
-		await linear.markStage(state.issue.id, "backlog");
+		await linear.markStage(state.issue.id, "canceled");
 		await linear.clearWorkflowStageLabels(state.issue.id);
 		await linear.comment(
 			state.issue.id,
@@ -134,15 +131,15 @@ export async function handlePlanningStage(
 		await deps.safeNotifyTaskOutcome(
 			notifications,
 			state,
-			"blocked",
+			"canceled",
 			state.lastError,
 		);
-		emitActionProgress(state, "planning", "plan", "blocked", {
+		emitActionProgress(state, "plan", "plan", "canceled", {
 			detail: state.lastError,
 		});
-		emitStageProgress(state, "planning", "blocked", state.lastError);
+		emitStageProgress(state, "plan", "canceled", state.lastError);
 		deps.loggerInfo(
-			deps.buildIssueJobLogFields(state, "planning"),
+			deps.buildIssueJobLogFields(state, "plan"),
 			"Plan needs clarification",
 		);
 		return;
@@ -154,18 +151,18 @@ export async function handlePlanningStage(
 		parsedPlan.complexityScore,
 	);
 	if (parsedPlan.complexity === "SIMPLE") {
-		Object.assign(state, deps.transitionStage(state, "implementing"));
+		Object.assign(state, deps.transitionStage(state, "in_progress"));
 		await deps.saveRunState(config.workspacePath, state);
-		await linear.markStage(state.issue.id, "implementing");
+		await linear.markStage(state.issue.id, "in_progress");
 		await linear.comment(
 			state.issue.id,
 			buildPlanComment(state.issue.key, state.planSummary, result.usage),
 		);
 		emitPlanningSummaryProgress(state, { planSummary: state.planSummary });
-		emitActionProgress(state, "planning", "plan", "succeeded");
-		emitStageProgress(state, "planning", "succeeded", "Plan completed");
+		emitActionProgress(state, "plan", "plan", "succeeded");
+		emitStageProgress(state, "plan", "succeeded", "Plan completed");
 		deps.loggerInfo(
-			deps.buildIssueJobLogFields(state, "planning"),
+			deps.buildIssueJobLogFields(state, "plan"),
 			"Plan completed",
 		);
 		return;
@@ -183,7 +180,7 @@ export async function handlePlanningStage(
 	state.splitTasks = createdTasks;
 	Object.assign(state, deps.transitionStage(state, "done"));
 	await deps.saveRunState(config.workspacePath, state);
-	await linear.markStage(state.issue.id, "backlog");
+	await linear.markStage(state.issue.id, "done");
 	await linear.clearWorkflowStageLabels(state.issue.id);
 	await linear.comment(
 		state.issue.id,
@@ -196,15 +193,12 @@ export async function handlePlanningStage(
 		planSummary: state.planSummary,
 		splitTasks: parsedPlan.splitTasks,
 	});
-	emitActionProgress(state, "planning", "split-tasks", "succeeded", {
+	emitActionProgress(state, "plan", "split-tasks", "succeeded", {
 		detail: `${createdTasks.length} tasks created`,
 	});
-	emitActionProgress(state, "planning", "plan", "succeeded");
-	emitStageProgress(state, "planning", "succeeded", "Plan completed");
-	deps.loggerInfo(
-		deps.buildIssueJobLogFields(state, "planning"),
-		"Plan completed",
-	);
+	emitActionProgress(state, "plan", "plan", "succeeded");
+	emitStageProgress(state, "plan", "succeeded", "Plan completed");
+	deps.loggerInfo(deps.buildIssueJobLogFields(state, "plan"), "Plan completed");
 }
 
 export async function resolveParentPlanningSessionId(

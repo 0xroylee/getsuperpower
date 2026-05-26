@@ -16,13 +16,17 @@ import {
 } from "./types/board.types";
 
 const LEGACY_PR_CREATED_STATUS = "pr_created";
-const LEGACY_BACKLOG_STATUS = "planning";
+const LEGACY_PLANNING_STATUS = "planning";
 const LEGACY_PLAN_STATUS = "todo";
+const LEGACY_IN_PROGRESS_STATUS = "implementing";
+const LEGACY_REVIEW_STATUSES = ["reviewing", "testing"] as const;
 const BOARD_STATUS_QUERY_VALUES = [
 	...REQUIRED_BOARD_STATUSES,
-	LEGACY_BACKLOG_STATUS,
+	LEGACY_PLANNING_STATUS,
 	LEGACY_PLAN_STATUS,
+	LEGACY_IN_PROGRESS_STATUS,
 	LEGACY_PR_CREATED_STATUS,
+	...LEGACY_REVIEW_STATUSES,
 ];
 
 export function createBoardRepository(
@@ -170,11 +174,17 @@ function buildStatusColumns(tasks: BoardTaskSummary[]): BoardStatusColumn[] {
 }
 
 function normalizeBoardStatus(status: string): string {
-	if (status === LEGACY_BACKLOG_STATUS) {
-		return "backlog";
+	if (status === LEGACY_PLANNING_STATUS) {
+		return "plan";
 	}
 	if (status === LEGACY_PLAN_STATUS) {
 		return "plan";
 	}
-	return status === LEGACY_PR_CREATED_STATUS ? "reviewing" : status;
+	if (status === LEGACY_IN_PROGRESS_STATUS) {
+		return "in_progress";
+	}
+	return status === LEGACY_PR_CREATED_STATUS ||
+		(LEGACY_REVIEW_STATUSES as readonly string[]).includes(status)
+		? "in_review"
+		: status;
 }
