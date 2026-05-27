@@ -16,7 +16,7 @@ type Props = {
 
 export default function RootLayout({ children }: Props): ReactElement {
 	return (
-		<html lang="en">
+		<html lang="en" suppressHydrationWarning>
 			<body>
 				<AppProviders>{children}</AppProviders>
 			</body>
