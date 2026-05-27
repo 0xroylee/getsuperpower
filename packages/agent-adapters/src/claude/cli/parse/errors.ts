@@ -1,5 +1,5 @@
-import { AgentAdapterError } from "../adapter-error";
-import type { AgentAdapterRunRequest } from "../types/agent-adapter.types";
+import { AgentAdapterError } from "../../../adapter-error";
+import type { AgentAdapterRunRequest } from "../../../types/agent-adapter.types";
 
 export function mapClaudeError(
 	command: string,

@@ -2,7 +2,7 @@ import type {
 	AgentAdapterRunRole,
 	AgentAdapterRuntimeConfig,
 	CodexReasoningEffort,
-} from "../types/agent-adapter.types";
+} from "../../../types/agent-adapter.types";
 
 export interface CodexStageConfig {
 	model?: string;

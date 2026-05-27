@@ -1,4 +1,4 @@
-import type { AgentAdapterRunRequest } from "./types/agent-adapter.types";
+import type { AgentAdapterRunRequest } from "../../types/agent-adapter.types";
 
 export function renderAgentPrompt(request: AgentAdapterRunRequest): string {
 	const sections = [

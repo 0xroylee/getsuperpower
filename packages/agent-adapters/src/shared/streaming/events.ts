@@ -1,5 +1,5 @@
 import type { AgentStreamEvent } from "devos-agents";
-import type { AgentAdapterRunRequest } from "./types/agent-adapter.types";
+import type { AgentAdapterRunRequest } from "../../types/agent-adapter.types";
 
 export function emitStreamEvent(
 	request: AgentAdapterRunRequest,

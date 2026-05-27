@@ -2,8 +2,8 @@ import type {
 	AgentAdapterRunRequest,
 	AgentAdapterRuntimeConfig,
 	CodexReasoningEffort,
-} from "../types/agent-adapter.types";
-import { normalizeList, toTomlStringArray } from "./config";
+} from "../../../types/agent-adapter.types";
+import { normalizeList, toTomlStringArray } from "../utils/config";
 
 export function buildCodexConfigOverrides(
 	config: AgentAdapterRuntimeConfig,
