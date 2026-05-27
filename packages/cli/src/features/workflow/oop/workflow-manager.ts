@@ -13,9 +13,7 @@ export interface ProjectWorkflowContext<
 	linear: WorkflowLinearClient;
 }
 
-export interface WorkflowOrchestratorDeps<
-	TProject extends ResolvedProjectConfig,
-> {
+export interface WorkflowManagerDeps<TProject extends ResolvedProjectConfig> {
 	resolvePolling(config: LoadedConfig, options: RunOptions): PollingSettings;
 	pickProjects(
 		config: LoadedConfig,
@@ -61,12 +59,12 @@ export interface WorkflowOrchestratorDeps<
 	sleepForWorkflow(runtime: WorkflowRuntime, ms: number): Promise<void>;
 }
 
-export class WorkflowOrchestrator<TProject extends ResolvedProjectConfig> {
+export class WorkflowManager<TProject extends ResolvedProjectConfig> {
 	constructor(
 		private readonly config: LoadedConfig,
 		private readonly options: RunOptions,
 		private readonly runtime: WorkflowRuntime,
-		private readonly deps: WorkflowOrchestratorDeps<TProject>,
+		private readonly deps: WorkflowManagerDeps<TProject>,
 	) {}
 
 	async run(): Promise<void> {

@@ -7,7 +7,11 @@ import type {
 import type { LoadedConfig } from "../src/features/config";
 import type { ResolvedProjectConfig } from "../src/features/types";
 import { AgentAdapterBridge } from "../src/features/workflow/oop/agent-adapter-bridge";
-import { WorkflowOrchestrator } from "../src/features/workflow/oop/workflow-orchestrator";
+import { createBuiltInWorkflowMetadata } from "../src/features/workflow/oop/built-in-workflow-metadata";
+import { MissionManager } from "../src/features/workflow/oop/mission-manager";
+import { PhaseRunner } from "../src/features/workflow/oop/phase-runner";
+import { PipelineManager } from "../src/features/workflow/oop/pipeline-manager";
+import { WorkflowManager } from "../src/features/workflow/oop/workflow-manager";
 
 describe("workflow OOP bridge", () => {
 	it("routes stage agents through the structured adapter contract", async () => {
@@ -32,7 +36,7 @@ describe("workflow OOP bridge", () => {
 		const events: string[] = [];
 		const project = fakeProject();
 		const config = { projects: [project], polling: {}, notifications: {} };
-		const orchestrator = new WorkflowOrchestrator(
+		const manager = new WorkflowManager(
 			config as LoadedConfig,
 			{},
 			{
@@ -68,9 +72,83 @@ describe("workflow OOP bridge", () => {
 			},
 		);
 
-		await orchestrator.run();
+		await manager.run();
 
 		expect(events).toEqual(["cycle", "stopped"]);
+	});
+
+	it("models built-in metadata as plan, implement, and testing phases", () => {
+		const metadata = createBuiltInWorkflowMetadata(fakeProject());
+
+		expect(metadata.phases.map((phase) => phase.id)).toEqual([
+			"plan",
+			"implement",
+			"testing",
+		]);
+		expect(metadata.phases.flatMap((phase) => phase.agentAssignments)).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ name: "planner", role: "planning" }),
+				expect.objectContaining({
+					name: "implementer",
+					role: "implementing",
+				}),
+				expect.objectContaining({ name: "reviewer", role: "review-testing" }),
+			]),
+		);
+	});
+
+	it("runs multiple agents in a phase before moving to the next phase", async () => {
+		const events: string[] = [];
+		const phaseRunner = new PhaseRunner({
+			runAgent: async ({ phase, assignment }) => {
+				events.push(`${phase.id}:${assignment.name}`);
+				return {
+					assignment,
+					result: { stdout: assignment.name, finalMessage: assignment.name },
+				};
+			},
+		});
+		const metadata = createBuiltInWorkflowMetadata(fakeProject());
+		metadata.phases[0] = {
+			...metadata.phases[0],
+			agentAssignments: [
+				{ name: "a", role: "planning", required: true, skills: [] },
+				{ name: "b", role: "planning", required: true, skills: [] },
+			],
+		};
+		const pipeline = new PipelineManager(metadata, { phaseRunner });
+		const state = fakeRunState("plan");
+
+		const result = await pipeline.run({
+			config: fakeProject(),
+			state,
+			shouldContinue: () => state.stage === "plan",
+			afterPhase: async () => {
+				state.stage = "done";
+			},
+		});
+
+		expect(result.ok).toBe(true);
+		expect(events.sort()).toEqual(["plan:a", "plan:b"]);
+	});
+
+	it("creates an internal mission from a task and run state", () => {
+		const project = fakeProject();
+		const issue = fakeIssue("eng-7");
+		const state = fakeRunState("plan");
+
+		const mission = new MissionManager(project).createMission({
+			issue,
+			state,
+			resumed: true,
+		});
+
+		expect(mission).toMatchObject({
+			id: "default:ENG-7",
+			key: "ENG-7",
+			projectId: "default",
+			resumed: true,
+		});
 	});
 });
 
@@ -150,5 +228,36 @@ function fakeLinearClient() {
 		applyStageLabel: async () => undefined,
 		clearWorkflowStageLabels: async () => undefined,
 		comment: async () => undefined,
+	};
+}
+
+function fakeIssue(identifier: string) {
+	return {
+		id: "issue-1",
+		identifier,
+		title: "Build workflow",
+		url: "devos://tasks/issue-1",
+		priority: { value: 1, name: "P1" },
+		labels: [],
+		state: { id: "plan", name: "plan" },
+	};
+}
+
+function fakeRunState(stage: "plan" | "done") {
+	return {
+		projectId: "default",
+		projectName: "Default",
+		workspacePath: "/tmp/workspace",
+		repository: { owner: "o", name: "r", baseBranch: "main" },
+		issue: {
+			id: "issue-1",
+			key: "ENG-7",
+			title: "Build workflow",
+			url: "devos://tasks/issue-1",
+		},
+		stage,
+		bugs: [],
+		startedAt: "2026-05-27T00:00:00.000Z",
+		updatedAt: "2026-05-27T00:00:00.000Z",
 	};
 }

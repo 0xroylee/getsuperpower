@@ -4,7 +4,11 @@ import { logger, normalizeError } from "../../utils/logger";
 import { type LoadedConfig, getProjectById } from "../config";
 import { runAgentWithChatLog } from "./agent-chat-log";
 import { safeLinearComment } from "./integration-wrappers";
-import { WorkflowOrchestrator } from "./oop/workflow-orchestrator";
+import { createBuiltInWorkflowMetadata } from "./oop/built-in-workflow-metadata";
+import { MissionManager } from "./oop/mission-manager";
+import { PhaseRunner } from "./oop/phase-runner";
+import { PipelineManager } from "./oop/pipeline-manager";
+import { WorkflowManager } from "./oop/workflow-manager";
 import {
 	handlePlanningStage,
 	shouldSquashMergePullRequestForComplexityScore,
@@ -120,7 +124,7 @@ export async function runWorkflow(
 	options: RunOptions,
 	runtime: WorkflowRuntime = createWorkflowRuntime(),
 ): Promise<void> {
-	await new WorkflowOrchestrator(config, options, runtime, {
+	await new WorkflowManager(config, options, runtime, {
 		resolvePolling: (loadedConfig, runOptions) =>
 			resolvePollingSettings(loadedConfig.polling, runOptions),
 		pickProjects,
@@ -846,10 +850,18 @@ async function processIssue(
 	if (options.reviewOnly && !runState.reviewMode) {
 		runState.reviewMode = "bot";
 	}
+	const mission = new MissionManager(config).createMission({
+		issue,
+		state: runState,
+		resumed: existing !== null,
+	});
 	issueLogger.info(
-		buildIssueJobLogFields(runState, runState.stage, {
-			resumed: existing !== null,
-		}),
+		{
+			...buildIssueJobLogFields(runState, runState.stage, {
+				resumed: mission.resumed,
+			}),
+			missionId: mission.id,
+		},
 		"Taking issue job",
 	);
 	const executionRecorder = createWorkflowExecutionRecorder(config, runState);
@@ -1061,82 +1073,104 @@ async function executeIssue(
 
 	await runtime.ensureBaseBranchFresh(config);
 	const agent = runtime.createAgentAdapter(config);
-
-	while (
-		state.stage !== "done" &&
-		state.stage !== "canceled" &&
-		state.stage !== "failed"
-	) {
-		if (options.reviewOnly && !isReviewOnlyExecutableStage(state.stage)) {
-			break;
-		}
-		if (state.stage === "in_review" && state.humanReviewNotifiedAt) {
-			break;
-		}
-		await heartbeatRunLease(
-			config.workspacePath,
-			state,
-			leaseOwnerId,
-			leaseTimeoutMs,
-		);
-		if (state.stage === "backlog") {
-			await handleReceivedStage(config, linear, state);
-			continue;
-		}
-
-		if (state.stage === "plan") {
-			await handlePlanningStage(config, agent, notifications, linear, state, {
-				runAgentWithChatLog,
-				appendCodexUsage,
-				saveRunState,
-				transitionStage,
-				safeNotifyTaskOutcome: (notifyConfig, runState, outcome, error) =>
-					safeNotifyTaskOutcome(
-						notifyConfig,
-						runState,
-						outcome,
-						error,
-						runtime,
-					),
-				loggerInfo: logger.info.bind(logger),
-				buildIssueJobLogFields: (runState, stage, stageOptions) => ({
-					...buildIssueJobLogFields(runState, stage, stageOptions),
-				}),
-			});
-			continue;
-		}
-
-		if (state.stage === "in_progress") {
-			await handleImplementingStage(config, agent, linear, state, runtime);
-			continue;
-		}
-
-		if (state.stage === "in_review") {
-			if (options.reviewOnly) {
-				const parkedForConflict = await maybeParkReviewOnlyConflict(
+	if (state.stage === "backlog") {
+		await handleReceivedStage(config, linear, state);
+	}
+	const metadata = createBuiltInWorkflowMetadata(config);
+	const pipeline = new PipelineManager(metadata, {
+		phaseRunner: new PhaseRunner({
+			runAgent: async ({ phase, assignment }) => {
+				await runBuiltInWorkflowPhase(
+					phase.id,
 					config,
+					agent,
 					notifications,
 					linear,
 					state,
 					runtime,
 				);
-				if (parkedForConflict) {
-					continue;
-				}
+				return {
+					assignment,
+					result: { stdout: "", finalMessage: phase.title },
+				};
+			},
+		}),
+	});
+	const pipelineResult = await pipeline.run({
+		config,
+		state,
+		shouldContinue: (runState) =>
+			runState.stage !== "done" &&
+			runState.stage !== "canceled" &&
+			runState.stage !== "failed" &&
+			(!options.reviewOnly || isReviewOnlyExecutableStage(runState.stage)) &&
+			!(runState.stage === "in_review" && runState.humanReviewNotifiedAt),
+		beforePhase: async (phase) => {
+			await heartbeatRunLease(
+				config.workspacePath,
+				state,
+				leaseOwnerId,
+				leaseTimeoutMs,
+			);
+			if (phase.id !== "testing" || !options.reviewOnly) {
+				return "continue";
 			}
-			await handleReviewTestingStage(
+			const parkedForConflict = await maybeParkReviewOnlyConflict(
 				config,
-				agent,
 				notifications,
 				linear,
 				state,
 				runtime,
 			);
-			continue;
-		}
-
-		throw new Error(`Unsupported workflow stage: ${state.stage}`);
+			return parkedForConflict ? "skip" : "continue";
+		},
+	});
+	if (!pipelineResult.ok) {
+		const failed = pipelineResult.phaseResults.find(
+			(result) => result.status === "rejected",
+		);
+		throw new Error(
+			failed?.status === "rejected" ? failed.error : "Workflow pipeline failed",
+		);
 	}
+}
+
+async function runBuiltInWorkflowPhase(
+	phaseId: "plan" | "implement" | "testing",
+	config: ResolvedProjectConfig,
+	agent: AgentAdapter,
+	notifications: ResolvedNotificationConfig,
+	linear: WorkflowLinearClient,
+	state: RunState,
+	runtime: WorkflowRuntime,
+): Promise<void> {
+	if (phaseId === "plan") {
+		await handlePlanningStage(config, agent, notifications, linear, state, {
+			runAgentWithChatLog,
+			appendCodexUsage,
+			saveRunState,
+			transitionStage,
+			safeNotifyTaskOutcome: (notifyConfig, runState, outcome, error) =>
+				safeNotifyTaskOutcome(notifyConfig, runState, outcome, error, runtime),
+			loggerInfo: logger.info.bind(logger),
+			buildIssueJobLogFields: (runState, stage, stageOptions) => ({
+				...buildIssueJobLogFields(runState, stage, stageOptions),
+			}),
+		});
+		return;
+	}
+	if (phaseId === "implement") {
+		await handleImplementingStage(config, agent, linear, state, runtime);
+		return;
+	}
+	await handleReviewTestingStage(
+		config,
+		agent,
+		notifications,
+		linear,
+		state,
+		runtime,
+	);
 }
 
 async function maybeParkReviewOnlyConflict(
