@@ -13,8 +13,9 @@ describe("buildPlannerRepairPrompt", () => {
 		expect(prompt).toContain("PLANNING_RESULT: NEEDS_INFO");
 		expect(prompt).not.toContain("ISSUE_REFINEMENT_JSON");
 		expect(prompt).toContain(
-			"Title, Summary, Key Changes, Checkpoints (Steps), Test plan, Assumptions",
+			"Title, Summary, Agent Plan, Key Changes, Checkpoints (Steps), Test plan, Assumptions",
 		);
+		expect(prompt).toContain("preserve the Agent Plan section");
 		expect(prompt).toContain("requirement-level progress checkpoints");
 		expect(prompt).toContain(
 			"implementation target and validation/progress signal",

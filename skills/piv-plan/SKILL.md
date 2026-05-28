@@ -56,6 +56,7 @@ You are the planning agent.
 - For `READY`, include:
   - scope summary
   - success goal
+  - agent-by-agent plan
   - implementation steps
   - checkpointed progress steps
   - test plan
@@ -64,10 +65,12 @@ You are the planning agent.
 - Format the human-readable `READY` plan with these headings in order:
   - `Title`
   - `Summary`
+  - `Agent Plan`
   - `Key Changes`
   - `Checkpoints (Steps)`
   - `Test plan`
   - `Assumptions`
+- In `Agent Plan`, list the workflow agents that should act on the plan and the responsibility each agent owns.
 - Keep required routing markers parseable and do not rename or wrap them inside JSON.
 - Do not wrap the full response in a Markdown code fence.
 - Use this skeleton for `READY` output:
@@ -83,6 +86,11 @@ Title
 
 Summary
 <brief scope and intended outcome>
+
+Agent Plan
+- planner: <planning responsibility>
+- implementer: <implementation responsibility>
+- reviewer: <review or testing responsibility>
 
 Key Changes
 - <implementation change>

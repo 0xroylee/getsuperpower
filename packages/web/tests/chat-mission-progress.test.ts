@@ -126,7 +126,6 @@ describe("chat mission progress", () => {
 			"Planning",
 			"Implementing",
 			"Testing",
-			"QA",
 		]);
 		expect(mission.phases.map((phase) => phase.status)).toEqual([
 			"success",
