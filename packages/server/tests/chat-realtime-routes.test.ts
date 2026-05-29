@@ -115,7 +115,10 @@ describe("chat realtime routes", () => {
 		]);
 		expect(events).toMatchObject([
 			{ type: "chat.message.created", message: { role: "user" } },
-			{ type: "chat.stream.started", stream: { sessionId: session.id } },
+			{
+				type: "chat.stream.started",
+				stream: { sessionId: session.id, status: "loading" },
+			},
 			{ type: "issue.updated" },
 			{
 				type: "chat.stream.delta",

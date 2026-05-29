@@ -13,6 +13,11 @@ describe("chat stream realtime store", () => {
 		});
 
 		state = applyRealtimeEvent(state, chatStreamStartedEvent());
+		expect(state.chatStreamsByRunId["run-1"]).toMatchObject({
+			content: "",
+			sessionId: "session-1",
+			status: "loading",
+		});
 		state = applyRealtimeEvent(state, chatStreamDeltaEvent("Updated task "));
 		state = applyRealtimeEvent(
 			state,
@@ -63,6 +68,7 @@ function chatStreamStartedEvent(): RealtimeEvent {
 		stream: {
 			runId: "run-1",
 			sessionId: "session-1",
+			status: "loading",
 			userMessageId: "message-user",
 		},
 	};

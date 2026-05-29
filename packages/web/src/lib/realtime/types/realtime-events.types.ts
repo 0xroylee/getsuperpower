@@ -34,6 +34,7 @@ export type RealtimeChatEventType =
 export interface RealtimeChatStreamStarted {
 	runId: string;
 	sessionId: string;
+	status: "loading";
 	userMessageId: string;
 }
 

@@ -103,6 +103,7 @@ function parseChatStreamEvent(
 			stream: {
 				runId,
 				sessionId,
+				status: readEventType(readString(row, "status"), ["loading"]),
 				userMessageId: readString(row, "userMessageId"),
 			},
 		};

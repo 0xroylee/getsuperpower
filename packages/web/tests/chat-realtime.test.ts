@@ -37,7 +37,25 @@ describe("chat realtime events", () => {
 		expect(
 			parseRealtimeEvent(
 				JSON.stringify({
-					id: "event-stream",
+					id: "event-stream-started",
+					emittedAt: "2026-05-16T00:00:00.000Z",
+					type: "chat.stream.started",
+					stream: {
+						runId: "run-1",
+						sessionId: "session-1",
+						status: "loading",
+						userMessageId: "message-user",
+					},
+				}),
+			),
+		).toMatchObject({
+			type: "chat.stream.started",
+			stream: { runId: "run-1", status: "loading" },
+		});
+		expect(
+			parseRealtimeEvent(
+				JSON.stringify({
+					id: "event-stream-delta",
 					emittedAt: "2026-05-16T00:00:00.000Z",
 					type: "chat.stream.delta",
 					stream: {

@@ -20,3 +20,12 @@ export function chatStreamLinesForSession(
 		)
 		.filter((line) => line.text.trim().length > 0);
 }
+
+export function hasLoadingChatStreamForSession(
+	streamsByRunId: Record<string, RealtimeChatStreamBuffer>,
+	sessionId: string,
+): boolean {
+	return Object.values(streamsByRunId).some(
+		(stream) => stream.sessionId === sessionId && stream.status === "loading",
+	);
+}

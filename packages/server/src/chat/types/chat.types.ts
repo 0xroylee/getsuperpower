@@ -84,6 +84,7 @@ export interface ChatQueuedSendResult {
 export interface ChatStreamStartedPayload {
 	runId: string;
 	sessionId: string;
+	status: "loading";
 	userMessageId: string;
 }
 

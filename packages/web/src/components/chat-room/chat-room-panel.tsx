@@ -24,8 +24,7 @@ import { useChatRoomMission } from "./chat-room-mission";
 import { useChatRoomDraftState } from "./chat-room-panel-draft-state";
 import { ChatRoomPanelView } from "./chat-room-panel-view";
 import { selectChatSession } from "./chat-room-selection";
-import { chatStreamLinesForSession } from "./chat-room-stream-utils";
-import { shouldShowChatThinkingIndicator } from "./chat-thinking-state";
+import { resolveChatRoomStreamState } from "./chat-room-stream-state";
 import { useWorkingSectionState } from "./chat-working-section-state";
 import type * as CRT from "./types/chat-room.types";
 import { useChatTaskDetailPanelState } from "./use-chat-task-detail-panel-state";
@@ -59,7 +58,6 @@ export function ChatRoomPanel({
 	const updateSession = useUpdateChatSessionMutation();
 	const appendMessage = useAppendChatMessageMutation();
 	const sendMessage = useSendChatMessageMutation();
-
 	const sessions = sessionsQuery.data ?? [];
 	const { selectedSession, selectedSessionId } = selectChatSession(
 		sessions,
@@ -83,16 +81,13 @@ export function ChatRoomPanel({
 	const chatStreamsByRunId = useRealtimeStore(
 		(state) => state.chatStreamsByRunId,
 	);
-	const streamLines = [
-		...commandLines,
-		...chatStreamLinesForSession(chatStreamsByRunId, selectedSessionId),
-	];
-	const isThinking = shouldShowChatThinkingIndicator({
-		isSending: sendMessage.isPending,
+	const { isThinking, streamLines } = resolveChatRoomStreamState(
+		commandLines,
+		chatStreamsByRunId,
 		selectedSessionId,
-		sendingSessionId: sendMessage.variables?.sessionId,
-		streamLineCount: streamLines.length,
-	});
+		sendMessage.isPending,
+		sendMessage.variables?.sessionId,
+	);
 	const mutationBusy =
 		createSession.isPending ||
 		updateSession.isPending ||

@@ -92,7 +92,7 @@ export function applyRealtimeEvent(
 					sessionId: event.stream.sessionId,
 					userMessageId: event.stream.userMessageId,
 					content: "",
-					status: "streaming",
+					status: event.stream.status,
 					error: null,
 					completedMessageId: null,
 					updatedAt: event.emittedAt,

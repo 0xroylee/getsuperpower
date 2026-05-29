@@ -77,6 +77,10 @@ describe("chat send route async response", () => {
 				"chat.message.created",
 				"chat.stream.started",
 			]);
+			expect(events[1]).toMatchObject({
+				type: "chat.stream.started",
+				stream: { status: "loading" },
+			});
 
 			const body = (await response?.json()) as {
 				messages: Array<{ content: string; role: string }>;

@@ -102,6 +102,7 @@ async function acceptChatMessage(
 	stream?.onStreamStarted?.({
 		runId: stream.runId,
 		sessionId,
+		status: "loading",
 		userMessageId: userRecord.id,
 	});
 	return {

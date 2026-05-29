@@ -2,6 +2,7 @@ import { resolvePlanningStatusLabel } from "./chat-mission-phase-labels";
 
 export interface ChatThinkingStateInput {
 	isSending: boolean;
+	hasLoadingStream: boolean;
 	selectedSessionId: string;
 	sendingSessionId?: string;
 	streamLineCount: number;
@@ -13,16 +14,15 @@ export interface ChatPlanningStateInput {
 }
 
 export function shouldShowChatThinkingIndicator({
+	hasLoadingStream,
 	isSending,
 	selectedSessionId,
 	sendingSessionId,
 	streamLineCount,
 }: ChatThinkingStateInput): boolean {
+	if (!selectedSessionId || streamLineCount > 0) return false;
 	return (
-		isSending &&
-		Boolean(selectedSessionId) &&
-		sendingSessionId === selectedSessionId &&
-		streamLineCount === 0
+		hasLoadingStream || (isSending && sendingSessionId === selectedSessionId)
 	);
 }
 

@@ -13,6 +13,7 @@ describe("chat thinking indicator", () => {
 		expect(
 			shouldShowChatThinkingIndicator({
 				isSending: true,
+				hasLoadingStream: false,
 				selectedSessionId: "session-1",
 				sendingSessionId: "session-1",
 				streamLineCount: 0,
@@ -21,6 +22,7 @@ describe("chat thinking indicator", () => {
 		expect(
 			shouldShowChatThinkingIndicator({
 				isSending: true,
+				hasLoadingStream: false,
 				selectedSessionId: "session-1",
 				sendingSessionId: "session-2",
 				streamLineCount: 0,
@@ -29,6 +31,7 @@ describe("chat thinking indicator", () => {
 		expect(
 			shouldShowChatThinkingIndicator({
 				isSending: true,
+				hasLoadingStream: false,
 				selectedSessionId: "session-1",
 				sendingSessionId: "session-1",
 				streamLineCount: 1,
@@ -37,6 +40,7 @@ describe("chat thinking indicator", () => {
 		expect(
 			shouldShowChatThinkingIndicator({
 				isSending: false,
+				hasLoadingStream: false,
 				selectedSessionId: "session-1",
 				sendingSessionId: "session-1",
 				streamLineCount: 0,
@@ -45,9 +49,30 @@ describe("chat thinking indicator", () => {
 		expect(
 			shouldShowChatThinkingIndicator({
 				isSending: true,
+				hasLoadingStream: false,
 				selectedSessionId: "",
 				sendingSessionId: "session-1",
 				streamLineCount: 0,
+			}),
+		).toBe(false);
+	});
+	it("keeps thinking visible while websocket stream is loading", () => {
+		expect(
+			shouldShowChatThinkingIndicator({
+				isSending: false,
+				hasLoadingStream: true,
+				selectedSessionId: "session-1",
+				sendingSessionId: undefined,
+				streamLineCount: 0,
+			}),
+		).toBe(true);
+		expect(
+			shouldShowChatThinkingIndicator({
+				isSending: false,
+				hasLoadingStream: true,
+				selectedSessionId: "session-1",
+				sendingSessionId: undefined,
+				streamLineCount: 1,
 			}),
 		).toBe(false);
 	});
