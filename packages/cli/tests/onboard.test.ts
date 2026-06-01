@@ -181,6 +181,39 @@ describe("onboard helpers", () => {
 		}
 	});
 
+	it("seeds default skill files without overwriting local edits", async () => {
+		const tempDir = await mkdtemp(
+			path.join(process.cwd(), ".tmp-onboard-test-"),
+		);
+		const customPlanPath = path.join(tempDir, "skills", "piv-plan", "SKILL.md");
+		const customPlan = "---\nname: custom-plan\n---\n";
+
+		try {
+			await mkdir(path.dirname(customPlanPath), { recursive: true });
+			await writeFile(customPlanPath, customPlan);
+			await writeOnboardFiles(tempDir, draft);
+
+			const expectedSkillFiles = [
+				path.join("piv-brainstorm", "SKILL.md"),
+				path.join("piv-plan", "SKILL.md"),
+				path.join("piv-implement", "SKILL.md"),
+				path.join("piv-review-test", "SKILL.md"),
+				path.join("piv-github-comment", "SKILL.md"),
+				path.join("adhd-explore", "SKILL.md"),
+			];
+			for (const skillFile of expectedSkillFiles) {
+				const seeded = await readFile(
+					path.join(tempDir, "skills", skillFile),
+					"utf8",
+				);
+				expect(seeded.trim().length).toBeGreaterThan(0);
+			}
+			expect(await readFile(customPlanPath, "utf8")).toBe(customPlan);
+		} finally {
+			await rm(tempDir, { recursive: true, force: true });
+		}
+	});
+
 	it("uses high as default planning reasoning effort", () => {
 		expect(DEFAULT_REASONING_EFFORTS.plan).toBe("high");
 	});

@@ -11,7 +11,7 @@ import os from "node:os";
 import path from "node:path";
 
 describe("CLI build script", () => {
-	it("cleans stale assets and leaves database runtimes out of the bundle", async () => {
+	it("cleans stale assets, bundles skills, and excludes database runtimes", async () => {
 		const outdir = await mkdtemp(path.join(os.tmpdir(), "devos-build-"));
 
 		try {
@@ -24,9 +24,15 @@ describe("CLI build script", () => {
 
 			const outputFiles = await readdir(outdir);
 			expect(outputFiles).toContain("index.js");
+			expect(outputFiles).toContain("skills");
 			expect(outputFiles).not.toContain("pglite.wasm");
 			expect(outputFiles).not.toContain("pglite.data");
 			expect(outputFiles).not.toContain("migrations");
+			const defaultSkill = await readFile(
+				path.join(outdir, "skills", "piv-plan", "SKILL.md"),
+				"utf8",
+			);
+			expect(defaultSkill).toContain("name: adhd-plan");
 
 			const bundle = await readFile(path.join(outdir, "index.js"), "utf8");
 			expect(bundle).not.toMatch(

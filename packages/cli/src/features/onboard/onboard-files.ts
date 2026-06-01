@@ -3,6 +3,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { instanceConfigPath, saveSqliteEnv } from "../config";
 import { DEFAULT_WORKSPACE_NAME, ENV_FILE } from "./constants";
+import { seedDefaultSkillFiles } from "./default-skill-files";
 import {
 	buildDatabaseEnvUpdates,
 	buildEnvUpdates,
@@ -55,6 +56,7 @@ export async function writeOnboardFiles(
 	}
 	await mkdir(path.dirname(targetInstanceConfigPath), { recursive: true });
 	await createLocalInstanceDirectories(instanceConfig);
+	await seedDefaultSkillFiles(path.join(cwd, "skills"));
 	await writeFile(
 		targetInstanceConfigPath,
 		renderInstanceConfigDocument(instanceConfig),

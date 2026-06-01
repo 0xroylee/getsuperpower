@@ -88,20 +88,30 @@ bun run --filter devos release --publish --tag next --otp 123456
 The publish command always runs the same verification and dry-run publish steps
 before the real `bun publish`.
 
-## Post-Release Checks
+## GitHub Release From Tags
 
-List GitHub Releases for the current repository:
+The repository creates GitHub Releases from pushed version tags. The workflow
+runs when a tag like `v0.0.1` is pushed.
+
+```bash
+devos release tag v0.0.1 --message "Release v0.0.1"
+```
+
+The GitHub Action verifies that the tag version matches
+`packages/cli/package.json`, runs `bun run release:cli`, packs the CLI tarball,
+and creates a GitHub Release with that tarball attached. It does not publish to
+npm.
+
+After the action finishes, list the release:
 
 ```bash
 devos release list --limit 10
 ```
 
-For a tag-only release marker, create and push an annotated git tag. This does
-not create a GitHub Release and does not publish npm packages.
+The `devos release tag` command itself only creates and pushes the annotated git
+tag. GitHub Actions handles the GitHub Release after the pushed tag arrives.
 
-```bash
-devos release tag v0.0.1 --message "Release v0.0.1"
-```
+## Post-Release Checks
 
 Verify the registry entry and the zero-install CLI path.
 

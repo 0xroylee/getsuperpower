@@ -1,4 +1,4 @@
-import { rm } from "node:fs/promises";
+import { cp, rm } from "node:fs/promises";
 import path from "node:path";
 
 interface BuildCliPackageOptions {
@@ -23,6 +23,13 @@ export async function buildCliPackage(
 	if (!result.success) {
 		throw new Error(formatBuildErrors(result.logs));
 	}
+	await cp(
+		path.resolve(packageRoot, "../..", "skills"),
+		path.join(outdir, "skills"),
+		{
+			recursive: true,
+		},
+	);
 }
 
 function formatBuildErrors(logs: Array<{ message: string }>): string {
