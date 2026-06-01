@@ -264,20 +264,22 @@ describe("onboard helpers", () => {
 
 	it("does not write onboard files when onboarding prompts are cancelled", async () => {
 		let wroteFiles = false;
-		await expect(
-			runOnboardWizard("/tmp/demo", {
-				runCommand: async () => okCommand(),
-				prompts: {
-					...promptAdapter({}),
-					text: async () => {
-						throw new PromptCancelledError();
+		await captureStdout(async () => {
+			await expect(
+				runOnboardWizard("/tmp/demo", {
+					runCommand: async () => okCommand(),
+					prompts: {
+						...promptAdapter({}),
+						text: async () => {
+							throw new PromptCancelledError();
+						},
 					},
-				},
-				writeOnboardFiles: async () => {
-					wroteFiles = true;
-				},
-			}),
-		).rejects.toBeInstanceOf(PromptCancelledError);
+					writeOnboardFiles: async () => {
+						wroteFiles = true;
+					},
+				}),
+			).rejects.toBeInstanceOf(PromptCancelledError);
+		});
 		expect(wroteFiles).toBe(false);
 	});
 
@@ -303,6 +305,17 @@ describe("onboard helpers", () => {
 			const sqliteEnv = await loadSqliteEnv(tempDir);
 			const jwtSecret = sqliteEnv?.JWT_SECRET ?? "missing JWT_SECRET";
 			expect(collectChecks).toHaveBeenCalledTimes(1);
+			expect(output).toContain("Customize this workspace");
+			expect(output).toContain("Workspace name and execution path");
+			expect(output).toContain("Isolated worktrees");
+			expect(output).toContain("Local instance server settings");
+			expect(output).toContain(
+				"Database, logs, storage, secrets, and telemetry",
+			);
+			expect(output).toContain(
+				"Codex models, reasoning, plugins, skills, sandbox, and hooks",
+			);
+			expect(output).toContain("Doctor checks");
 			expect(output).toContain("Onboarding files written:");
 			expect(output).toContain(`Instance config: ${instanceConfigPath()}`);
 			expect(output).toContain(`Secrets saved to ${sqliteEnvDbPath(tempDir)}`);

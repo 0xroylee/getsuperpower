@@ -40,7 +40,7 @@ secrets under `~/.devos/config`.
 
 ```bash
 devos onboard
-devos onboard --check
+devos daemon
 ```
 
 Run one scoped workflow.
@@ -124,6 +124,7 @@ workflow progress.
 ```bash
 # guided setup and validation
 devos onboard
+devos daemon
 devos onboard --check
 
 # run one issue or the configured queue

@@ -27,6 +27,7 @@ export async function runOnboardWizard(
 	const collectChecks = deps.collectOnboardChecks ?? collectOnboardChecks;
 	const configurePluginCredentials =
 		deps.configurePluginCredentials ?? configureInstalledPluginCredentials;
+	process.stdout.write(renderOnboardCustomizationIntro());
 	const rtk = await safeRun(commandRunner, "rtk", ["--version"], cwd);
 	if (rtk.code !== 0) process.stdout.write(renderOnboardRtkInstallPrompt());
 	const gh = await safeRun(commandRunner, "gh", ["auth", "status"], cwd);
@@ -49,6 +50,20 @@ export async function runOnboardWizard(
 		throw new Error("Onboard check failed");
 	}
 	process.stdout.write(`${renderCliHeading("Next command")}\ndevos daemon\n`);
+}
+
+function renderOnboardCustomizationIntro(): string {
+	return [
+		`${renderCliHeading("Customize this workspace")}`,
+		"devos onboard will configure:",
+		"  - Workspace name and execution path",
+		"  - Isolated worktrees",
+		"  - Local instance server settings",
+		"  - Database, logs, storage, secrets, and telemetry",
+		"  - Codex models, reasoning, plugins, skills, sandbox, and hooks",
+		"  - Doctor checks after files are written",
+		"",
+	].join("\n");
 }
 
 async function configureInstalledPluginCredentials(
