@@ -1,38 +1,44 @@
 "use client";
 
-import { LayoutGrid, List, Plus, RefreshCw, Search } from "lucide-react";
+import { Plus, RefreshCw } from "lucide-react";
 import type { ChangeEvent, FormEvent, ReactElement } from "react";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Typography } from "@/components/ui/typography";
+import type { WorkspaceProjectRecord } from "@/lib/api";
 import {
 	useCreateProjectMutation,
 	useCurrentWorkspaceQuery,
+	useUpdateProjectMutation,
 } from "@/lib/api/queries";
 import { useWorkspaceProjectsQuery } from "@/lib/api/realtime-queries";
-import { cn } from "@/lib/utils";
 
-import { ProjectCreateDialog } from "./project-create-dialog";
+import { ProjectFormDialog } from "./project-form-dialog";
 import {
 	EMPTY_PROJECT_FORM_STATE,
 	buildProjectCreateRequest,
+	buildProjectUpdateRequest,
+	formStateFromProject,
 } from "./project-form-utils";
 import {
 	buildProjectDisplayRows,
 	filterProjects,
 } from "./projects-panel-utils";
 import { ProjectsTable } from "./projects-table";
+import { ProjectsToolbar } from "./projects-toolbar";
 import type {
+	ProjectDialogMode,
 	ProjectFormFieldName,
+	ProjectRepositorySelection,
 	ProjectTableDensity,
 } from "./types/projects-panel.types";
 
 export function ProjectsPanel(): ReactElement {
 	const [form, setForm] = useState(EMPTY_PROJECT_FORM_STATE);
 	const [formError, setFormError] = useState<string | null>(null);
-	const [isCreateOpen, setIsCreateOpen] = useState(false);
+	const [dialogMode, setDialogMode] = useState<ProjectDialogMode | null>(null);
+	const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [density, setDensity] = useState<ProjectTableDensity>("compact");
 	const currentWorkspaceQuery = useCurrentWorkspaceQuery({
@@ -43,6 +49,7 @@ export function ProjectsPanel(): ReactElement {
 		refetchIntervalMs: false,
 	});
 	const createProject = useCreateProjectMutation();
+	const updateProject = useUpdateProjectMutation();
 	const projects = projectsQuery.data ?? [];
 	const filteredProjects = useMemo(
 		() => filterProjects(projects, searchQuery),
@@ -61,13 +68,33 @@ export function ProjectsPanel(): ReactElement {
 	}
 
 	function openCreateDialog(): void {
+		setForm(EMPTY_PROJECT_FORM_STATE);
+		setEditingProjectId(null);
 		setFormError(null);
-		setIsCreateOpen(true);
+		setDialogMode("create");
 	}
 
-	function closeCreateDialog(): void {
-		setIsCreateOpen(false);
+	function openEditDialog(project: WorkspaceProjectRecord): void {
+		setForm(formStateFromProject(project));
+		setEditingProjectId(project.id);
 		setFormError(null);
+		setDialogMode("edit");
+	}
+
+	function closeDialog(): void {
+		setDialogMode(null);
+		setEditingProjectId(null);
+		setFormError(null);
+	}
+
+	function updateRepositoryQuery(value: string): void {
+		setForm((current) => ({ ...current, repositoryQuery: value }));
+	}
+
+	function updateRepositorySelection(
+		selection: ProjectRepositorySelection | null,
+	): void {
+		setForm((current) => ({ ...current, repositorySelection: selection }));
 	}
 
 	async function submitProject(
@@ -80,14 +107,22 @@ export function ProjectsPanel(): ReactElement {
 			return;
 		}
 		try {
-			await createProject.mutateAsync(
-				buildProjectCreateRequest(form, {
-					boardId: "board-1",
-					ownerId: workspaceId,
-				}),
-			);
+			if (dialogMode === "edit" && editingProjectId) {
+				await updateProject.mutateAsync({
+					projectId: editingProjectId,
+					project: buildProjectUpdateRequest(form),
+				});
+			} else {
+				await createProject.mutateAsync(
+					buildProjectCreateRequest(form, {
+						boardId: "board-1",
+						ownerId: workspaceId,
+					}),
+				);
+			}
 			setForm(EMPTY_PROJECT_FORM_STATE);
-			setIsCreateOpen(false);
+			setEditingProjectId(null);
+			setDialogMode(null);
 		} catch (error) {
 			setFormError(
 				error instanceof Error ? error.message : "Project save failed",
@@ -125,7 +160,7 @@ export function ProjectsPanel(): ReactElement {
 					</Button>
 				</div>
 			</header>
-			<ProjectToolbar
+			<ProjectsToolbar
 				density={density}
 				filteredCount={filteredProjects.length}
 				searchQuery={searchQuery}
@@ -141,109 +176,22 @@ export function ProjectsPanel(): ReactElement {
 					rows={projectRows}
 					searchQuery={searchQuery}
 					totalCount={projects.length}
+					onEditProject={openEditDialog}
 				/>
 			</div>
-			{isCreateOpen ? (
-				<ProjectCreateDialog
+			{dialogMode ? (
+				<ProjectFormDialog
 					form={form}
 					formError={formError}
-					isSaving={createProject.isPending}
-					onClose={closeCreateDialog}
+					isSaving={createProject.isPending || updateProject.isPending}
+					mode={dialogMode}
+					onClose={closeDialog}
+					onRepositoryQueryChange={updateRepositoryQuery}
+					onRepositorySelectionChange={updateRepositorySelection}
 					onSubmit={(event) => void submitProject(event)}
 					onUpdateField={updateField}
 				/>
 			) : null}
 		</section>
-	);
-}
-
-function ProjectToolbar({
-	density,
-	filteredCount,
-	searchQuery,
-	totalCount,
-	onDensityChange,
-	onSearchChange,
-}: {
-	density: ProjectTableDensity;
-	filteredCount: number;
-	searchQuery: string;
-	totalCount: number;
-	onDensityChange: (density: ProjectTableDensity) => void;
-	onSearchChange: (value: string) => void;
-}): ReactElement {
-	return (
-		<div className="flex flex-wrap items-center gap-3 border-b border-border px-5 py-3">
-			<label
-				className="relative min-w-60 flex-1 sm:max-w-sm"
-				htmlFor="projects-search"
-			>
-				<Search
-					className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-					size={16}
-				/>
-				<Input
-					aria-label="Search projects"
-					className="pl-9"
-					id="projects-search"
-					onChange={(event) => onSearchChange(event.target.value)}
-					placeholder="Search projects..."
-					value={searchQuery}
-				/>
-			</label>
-			<div className="ml-auto flex flex-wrap items-center gap-3">
-				<Typography className="whitespace-nowrap" variant="description">
-					{filteredCount} / {totalCount}
-				</Typography>
-				<div className="inline-flex rounded-lg border border-border bg-card p-1">
-					<DensityButton
-						density="compact"
-						icon={<List size={15} />}
-						isActive={density === "compact"}
-						label="Compact"
-						onSelect={onDensityChange}
-					/>
-					<DensityButton
-						density="comfortable"
-						icon={<LayoutGrid size={15} />}
-						isActive={density === "comfortable"}
-						label="Comfortable"
-						onSelect={onDensityChange}
-					/>
-				</div>
-			</div>
-		</div>
-	);
-}
-
-function DensityButton({
-	density,
-	icon,
-	isActive,
-	label,
-	onSelect,
-}: {
-	density: ProjectTableDensity;
-	icon: ReactElement;
-	isActive: boolean;
-	label: string;
-	onSelect: (density: ProjectTableDensity) => void;
-}): ReactElement {
-	return (
-		<Button
-			className={cn(
-				"h-8 gap-2 px-2.5",
-				isActive
-					? "bg-surface-active text-zinc-100"
-					: "text-muted-foreground hover:text-zinc-200",
-			)}
-			onClick={() => onSelect(density)}
-			size="sm"
-			type="button"
-			variant="ghost"
-		>
-			{icon}
-			<Typography as="span">{label}</Typography>
-		</Button>
 	);
 }

@@ -37,6 +37,7 @@ export {
 	useCreateProjectMutation,
 	useUpdateProjectMutation,
 } from "./project-mutations";
+export { useGitHubRepositorySearchQuery } from "./github-queries";
 export { serverStateQueryKeys } from "./query-keys";
 export {
 	taskCreationMutationKeys,

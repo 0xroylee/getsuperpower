@@ -1,8 +1,9 @@
 "use client";
 
-import { Folder } from "lucide-react";
+import { Edit3, Folder } from "lucide-react";
 import type { ReactElement } from "react";
 
+import { Button } from "@/components/ui/button";
 import { Typography } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 
@@ -11,7 +12,7 @@ import type {
 	ProjectTableDensity,
 } from "./types/projects-panel.types";
 
-const PROJECT_TABLE_COLUMN_COUNT = 6;
+const PROJECT_TABLE_COLUMN_COUNT = 7;
 
 interface ProjectsTableProps {
 	density: ProjectTableDensity;
@@ -20,6 +21,7 @@ interface ProjectsTableProps {
 	rows: ProjectDisplayRow[];
 	searchQuery: string;
 	totalCount: number;
+	onEditProject: (project: ProjectDisplayRow["project"]) => void;
 }
 
 export function ProjectsTable({
@@ -29,6 +31,7 @@ export function ProjectsTable({
 	rows,
 	searchQuery,
 	totalCount,
+	onEditProject,
 }: ProjectsTableProps): ReactElement {
 	const rowPadding = density === "compact" ? "px-4 py-2.5" : "px-4 py-4";
 	const stateLabel = resolveProjectTableState({
@@ -42,14 +45,15 @@ export function ProjectsTable({
 	return (
 		<section className="min-h-0 overflow-hidden rounded-lg border border-border bg-surface-input">
 			<div className="h-full overflow-x-auto">
-				<table className="h-full w-full min-w-[58rem] table-fixed border-collapse">
+				<table className="h-full w-full min-w-[62rem] table-fixed border-collapse">
 					<colgroup>
-						<col className="w-[34%]" />
+						<col className="w-[30%]" />
 						<col className="w-[10%]" />
 						<col className="w-[14%]" />
 						<col className="w-[18%]" />
 						<col className="w-[12%]" />
 						<col className="w-[12%]" />
+						<col className="w-[4%]" />
 					</colgroup>
 					<thead className="bg-card text-left text-xs font-medium text-muted-foreground">
 						<tr className="border-b border-border">
@@ -59,6 +63,7 @@ export function ProjectsTable({
 							<TableHeaderCell label="Repository" />
 							<TableHeaderCell label="Lead" />
 							<TableHeaderCell label="Created" />
+							<TableHeaderCell label="" />
 						</tr>
 					</thead>
 					<tbody className="text-sm text-zinc-300">
@@ -79,6 +84,7 @@ export function ProjectsTable({
 									key={row.project.id}
 									row={row}
 									rowPadding={rowPadding}
+									onEditProject={onEditProject}
 								/>
 							))
 						)}
@@ -102,9 +108,11 @@ function TableHeaderCell({ label }: { label: string }): ReactElement {
 }
 
 function ProjectTableRow({
+	onEditProject,
 	row,
 	rowPadding,
 }: {
+	onEditProject: (project: ProjectDisplayRow["project"]) => void;
 	row: ProjectDisplayRow;
 	rowPadding: string;
 }): ReactElement {
@@ -146,6 +154,17 @@ function ProjectTableRow({
 					{row.createdLabel}
 				</Typography>
 			</Typography>
+			<td className={cn(rowPadding, "text-right align-middle")}>
+				<Button
+					aria-label={`Edit ${row.project.name}`}
+					onClick={() => onEditProject(row.project)}
+					size="icon"
+					type="button"
+					variant="ghost"
+				>
+					<Edit3 size={14} />
+				</Button>
+			</td>
 		</tr>
 	);
 }
