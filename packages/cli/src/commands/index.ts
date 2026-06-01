@@ -6,6 +6,7 @@ import type { CliRuntime } from "../types/args.types";
 import { registerDaemonCommand } from "./daemon";
 import { registerModelsCommand } from "./models";
 import { registerOnboardCommand } from "./onboard";
+import { registerReleaseCommand } from "./release";
 import { registerRunCommand } from "./run";
 import { registerStatusCommand } from "./status";
 import { registerWorkflowWorkerCommand } from "./workflow-worker";
@@ -19,6 +20,7 @@ export function registerCliCommands(
 	registerWorkflowWorkerCommand(program, runtime);
 	registerOnboardCommand(program, runtime);
 	registerModelsCommand(program, runtime);
+	registerReleaseCommand(program, runtime);
 	registerStatusCommand(program, runtime);
 	registerTaskCommand(program, runtime);
 	registerSkillsCommand(program, runtime);

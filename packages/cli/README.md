@@ -121,6 +121,36 @@ Usage notes:
 
 - `--issue` is required.
 
+### release
+
+Purpose: inspect GitHub Releases and run the tag-only release marker flow.
+
+Syntax:
+
+```bash
+devos release list [--limit <N>] [--repo <OWNER/REPO>]
+devos release tag <TAG> [--message <MESSAGE>] [--remote <REMOTE>]
+```
+
+Options:
+
+- `--limit <N>`: positive integer number of GitHub Releases to list.
+- `--repo <OWNER/REPO>`: optional GitHub repository for `release list`.
+- `--message <MESSAGE>`: annotated tag message for `release tag`.
+- `--remote <REMOTE>`: git remote to push to; defaults to `origin`.
+
+Output shape:
+
+- `release list` streams `gh release list` output.
+- `release tag` streams `git tag` and `git push` output.
+
+Usage notes:
+
+- `release tag` only creates and pushes an annotated git tag. It does not create
+  a GitHub Release and does not publish npm packages.
+- Use `gh release create <TAG>` later if you want a GitHub Release entry from an
+  existing tag.
+
 ### task create
 
 Purpose: generate a Linear backlog issue from a loose request through task intake.

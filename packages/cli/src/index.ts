@@ -16,6 +16,7 @@ import {
 } from "./features/daemon";
 import { handleModelsCommand } from "./features/models/model-command";
 import { PromptCancelledError } from "./features/prompts";
+import { handleReleaseCommand } from "./features/release/release-command";
 import {
 	logger,
 	normalizeError,
@@ -36,6 +37,7 @@ async function main(): Promise<void> {
 		handleSkillsCommand,
 		handlePluginsCommand,
 		handleModelsCommand,
+		handleReleaseCommand,
 		handleTaskCommand,
 	};
 	const program = createCliProgram(runtime);

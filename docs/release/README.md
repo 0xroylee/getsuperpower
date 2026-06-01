@@ -90,6 +90,19 @@ before the real `bun publish`.
 
 ## Post-Release Checks
 
+List GitHub Releases for the current repository:
+
+```bash
+devos release list --limit 10
+```
+
+For a tag-only release marker, create and push an annotated git tag. This does
+not create a GitHub Release and does not publish npm packages.
+
+```bash
+devos release tag v0.0.1 --message "Release v0.0.1"
+```
+
 Verify the registry entry and the zero-install CLI path.
 
 ```bash

@@ -137,6 +137,10 @@ export type DaemonCommand = Record<string, never>;
 
 export type WorkflowWorkerCommand = Record<string, never>;
 
+export type ReleaseCommand =
+	| { action: "list"; limit?: number; repo?: string }
+	| { action: "tag"; tag: string; message?: string; remote: string };
+
 export type StatusCommand = {
 	issueKey: string;
 	projectId: string;
@@ -163,6 +167,7 @@ export type CliRuntime = {
 		cwd: string,
 	): Promise<void>;
 	handleModelsCommand(command: ModelsCommand, cwd: string): Promise<void>;
+	handleReleaseCommand(command: ReleaseCommand, cwd: string): Promise<void>;
 	handleTaskCommand(config: LoadedConfig, command: TaskCommand): Promise<void>;
 };
 

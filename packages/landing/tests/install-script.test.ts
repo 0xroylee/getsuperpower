@@ -31,17 +31,32 @@ describe("devos installer route", () => {
 		expect(body.startsWith("#!/usr/bin/env sh\n")).toBe(true);
 		expect(body).toContain('bun add --global "$TARGET"');
 		expect(body).toContain("curl -fsSL https://bun.sh/install | bash");
+		expect(body).toContain("https://devos.ing/cli/devos-0.0.1.tgz");
 	});
 
-	it("installs the requested devos package target with Bun", async () => {
+	it("installs the hosted devos tarball with Bun by default", async () => {
 		const tempDir = await makeTempDir();
 		const binDir = path.join(tempDir, "bin");
 		const scriptPath = path.join(tempDir, "install.sh");
 		const callLogPath = path.join(tempDir, "bun-call.log");
+		const curlLogPath = path.join(tempDir, "curl-call.log");
 		await mkdir(binDir);
 		await writeFile(scriptPath, getDevosInstallScript());
 		await chmod(scriptPath, 0o755);
-		await writeFakeExecutable(path.join(binDir, "curl"), "exit 0\n");
+		await writeFakeExecutable(
+			path.join(binDir, "curl"),
+			[
+				'printf "%s\\n" "$*" > "$CURL_CALL_LOG"',
+				'while [ "$#" -gt 0 ]; do',
+				'  if [ "$1" = "-o" ]; then',
+				'    printf "%s\\n" "tarball" > "$2"',
+				"    exit 0",
+				"  fi",
+				"  shift",
+				"done",
+				"exit 64",
+			].join("\n"),
+		);
 		await writeFakeExecutable(
 			path.join(binDir, "bun"),
 			[
@@ -67,7 +82,7 @@ describe("devos installer route", () => {
 
 		const installResult = await runShell(["sh", scriptPath], {
 			BUN_CALL_LOG: callLogPath,
-			DEVOS_VERSION: "0.0.1",
+			CURL_CALL_LOG: curlLogPath,
 			FAKE_BIN: binDir,
 			HOME: tempDir,
 			PATH: `${binDir}:${process.env.PATH ?? ""}`,
@@ -75,9 +90,11 @@ describe("devos installer route", () => {
 
 		expect(installResult.code).toBe(0);
 		expect(installResult.stderr).toBe("");
-		expect(await readFile(callLogPath, "utf8")).toBe(
-			"add --global devos@0.0.1\n",
+		expect(await readFile(curlLogPath, "utf8")).toContain(
+			"https://devos.ing/cli/devos-0.0.1.tgz",
 		);
+		expect(await readFile(callLogPath, "utf8")).toContain("add --global ");
+		expect(await readFile(callLogPath, "utf8")).toContain("devos-cli.");
 		expect(installResult.stdout).toContain("devos installed successfully");
 	});
 });
