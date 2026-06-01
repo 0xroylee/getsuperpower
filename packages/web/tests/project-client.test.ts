@@ -15,6 +15,7 @@ describe("project API client", () => {
 			boardId: "board-1",
 			ownerId: "owner-1",
 			name: "Web Project",
+			emoji: "🧭",
 			externalProjectId: "external-1",
 			description: "Created from UI",
 			repoOwner: "octo",
@@ -50,6 +51,7 @@ describe("project API client", () => {
 			workspaceId: "owner-1",
 			externalProjectId: "external-1",
 			name: "Web Project",
+			emoji: "🧭",
 			description: "Created from UI",
 			repoOwner: "octo",
 			repoName: "demo",
@@ -105,43 +107,86 @@ describe("project API client", () => {
 	});
 
 	it("updates projects through the server API", async () => {
+		const request = {
+			name: "Web Project Updated",
+			emoji: "🚀",
+			description: "Edited from UI",
+			repoOwner: "octo",
+			repoName: "demo",
+			baseBranch: "trunk",
+			lead: "Roy",
+			priority: 3,
+		};
 		const fetchFn = (async (input: URL | RequestInfo, init?: RequestInit) => {
 			expect(String(input)).toBe("/api/projects/project-1");
 			expect(init?.method).toBe("PATCH");
-			expect(JSON.parse(String(init?.body))).toEqual({
-				name: "Updated",
-				repoOwner: "devos",
-				repoName: "show-me-ur-agents",
-				baseBranch: "main",
-			});
+			expect(init?.headers).toBeInstanceOf(Headers);
+			expect((init?.headers as Headers).get("content-type")).toBe(
+				"application/json",
+			);
+			expect(JSON.parse(String(init?.body))).toEqual(request);
 			return okJsonResponse({
 				id: "project-1",
 				boardId: "board-1",
-				ownerId: "owner-1",
-				name: "Updated",
+				workspaceId: "owner-1",
 				externalProjectId: null,
-				description: null,
-				repoOwner: "devos",
-				repoName: "show-me-ur-agents",
-				baseBranch: "main",
+				...request,
 				localFolder: null,
-				lead: null,
 				category: null,
-				priority: null,
 				createdAt: "2026-05-20T00:00:00.000Z",
 				updatedAt: "2026-05-21T00:00:00.000Z",
 			});
 		}) as typeof fetch;
 		const client = createApiClient({ fetchFn });
 
-		const project = await client.updateProject("project-1", {
-			name: "Updated",
-			repoOwner: "devos",
-			repoName: "show-me-ur-agents",
-			baseBranch: "main",
+		await expect(client.updateProject("project-1", request)).resolves.toEqual({
+			id: "project-1",
+			boardId: "board-1",
+			workspaceId: "owner-1",
+			externalProjectId: null,
+			name: "Web Project Updated",
+			emoji: "🚀",
+			description: "Edited from UI",
+			repoOwner: "octo",
+			repoName: "demo",
+			baseBranch: "trunk",
+			localFolder: null,
+			lead: "Roy",
+			category: null,
+			priority: 3,
+			createdAt: "2026-05-20T00:00:00.000Z",
+			updatedAt: "2026-05-21T00:00:00.000Z",
 		});
+	});
 
-		expect(project.name).toBe("Updated");
-		expect(project.repoOwner).toBe("devos");
+	it("treats missing project emoji values as null", async () => {
+		const fetchFn = (async () =>
+			okJsonResponse({
+				workspaceId: "owner-1",
+				projects: [
+					{
+						id: "project-1",
+						boardId: "board-1",
+						workspaceId: "owner-1",
+						externalProjectId: null,
+						name: "Legacy Project",
+						description: null,
+						repoOwner: null,
+						repoName: null,
+						baseBranch: null,
+						localFolder: null,
+						lead: null,
+						category: null,
+						priority: null,
+						createdAt: "2026-05-20T00:00:00.000Z",
+						updatedAt: "2026-05-20T00:00:00.000Z",
+					},
+				],
+			})) as typeof fetch;
+		const client = createApiClient({ fetchFn });
+
+		const projects = await client.listWorkspaceProjects("owner-1");
+
+		expect(projects[0]?.emoji).toBeNull();
 	});
 });

@@ -12,6 +12,13 @@ const IMPLEMENTED_ROUTES = [
 	["GET", "/api/projects/{id}"],
 	["PATCH", "/api/projects/{id}"],
 	["DELETE", "/api/projects/{id}"],
+	["GET", "/api/github/connection"],
+	["DELETE", "/api/github/connection"],
+	["GET", "/api/github/oauth/start"],
+	["GET", "/api/github/oauth/callback"],
+	["POST", "/api/github/device/start"],
+	["POST", "/api/github/device/poll"],
+	["GET", "/api/github/repositories"],
 	["GET", "/api/tasks"],
 	["POST", "/api/tasks"],
 	["POST", "/api/tasks/chat-create"],
@@ -47,6 +54,22 @@ const IMPLEMENTED_ROUTES = [
 	["PATCH", "/api/settings/models"],
 ] as const;
 
+const PROJECT_MUTATION_FIELDS = [
+	"boardId",
+	"name",
+	"ownerId",
+	"emoji",
+	"externalProjectId",
+	"description",
+	"repoOwner",
+	"repoName",
+	"baseBranch",
+	"localFolder",
+	"lead",
+	"category",
+	"priority",
+] as const;
+
 const AGENT_UPDATE_FIELDS = [
 	"name",
 	"description",
@@ -64,16 +87,6 @@ const AGENT_UPDATE_FIELDS = [
 	"recentWork",
 	"activity",
 	"instructions",
-] as const;
-
-const PROJECT_METADATA_FIELDS = [
-	"repoOwner",
-	"repoName",
-	"baseBranch",
-	"localFolder",
-	"lead",
-	"category",
-	"priority",
 ] as const;
 
 function extractOpenApiRoutes(openApiDocument: string): Set<string> {
@@ -98,6 +111,19 @@ function extractOpenApiRoutes(openApiDocument: string): Set<string> {
 		}
 	}
 	return routes;
+}
+
+function extractTopLevelTagNames(openApiDocument: string): string[] {
+	const tagsSection = openApiDocument.match(
+		/(^|\n)tags:\n([\s\S]*?)(\npaths:)/,
+	);
+	if (!tagsSection?.[2]) {
+		return [];
+	}
+	return tagsSection[2].split("\n").flatMap((line) => {
+		const tagMatch = line.match(/^ {2}- name: (.+)\s*$/);
+		return tagMatch?.[1] ? [tagMatch[1]] : [];
+	});
 }
 
 function findUntypedNullableSchemaLines(openApiDocument: string): number[] {
@@ -158,11 +184,14 @@ function leadingSpaceCount(line: string): number {
 	return line.match(/^ */)?.[0].length ?? 0;
 }
 
+function readOpenApiText(): string {
+	const root = path.resolve(__dirname, "../..", "..");
+	return readFileSync(path.join(root, "openapi.yaml"), "utf-8");
+}
+
 describe("openapi contract", () => {
 	it("includes all implemented Express routes", () => {
-		const root = path.resolve(__dirname, "../..", "..");
-		const openApiPath = path.join(root, "openapi.yaml");
-		const openApiText = readFileSync(openApiPath, "utf-8");
+		const openApiText = readOpenApiText();
 		const documentedRoutes = extractOpenApiRoutes(openApiText);
 
 		expect(documentedRoutes.size).toBeGreaterThan(0);
@@ -174,18 +203,20 @@ describe("openapi contract", () => {
 		}
 	});
 
+	it("keeps top-level tags unique", () => {
+		const tags = extractTopLevelTagNames(readOpenApiText());
+
+		expect(new Set(tags).size).toBe(tags.length);
+	});
+
 	it("keeps nullable schemas compatible with the OpenAPI validator", () => {
-		const root = path.resolve(__dirname, "../..", "..");
-		const openApiPath = path.join(root, "openapi.yaml");
-		const openApiText = readFileSync(openApiPath, "utf-8");
+		const openApiText = readOpenApiText();
 
 		expect(findUntypedNullableSchemaLines(openApiText)).toEqual([]);
 	});
 
 	it("documents all implemented agent update fields", () => {
-		const root = path.resolve(__dirname, "../..", "..");
-		const openApiPath = path.join(root, "openapi.yaml");
-		const openApiText = readFileSync(openApiPath, "utf-8");
+		const openApiText = readOpenApiText();
 		const agentPatchFields = extractSchemaBlock(
 			openApiText,
 			"AgentPatchFields",
@@ -196,10 +227,8 @@ describe("openapi contract", () => {
 		}
 	});
 
-	it("documents project repository metadata fields", () => {
-		const root = path.resolve(__dirname, "../..", "..");
-		const openApiPath = path.join(root, "openapi.yaml");
-		const openApiText = readFileSync(openApiPath, "utf-8");
+	it("documents all project mutation fields", () => {
+		const openApiText = readOpenApiText();
 		const projectCreateFields = extractSchemaBlock(
 			openApiText,
 			"ProjectCreateRequest",
@@ -209,7 +238,7 @@ describe("openapi contract", () => {
 			"ProjectPatchFields",
 		);
 
-		for (const field of PROJECT_METADATA_FIELDS) {
+		for (const field of PROJECT_MUTATION_FIELDS) {
 			expect(projectCreateFields).toContain(`${field}:`);
 			expect(projectPatchFields).toContain(`${field}:`);
 		}

@@ -28,6 +28,7 @@ function parseWorkspaceProjectRecord(payload: unknown): WorkspaceProjectRecord {
 		workspaceId: readWorkspaceId(row, endpoint),
 		externalProjectId: readNullableString(row, "externalProjectId", endpoint),
 		name: readString(row, "name", endpoint),
+		emoji: readOptionalProjectEmoji(row, endpoint),
 		description: readNullableString(row, "description", endpoint),
 		repoOwner: readNullableString(row, "repoOwner", endpoint),
 		repoName: readNullableString(row, "repoName", endpoint),
@@ -39,6 +40,13 @@ function parseWorkspaceProjectRecord(payload: unknown): WorkspaceProjectRecord {
 		createdAt: readString(row, "createdAt", endpoint),
 		updatedAt: readString(row, "updatedAt", endpoint),
 	};
+}
+
+function readOptionalProjectEmoji(
+	row: Record<string, unknown>,
+	endpoint: string,
+): string | null {
+	return "emoji" in row ? readNullableString(row, "emoji", endpoint) : null;
 }
 
 function readWorkspaceId(
@@ -101,6 +109,10 @@ function projectBoardPath(workspaceId: string, projectId: string): string {
 	return `${workspaceProjectsPath(workspaceId)}/${encodePathSegment(projectId)}/board`;
 }
 
+function projectPath(projectId: string): string {
+	return `/api/projects/${encodePathSegment(projectId)}`;
+}
+
 export interface BoardApiMethods {
 	listWorkspaceProjects(
 		workspaceId: string,
@@ -150,7 +162,7 @@ export function createBoardApiMethods(
 		},
 		async updateProject(projectId, request, options) {
 			const payload = await requestWithBase(
-				`/api/projects/${encodePathSegment(projectId)}`,
+				projectPath(projectId),
 				"PATCH",
 				options,
 				request,

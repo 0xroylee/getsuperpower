@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import {
+	DEFAULT_PROJECT_EMOJI,
 	EMPTY_PROJECT_FORM_STATE,
 	buildProjectCreateRequest,
 	buildProjectUpdateRequest,
@@ -17,6 +18,7 @@ describe("project form request builder", () => {
 	it("maps a GitHub HTTPS repository URL to the API request", () => {
 		const request = buildProjectCreateRequest(
 			{
+				...EMPTY_PROJECT_FORM_STATE,
 				name: "  Web Project  ",
 				externalProjectId: "  external-1  ",
 				description: "  Created from UI  ",
@@ -34,6 +36,7 @@ describe("project form request builder", () => {
 			boardId: "board-1",
 			ownerId: "owner-1",
 			name: "Web Project",
+			emoji: DEFAULT_PROJECT_EMOJI,
 			externalProjectId: "external-1",
 			description: "Created from UI",
 			repoOwner: "octo",
@@ -83,6 +86,7 @@ describe("project form request builder", () => {
 			boardId: "board-1",
 			ownerId: "owner-1",
 			name: "Web Project",
+			emoji: DEFAULT_PROJECT_EMOJI,
 			externalProjectId: null,
 			description: null,
 			repoOwner: null,
@@ -126,7 +130,7 @@ describe("project form request builder", () => {
 				},
 				defaults,
 			),
-		).toThrow("Priority must be an integer");
+		).toThrow("Priority must be a whole number");
 	});
 });
 
@@ -215,6 +219,7 @@ function buildProject(
 		externalProjectId: null,
 		name: "Project",
 		description: "Project description",
+		emoji: null,
 		repoOwner: "devos",
 		repoName: "show-me-ur-agents",
 		baseBranch: "main",

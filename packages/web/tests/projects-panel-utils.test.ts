@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import {
+	DEFAULT_PROJECT_EMOJI,
 	buildProjectDisplayRows,
 	filterProjects,
 	formatProjectCreatedAt,
@@ -13,7 +14,6 @@ describe("projects panel table helpers", () => {
 			buildProject({
 				id: "worker",
 				name: "Worker",
-				category: "automation",
 				lead: "Roy",
 			}),
 		];
@@ -28,6 +28,7 @@ describe("projects panel table helpers", () => {
 			[
 				buildProject({
 					description: null,
+					emoji: null,
 					priority: null,
 					repoOwner: null,
 					repoName: null,
@@ -38,6 +39,7 @@ describe("projects panel table helpers", () => {
 		);
 
 		expect(row).toMatchObject({
+			emojiLabel: DEFAULT_PROJECT_EMOJI,
 			priorityLabel: "--",
 			categoryLabel: "--",
 			repositoryLabel: "--",
@@ -72,6 +74,7 @@ function buildProject(
 		workspaceId: "owner-1",
 		externalProjectId: null,
 		name: "Project",
+		emoji: null,
 		description: "Project description",
 		repoOwner: "devos",
 		repoName: "show-me-ur-agents",

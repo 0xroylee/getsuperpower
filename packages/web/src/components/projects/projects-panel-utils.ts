@@ -1,16 +1,29 @@
 import type { WorkspaceProjectRecord } from "@/lib/api";
 import type { ProjectDisplayRow } from "./types/projects-panel.types";
 
+export {
+	DEFAULT_PROJECT_EMOJI,
+	EMPTY_PROJECT_FORM_STATE,
+	buildProjectCreateRequest,
+	buildProjectEditFormState,
+	buildProjectUpdateRequest,
+} from "./project-form-utils";
+
 const EMPTY_LABEL = "--";
+const RELATIVE_TIME_UNITS = [
+	{ divisor: 60, limit: 60, suffix: "m" },
+	{ divisor: 60 * 60, limit: 24, suffix: "h" },
+	{ divisor: 60 * 60 * 24, limit: 7, suffix: "d" },
+	{ divisor: 60 * 60 * 24 * 7, limit: 5, suffix: "w" },
+	{ divisor: 60 * 60 * 24 * 30, limit: 12, suffix: "mo" },
+] as const;
 
 export function filterProjects(
 	projects: WorkspaceProjectRecord[],
 	searchQuery: string,
 ): WorkspaceProjectRecord[] {
 	const query = searchQuery.trim().toLowerCase();
-	if (!query) {
-		return projects;
-	}
+	if (!query) return projects;
 	return projects.filter((project) =>
 		projectSearchText(project).toLowerCase().includes(query),
 	);
@@ -22,15 +35,13 @@ export function buildProjectDisplayRows(
 ): ProjectDisplayRow[] {
 	return projects.map((project) => ({
 		project,
+		emojiLabel: formatOptionalLabel(project.emoji, "📁"),
 		priorityLabel: formatProjectPriority(project.priority),
 		categoryLabel: formatOptionalLabel(project.category),
 		repositoryLabel: formatProjectRepository(project),
 		leadLabel: formatOptionalLabel(project.lead),
 		createdLabel: formatProjectCreatedAt(project.createdAt, now),
-		summaryLabel:
-			formatOptionalLabel(project.description) === EMPTY_LABEL
-				? project.id
-				: formatOptionalLabel(project.description),
+		summaryLabel: formatOptionalLabel(project.description, project.id),
 	}));
 }
 
@@ -43,10 +54,7 @@ export function formatProjectRepository(
 ): string {
 	const owner = project.repoOwner?.trim();
 	const repo = project.repoName?.trim();
-	if (owner && repo) {
-		return `${owner}/${repo}`;
-	}
-	return owner || repo || EMPTY_LABEL;
+	return owner && repo ? `${owner}/${repo}` : owner || repo || EMPTY_LABEL;
 }
 
 export function formatProjectCreatedAt(
@@ -54,54 +62,24 @@ export function formatProjectCreatedAt(
 	now = new Date(),
 ): string {
 	const createdDate = new Date(createdAt);
-	if (Number.isNaN(createdDate.getTime())) {
-		return EMPTY_LABEL;
-	}
+	if (Number.isNaN(createdDate.getTime())) return EMPTY_LABEL;
 	const elapsedMs = Math.max(0, now.getTime() - createdDate.getTime());
 	const elapsedSeconds = Math.floor(elapsedMs / 1000);
-	if (elapsedSeconds < 60) {
-		return "Just now";
+	if (elapsedSeconds < 60) return "Just now";
+	for (const unit of RELATIVE_TIME_UNITS) {
+		const value = Math.floor(elapsedSeconds / unit.divisor);
+		if (value < unit.limit) return `${value}${unit.suffix} ago`;
 	}
-	const elapsedMinutes = Math.floor(elapsedSeconds / 60);
-	if (elapsedMinutes < 60) {
-		return `${elapsedMinutes}m ago`;
-	}
-	const elapsedHours = Math.floor(elapsedMinutes / 60);
-	if (elapsedHours < 24) {
-		return `${elapsedHours}h ago`;
-	}
-	const elapsedDays = Math.floor(elapsedHours / 24);
-	if (elapsedDays < 7) {
-		return `${elapsedDays}d ago`;
-	}
-	const elapsedWeeks = Math.floor(elapsedDays / 7);
-	if (elapsedWeeks < 5) {
-		return `${elapsedWeeks}w ago`;
-	}
-	const elapsedMonths = Math.floor(elapsedDays / 30);
-	if (elapsedMonths < 12) {
-		return `${elapsedMonths}mo ago`;
-	}
-	return `${Math.floor(elapsedDays / 365)}y ago`;
+	return `${Math.floor(elapsedSeconds / (60 * 60 * 24 * 365))}y ago`;
 }
 
-function formatOptionalLabel(value: string | null): string {
-	return value?.trim() || EMPTY_LABEL;
+function formatOptionalLabel(
+	value: string | null,
+	fallback = EMPTY_LABEL,
+): string {
+	return value?.trim() || fallback;
 }
 
 function projectSearchText(project: WorkspaceProjectRecord): string {
-	return [
-		project.name,
-		project.description,
-		project.externalProjectId,
-		project.repoOwner,
-		project.repoName,
-		project.baseBranch,
-		project.localFolder,
-		project.lead,
-		project.category,
-		project.priority === null ? null : String(project.priority),
-	]
-		.filter(Boolean)
-		.join(" ");
+	return `${project.name} ${project.emoji ?? ""} ${project.description ?? ""} ${project.externalProjectId ?? ""} ${project.repoOwner ?? ""} ${project.repoName ?? ""} ${project.baseBranch ?? ""} ${project.localFolder ?? ""} ${project.lead ?? ""} ${project.category ?? ""} ${project.priority ?? ""}`;
 }

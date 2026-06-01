@@ -4,6 +4,7 @@ export interface WorkspaceProjectRecord {
 	workspaceId: string;
 	externalProjectId: string | null;
 	name: string;
+	emoji: string | null;
 	description: string | null;
 	repoOwner: string | null;
 	repoName: string | null;
@@ -20,6 +21,7 @@ export interface ProjectCreateRequest {
 	boardId: string;
 	ownerId: string;
 	name: string;
+	emoji?: string | null;
 	externalProjectId?: string | null;
 	description?: string | null;
 	repoOwner?: string | null;
@@ -35,6 +37,7 @@ export interface ProjectUpdateRequest {
 	boardId?: string;
 	ownerId?: string;
 	name?: string;
+	emoji?: string | null;
 	externalProjectId?: string | null;
 	description?: string | null;
 	repoOwner?: string | null;

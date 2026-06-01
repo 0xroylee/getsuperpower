@@ -46,6 +46,7 @@ export interface WorkspaceProjectRecord {
 	boardId: string;
 	externalProjectId: string | null;
 	name: string;
+	emoji: string | null;
 	description: string | null;
 	repoOwner: string | null;
 	repoName: string | null;
