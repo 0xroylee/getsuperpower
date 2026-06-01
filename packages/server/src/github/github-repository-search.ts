@@ -75,6 +75,7 @@ function parseRepositoryItem(
 	const description = item.description;
 	const isPrivate = item.private;
 	if (
+		(typeof id !== "number" && typeof id !== "string") ||
 		typeof owner !== "string" ||
 		typeof name !== "string" ||
 		typeof fullName !== "string" ||

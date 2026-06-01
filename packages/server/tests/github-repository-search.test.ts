@@ -21,6 +21,16 @@ describe("GitHub repository search service", () => {
 			return jsonResponse({
 				items: [
 					{
+						owner: { login: "devos" },
+						name: "missing-id",
+						full_name: "devos/missing-id",
+						html_url: "https://github.com/devos/missing-id",
+						clone_url: "https://github.com/devos/missing-id.git",
+						default_branch: "main",
+						description: "Malformed record",
+						private: false,
+					},
+					{
 						id: 7,
 						owner: { login: "devos" },
 						name: "show-me-ur-agents",
@@ -30,6 +40,17 @@ describe("GitHub repository search service", () => {
 						default_branch: "main",
 						description: "Agent workflow UI",
 						private: false,
+					},
+					{
+						id: "8",
+						owner: { login: "devos" },
+						name: "string-id",
+						full_name: "devos/string-id",
+						html_url: "https://github.com/devos/string-id",
+						clone_url: "https://github.com/devos/string-id.git",
+						default_branch: "main",
+						description: null,
+						private: true,
 					},
 				],
 			});
@@ -53,6 +74,17 @@ describe("GitHub repository search service", () => {
 					defaultBranch: "main",
 					description: "Agent workflow UI",
 					isPrivate: false,
+				},
+				{
+					id: "8",
+					owner: "devos",
+					name: "string-id",
+					fullName: "devos/string-id",
+					htmlUrl: "https://github.com/devos/string-id",
+					cloneUrl: "https://github.com/devos/string-id.git",
+					defaultBranch: "main",
+					description: null,
+					isPrivate: true,
 				},
 			],
 		});
