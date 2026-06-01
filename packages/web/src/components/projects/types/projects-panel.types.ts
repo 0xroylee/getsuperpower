@@ -1,10 +1,22 @@
-import type { WorkspaceProjectRecord } from "@/lib/api";
+import type {
+	GitHubRepositorySearchResult,
+	ProjectUpdateRequest,
+	WorkspaceProjectRecord,
+} from "@/lib/api";
+
+export interface ProjectRepositorySelection {
+	owner: string;
+	name: string;
+	fullName: string;
+	defaultBranch: string;
+}
 
 export interface ProjectFormState {
 	name: string;
 	externalProjectId: string;
 	description: string;
-	repositoryUrl: string;
+	repositoryQuery: string;
+	repositorySelection: ProjectRepositorySelection | null;
 	localFolder: string;
 	lead: string;
 	category: string;
@@ -16,8 +28,18 @@ export interface ProjectCreateDefaults {
 	ownerId: string;
 }
 
+export interface ProjectFormRequestPayload extends ProjectUpdateRequest {
+	name: string;
+}
+
+export type ProjectDialogMode = "create" | "edit";
+export type ProjectFormFieldName = Exclude<
+	keyof ProjectFormState,
+	"repositorySelection"
+>;
+
 export interface ProjectFieldConfig {
-	name: keyof ProjectFormState;
+	name: ProjectFormFieldName;
 	label: string;
 	placeholder?: string;
 	type?: "number" | "text";
@@ -39,3 +61,6 @@ export interface ProjectDisplayRow {
 	createdLabel: string;
 	summaryLabel: string;
 }
+
+export interface ProjectRepositoryPickerResult
+	extends GitHubRepositorySearchResult {}

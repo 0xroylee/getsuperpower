@@ -12,8 +12,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Typography } from "@/components/ui/typography";
-import { PROJECT_FORM_FIELD_GROUPS } from "./projects-panel-utils";
-import type { ProjectFormState } from "./types/projects-panel.types";
+import { PROJECT_FORM_FIELD_GROUPS } from "./project-form-utils";
+import type {
+	ProjectFormFieldName,
+	ProjectFormState,
+} from "./types/projects-panel.types";
 
 interface ProjectCreateDialogProps {
 	form: ProjectFormState;
@@ -22,7 +25,7 @@ interface ProjectCreateDialogProps {
 	onClose: () => void;
 	onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 	onUpdateField: (
-		field: keyof ProjectFormState,
+		field: ProjectFormFieldName,
 		event: ChangeEvent<HTMLInputElement>,
 	) => void;
 }

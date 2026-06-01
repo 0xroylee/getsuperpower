@@ -1,78 +1,7 @@
-import type { ProjectCreateRequest, WorkspaceProjectRecord } from "@/lib/api";
-import type {
-	ProjectCreateDefaults,
-	ProjectDisplayRow,
-	ProjectFieldGroup,
-	ProjectFormState,
-} from "./types/projects-panel.types";
+import type { WorkspaceProjectRecord } from "@/lib/api";
+import type { ProjectDisplayRow } from "./types/projects-panel.types";
 
 const EMPTY_LABEL = "--";
-
-export const EMPTY_PROJECT_FORM_STATE: ProjectFormState = {
-	name: "",
-	externalProjectId: "",
-	description: "",
-	repositoryUrl: "",
-	localFolder: "",
-	lead: "",
-	category: "",
-	priority: "",
-};
-
-export const PROJECT_FORM_FIELD_GROUPS: ProjectFieldGroup[] = [
-	{
-		title: "Identity",
-		fields: [
-			{ name: "name", label: "Project name" },
-			{ name: "externalProjectId", label: "External project ID" },
-			{ name: "description", label: "Description" },
-		],
-	},
-	{
-		title: "Repository",
-		fields: [
-			{
-				name: "repositoryUrl",
-				label: "Repository URL",
-				placeholder: "https://github.com/org/repo",
-			},
-			{ name: "localFolder", label: "Local folder" },
-		],
-	},
-	{
-		title: "Ownership",
-		fields: [
-			{ name: "lead", label: "Lead" },
-			{ name: "category", label: "Category" },
-			{ name: "priority", label: "Priority", type: "number" },
-		],
-	},
-];
-
-export function buildProjectCreateRequest(
-	form: ProjectFormState,
-	defaults: ProjectCreateDefaults,
-): ProjectCreateRequest {
-	const name = form.name.trim();
-	if (!name) {
-		throw new Error("Project name is required");
-	}
-	const repository = parseGitHubRepositoryUrl(form.repositoryUrl);
-	return {
-		boardId: defaults.boardId,
-		ownerId: defaults.ownerId,
-		name,
-		externalProjectId: optionalText(form.externalProjectId),
-		description: optionalText(form.description),
-		repoOwner: repository?.owner ?? null,
-		repoName: repository?.name ?? null,
-		baseBranch: repository ? "main" : null,
-		localFolder: optionalText(form.localFolder),
-		lead: optionalText(form.lead),
-		category: optionalText(form.category),
-		priority: optionalPriority(form.priority),
-	};
-}
 
 export function filterProjects(
 	projects: WorkspaceProjectRecord[],
@@ -154,40 +83,6 @@ export function formatProjectCreatedAt(
 		return `${elapsedMonths}mo ago`;
 	}
 	return `${Math.floor(elapsedDays / 365)}y ago`;
-}
-
-function optionalText(value: string): string | null {
-	const trimmed = value.trim();
-	return trimmed || null;
-}
-
-function optionalPriority(value: string): number | null {
-	const trimmed = value.trim();
-	if (!trimmed) {
-		return null;
-	}
-	const parsed = Number(trimmed);
-	if (!Number.isInteger(parsed)) {
-		throw new Error("Priority must be an integer");
-	}
-	return parsed;
-}
-
-function parseGitHubRepositoryUrl(
-	value: string,
-): { owner: string; name: string } | null {
-	const trimmed = value.trim();
-	if (!trimmed) {
-		return null;
-	}
-	const match =
-		/^https:\/\/github\.com\/([^/\s]+)\/([^/\s]+?)(?:\.git)?$/.exec(trimmed) ??
-		/^git@github\.com:([^/\s]+)\/([^/\s]+?)(?:\.git)?$/.exec(trimmed) ??
-		/^ssh:\/\/git@github\.com\/([^/\s]+)\/([^/\s]+?)(?:\.git)?$/.exec(trimmed);
-	if (!match) {
-		throw new Error("Repository URL must be a GitHub HTTPS or SSH clone URL");
-	}
-	return { owner: match[1], name: match[2] };
 }
 
 function formatOptionalLabel(value: string | null): string {

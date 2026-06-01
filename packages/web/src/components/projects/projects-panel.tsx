@@ -18,21 +18,19 @@ import { ProjectCreateDialog } from "./project-create-dialog";
 import {
 	EMPTY_PROJECT_FORM_STATE,
 	buildProjectCreateRequest,
+} from "./project-form-utils";
+import {
 	buildProjectDisplayRows,
 	filterProjects,
 } from "./projects-panel-utils";
 import { ProjectsTable } from "./projects-table";
 import type {
-	ProjectFormState,
+	ProjectFormFieldName,
 	ProjectTableDensity,
 } from "./types/projects-panel.types";
 
-const LOCAL_BOARD_ID = "board-1";
-
 export function ProjectsPanel(): ReactElement {
-	const [form, setForm] = useState<ProjectFormState>({
-		...EMPTY_PROJECT_FORM_STATE,
-	});
+	const [form, setForm] = useState(EMPTY_PROJECT_FORM_STATE);
 	const [formError, setFormError] = useState<string | null>(null);
 	const [isCreateOpen, setIsCreateOpen] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
@@ -56,7 +54,7 @@ export function ProjectsPanel(): ReactElement {
 	);
 
 	function updateField(
-		field: keyof ProjectFormState,
+		field: ProjectFormFieldName,
 		event: ChangeEvent<HTMLInputElement>,
 	): void {
 		setForm((current) => ({ ...current, [field]: event.target.value }));
@@ -84,11 +82,11 @@ export function ProjectsPanel(): ReactElement {
 		try {
 			await createProject.mutateAsync(
 				buildProjectCreateRequest(form, {
-					boardId: LOCAL_BOARD_ID,
+					boardId: "board-1",
 					ownerId: workspaceId,
 				}),
 			);
-			setForm({ ...EMPTY_PROJECT_FORM_STATE });
+			setForm(EMPTY_PROJECT_FORM_STATE);
 			setIsCreateOpen(false);
 		} catch (error) {
 			setFormError(
