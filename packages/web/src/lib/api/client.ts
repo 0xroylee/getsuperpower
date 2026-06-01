@@ -1,6 +1,7 @@
 import { createBoardApiMethods } from "./board-client";
 import { createChatApiMethods } from "./chat-client";
 import { createCommandStreamApiMethods } from "./command-stream-client";
+import { createGitHubApiMethods } from "./github-client";
 import { createInboxApiMethods } from "./inbox-client";
 import { parsePollingStatusResponse } from "./polling-status-client";
 import { encodePathSegment } from "./response-utils";
@@ -37,6 +38,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
 		requestJson(baseUrl, path, method, fetchFn, headers, requestOptions, body);
 	const boardApiMethods = createBoardApiMethods(requestWithBase);
 	const chatApiMethods = createChatApiMethods(requestWithBase);
+	const githubApiMethods = createGitHubApiMethods(requestWithBase);
 	const commandStreamApiMethods = createCommandStreamApiMethods(
 		wsUrl,
 		options.WebSocketImpl,
@@ -54,6 +56,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
 		...boardApiMethods,
 		...chatApiMethods,
 		...commandStreamApiMethods,
+		...githubApiMethods,
 		...settingsApiMethods,
 		...workflowComputerApiMethods,
 		...workspaceApiMethods,
@@ -118,6 +121,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
 		listBoardTasks: taskApiMethods.listBoardTasks,
 		getBoardTask: taskApiMethods.getBoardTask,
 		createProject: boardApiMethods.createProject,
+		updateProject: boardApiMethods.updateProject,
 		listTaskActivity: taskApiMethods.listTaskActivity,
 		listInboxMessages: inboxApiMethods.listInboxMessages,
 		createTask: taskApiMethods.createTaskFromChat,

@@ -12,6 +12,7 @@ import type {
 	ProjectBoardRecord,
 	ProjectBoardStatusColumn,
 	ProjectCreateRequest,
+	ProjectUpdateRequest,
 	WorkspaceProjectRecord,
 	WorkspaceProjectsResponse,
 } from "./types/client.types";
@@ -109,6 +110,11 @@ export interface BoardApiMethods {
 		request: ProjectCreateRequest,
 		options?: HealthRequestOptions,
 	): Promise<WorkspaceProjectRecord>;
+	updateProject(
+		projectId: string,
+		request: ProjectUpdateRequest,
+		options?: HealthRequestOptions,
+	): Promise<WorkspaceProjectRecord>;
 	getProjectBoard(
 		workspaceId: string,
 		projectId: string,
@@ -137,6 +143,15 @@ export function createBoardApiMethods(
 			const payload = await requestWithBase(
 				"/api/projects",
 				"POST",
+				options,
+				request,
+			);
+			return parseWorkspaceProjectRecord(payload);
+		},
+		async updateProject(projectId, request, options) {
+			const payload = await requestWithBase(
+				`/api/projects/${encodePathSegment(projectId)}`,
+				"PATCH",
 				options,
 				request,
 			);

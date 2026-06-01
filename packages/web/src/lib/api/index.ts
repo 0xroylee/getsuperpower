@@ -1,4 +1,5 @@
 export { createApiClient } from "./client";
+export { useGitHubRepositorySearchQuery } from "./github-queries";
 export { ApiRequestError, isApiRequestError } from "./response-utils";
 export { createWebApiClient } from "./web-client";
 export type {
@@ -18,12 +19,14 @@ export type {
 	ChatSessionUpdateRequest,
 	CommandHistoryRecord,
 	CurrentWorkspaceRecord,
+	GitHubRepositorySearchResult,
 	HealthRequestOptions,
 	HealthResponse,
 	InboxMessageRecord,
 	InboxMessageScope,
 	JobRecord,
 	ProjectCreateRequest,
+	ProjectUpdateRequest,
 	ProjectBoardRecord,
 	ProjectBoardStatusColumn,
 	ProjectBoardTaskRecord,
@@ -70,6 +73,7 @@ export type {
 	BoardTaskUpdateMutationInput,
 	AgentUpdateMutationInput,
 	ProjectCreateMutationInput,
+	ProjectUpdateMutationInput,
 	ServerStateQueryOptions,
 	TaskCreateMutationInput,
 } from "./types/queries.types";

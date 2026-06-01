@@ -1,7 +1,10 @@
 import { describe, expect, it } from "bun:test";
 import { QueryClient } from "@tanstack/react-query";
 import type { WorkspaceProjectRecord } from "../src/lib/api";
-import { refreshCreatedProjectCache } from "../src/lib/api/project-mutations";
+import {
+	refreshCreatedProjectCache,
+	refreshUpdatedProjectCache,
+} from "../src/lib/api/project-mutations";
 import { serverStateQueryKeys } from "../src/lib/api/query-keys";
 
 describe("project create mutation cache refresh", () => {
@@ -18,6 +21,29 @@ describe("project create mutation cache refresh", () => {
 
 		expect(queryClient.getQueryData(queryKey)).toEqual([existing, created]);
 		expect(queryClient.getQueryState(queryKey)?.isInvalidated).toBe(true);
+		queryClient.clear();
+	});
+
+	it("replaces an updated project and invalidates affected project caches", async () => {
+		const queryClient = new QueryClient();
+		const existing = projectRecord("project-existing", "Existing");
+		const updated = projectRecord("project-existing", "Updated");
+		const listKey = serverStateQueryKeys.workspaceProjects(updated.workspaceId);
+		const boardKey = serverStateQueryKeys.projectBoard(
+			updated.workspaceId,
+			updated.id,
+		);
+		queryClient.setQueryData(listKey, [existing]);
+		queryClient.setQueryData(boardKey, {
+			project: existing,
+			statusColumns: [],
+		});
+
+		await refreshUpdatedProjectCache(queryClient, updated);
+
+		expect(queryClient.getQueryData(listKey)).toEqual([updated]);
+		expect(queryClient.getQueryState(listKey)?.isInvalidated).toBe(true);
+		expect(queryClient.getQueryState(boardKey)?.isInvalidated).toBe(true);
 		queryClient.clear();
 	});
 });

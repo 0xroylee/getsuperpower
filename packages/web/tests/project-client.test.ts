@@ -62,4 +62,86 @@ describe("project API client", () => {
 			updatedAt: "2026-05-20T00:00:00.000Z",
 		});
 	});
+
+	it("searches GitHub repositories through the server API", async () => {
+		const fetchFn = (async (input: URL | RequestInfo, init?: RequestInit) => {
+			expect(String(input)).toBe(
+				"/api/github/repositories/search?q=show-me-ur-agents",
+			);
+			expect(init?.method).toBe("GET");
+			return okJsonResponse({
+				repositories: [
+					{
+						id: "7",
+						owner: "devos",
+						name: "show-me-ur-agents",
+						fullName: "devos/show-me-ur-agents",
+						htmlUrl: "https://github.com/devos/show-me-ur-agents",
+						cloneUrl: "https://github.com/devos/show-me-ur-agents.git",
+						defaultBranch: "main",
+						description: "Agent workflow UI",
+						isPrivate: false,
+					},
+				],
+			});
+		}) as typeof fetch;
+		const client = createApiClient({ fetchFn });
+
+		await expect(
+			client.searchGitHubRepositories(" show-me-ur-agents "),
+		).resolves.toEqual([
+			{
+				id: "7",
+				owner: "devos",
+				name: "show-me-ur-agents",
+				fullName: "devos/show-me-ur-agents",
+				htmlUrl: "https://github.com/devos/show-me-ur-agents",
+				cloneUrl: "https://github.com/devos/show-me-ur-agents.git",
+				defaultBranch: "main",
+				description: "Agent workflow UI",
+				isPrivate: false,
+			},
+		]);
+	});
+
+	it("updates projects through the server API", async () => {
+		const fetchFn = (async (input: URL | RequestInfo, init?: RequestInit) => {
+			expect(String(input)).toBe("/api/projects/project-1");
+			expect(init?.method).toBe("PATCH");
+			expect(JSON.parse(String(init?.body))).toEqual({
+				name: "Updated",
+				repoOwner: "devos",
+				repoName: "show-me-ur-agents",
+				baseBranch: "main",
+			});
+			return okJsonResponse({
+				id: "project-1",
+				boardId: "board-1",
+				ownerId: "owner-1",
+				name: "Updated",
+				externalProjectId: null,
+				description: null,
+				repoOwner: "devos",
+				repoName: "show-me-ur-agents",
+				baseBranch: "main",
+				localFolder: null,
+				lead: null,
+				category: null,
+				priority: null,
+				createdAt: "2026-05-20T00:00:00.000Z",
+				updatedAt: "2026-05-21T00:00:00.000Z",
+			});
+		}) as typeof fetch;
+		const client = createApiClient({ fetchFn });
+
+		const project = await client.updateProject("project-1", {
+			name: "Updated",
+			repoOwner: "devos",
+			repoName: "show-me-ur-agents",
+			baseBranch: "main",
+		});
+
+		expect(project.name).toBe("Updated");
+		expect(project.repoOwner).toBe("devos");
+	});
 });
