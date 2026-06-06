@@ -77,6 +77,10 @@ const MIGRATIONS: Migration[] = [
 		id: "0020_project_emoji",
 		fileName: "0020_project_emoji.sql",
 	},
+	{
+		id: "0021_project_run_hooks",
+		fileName: "0021_project_run_hooks.sql",
+	},
 ];
 
 async function ensureMigrationsTable(

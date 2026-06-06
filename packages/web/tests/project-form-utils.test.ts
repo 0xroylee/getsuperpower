@@ -28,6 +28,8 @@ describe("project form request builder", () => {
 				lead: "  Roy  ",
 				category: "  platform  ",
 				priority: " 2 ",
+				preHookScript: "  bun install --frozen-lockfile\n",
+				afterHookScript: "echo done\n",
 			},
 			defaults,
 		);
@@ -46,6 +48,8 @@ describe("project form request builder", () => {
 			lead: "Roy",
 			category: "platform",
 			priority: 2,
+			preHookScript: "  bun install --frozen-lockfile\n",
+			afterHookScript: "echo done\n",
 		});
 	});
 
@@ -96,7 +100,24 @@ describe("project form request builder", () => {
 			lead: null,
 			category: null,
 			priority: null,
+			preHookScript: null,
+			afterHookScript: null,
 		});
+	});
+
+	it("normalizes whitespace-only hook scripts to null", () => {
+		const request = buildProjectCreateRequest(
+			{
+				...EMPTY_PROJECT_FORM_STATE,
+				name: "Web Project",
+				preHookScript: "   \n",
+				afterHookScript: "\t",
+			},
+			defaults,
+		);
+
+		expect(request.preHookScript).toBeNull();
+		expect(request.afterHookScript).toBeNull();
 	});
 
 	it("requires a valid GitHub repository URL when one is provided", () => {
@@ -182,6 +203,8 @@ describe("project form repository search helpers", () => {
 			fullName: "devos/show-me-ur-agents",
 			defaultBranch: "main",
 		});
+		expect(form.preHookScript).toBe("bun install --frozen-lockfile");
+		expect(form.afterHookScript).toBe("echo done");
 
 		expect(
 			buildProjectUpdateRequest({
@@ -227,6 +250,8 @@ function buildProject(
 		lead: null,
 		category: null,
 		priority: 2,
+		preHookScript: "bun install --frozen-lockfile",
+		afterHookScript: "echo done",
 		createdAt: "2026-05-25T00:00:00.000Z",
 		updatedAt: "2026-05-25T00:00:00.000Z",
 		...overrides,

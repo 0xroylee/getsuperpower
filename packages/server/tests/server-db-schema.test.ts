@@ -210,6 +210,8 @@ describe("server drizzle schema", () => {
 			lead: "Roy",
 			category: "platform",
 			priority: 1,
+			preHookScript: "bun install --frozen-lockfile",
+			afterHookScript: "echo done",
 			ownerId: "user-1",
 			createdAt: "2026-05-12 01:01:00",
 			updatedAt: "2026-05-12 01:01:00",
@@ -366,6 +368,8 @@ describe("server drizzle schema", () => {
 		expect(projectRow?.lead).toBe(project.lead ?? null);
 		expect(projectRow?.category).toBe(project.category ?? null);
 		expect(projectRow?.priority).toBe(project.priority ?? null);
+		expect(projectRow?.preHookScript).toBe(project.preHookScript ?? null);
+		expect(projectRow?.afterHookScript).toBe(project.afterHookScript ?? null);
 		expect(taskRow?.id).toBe(task.id);
 		expect(taskRow?.projectId).toBe(task.projectId ?? null);
 		expect(taskRow?.title).toBe(task.title);

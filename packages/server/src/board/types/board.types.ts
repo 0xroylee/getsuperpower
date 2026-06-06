@@ -25,6 +25,8 @@ export interface WorkspaceProjectSummary {
 	lead: string | null;
 	category: string | null;
 	priority: number | null;
+	preHookScript: string | null;
+	afterHookScript: string | null;
 	createdAt: string;
 	updatedAt: string;
 }

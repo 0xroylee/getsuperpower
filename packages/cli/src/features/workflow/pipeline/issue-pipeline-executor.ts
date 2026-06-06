@@ -4,6 +4,10 @@ import type {
 	RunOptions,
 	RunState,
 } from "../../types";
+import {
+	runProjectHookScript,
+	runProjectHookScriptSafely,
+} from "../hooks/project-run-hooks";
 import { ReviewMergeDecisionManager } from "../review/review-orchestrator";
 import { saveRunState, transitionStage } from "../state";
 import type { PipelineRunResult } from "../types/workflow-metadata.types";
@@ -37,55 +41,68 @@ export class IssuePipelineExecutor {
 		}
 
 		await this.runtime.ensureBaseBranchFresh(this.config);
-		const agent = this.runtime.createAgentAdapter(this.config);
-		if (state.stage === "backlog") {
-			await this.handleReceivedStage(state);
-		}
-		const phaseRunner = new BuiltInWorkflowPhaseRunner(this.runtime);
-		const pipeline = new PipelineManager(
-			createBuiltInWorkflowMetadata(this.config),
-			{
-				phaseRunner: new PhaseRunner({
-					runAgent: async ({ phase, assignment }) => {
-						await phaseRunner.run({
-							phaseId: phase.id,
-							config: this.config,
-							agent,
-							notifications: this.notifications,
-							taskClient: this.taskClient,
-							state,
-						});
-						return {
-							assignment,
-							result: { stdout: "", finalMessage: phase.title },
-						};
-					},
-				}),
-			},
-		);
-		const pipelineResult = await pipeline.run({
-			config: this.config,
-			state,
-			shouldContinue: (runState) => this.shouldContinue(runState),
-			beforePhase: async (phase) => {
-				await heartbeatRunLease(
-					this.config.workspacePath,
-					state,
-					this.leaseOwnerId,
-					this.leaseTimeoutMs,
-				);
-				if (phase.id !== "testing" || !this.options.reviewOnly) {
-					return "continue";
-				}
-				const parked =
-					await this.createReviewMergeManager().maybeParkReviewOnlyConflict(
+		try {
+			await runProjectHookScript({
+				config: this.config,
+				hookName: "pre",
+				script: this.config.preHookScript,
+			});
+			const agent = this.runtime.createAgentAdapter(this.config);
+			if (state.stage === "backlog") {
+				await this.handleReceivedStage(state);
+			}
+			const phaseRunner = new BuiltInWorkflowPhaseRunner(this.runtime);
+			const pipeline = new PipelineManager(
+				createBuiltInWorkflowMetadata(this.config),
+				{
+					phaseRunner: new PhaseRunner({
+						runAgent: async ({ phase, assignment }) => {
+							await phaseRunner.run({
+								phaseId: phase.id,
+								config: this.config,
+								agent,
+								notifications: this.notifications,
+								taskClient: this.taskClient,
+								state,
+							});
+							return {
+								assignment,
+								result: { stdout: "", finalMessage: phase.title },
+							};
+						},
+					}),
+				},
+			);
+			const pipelineResult = await pipeline.run({
+				config: this.config,
+				state,
+				shouldContinue: (runState) => this.shouldContinue(runState),
+				beforePhase: async (phase) => {
+					await heartbeatRunLease(
+						this.config.workspacePath,
 						state,
+						this.leaseOwnerId,
+						this.leaseTimeoutMs,
 					);
-				return parked ? "skip" : "continue";
-			},
-		});
-		if (!pipelineResult.ok) {
-			throw resolvePipelineFailureError(pipelineResult);
+					if (phase.id !== "testing" || !this.options.reviewOnly) {
+						return "continue";
+					}
+					const parked =
+						await this.createReviewMergeManager().maybeParkReviewOnlyConflict(
+							state,
+						);
+					return parked ? "skip" : "continue";
+				},
+			});
+			if (!pipelineResult.ok) {
+				throw resolvePipelineFailureError(pipelineResult);
+			}
+		} finally {
+			await runProjectHookScriptSafely({
+				config: this.config,
+				hookName: "after",
+				script: this.config.afterHookScript,
+			});
 		}
 	}
 

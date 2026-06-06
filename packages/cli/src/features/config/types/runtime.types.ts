@@ -39,6 +39,8 @@ export interface ProjectRuntimeConfig {
 		name: string;
 		baseBranch: string;
 	};
+	preHookScript?: string;
+	afterHookScript?: string;
 	github: GithubInstructionsConfig & {
 		useGhCli: boolean;
 		defaultBugLabel: string;

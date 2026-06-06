@@ -27,6 +27,8 @@ export interface ProjectFormState {
 	lead: string;
 	category: string;
 	priority: string;
+	preHookScript: string;
+	afterHookScript: string;
 }
 
 export interface ProjectCreateDefaults {
@@ -46,6 +48,8 @@ export interface ProjectFormRequestPayload {
 	lead: string | null;
 	category: string | null;
 	priority: number | null;
+	preHookScript: string | null;
+	afterHookScript: string | null;
 }
 
 export type ProjectDialogMode = "create" | "edit";

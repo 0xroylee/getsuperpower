@@ -64,6 +64,8 @@ function projectRecord(id: string, name: string): WorkspaceProjectRecord {
 		lead: null,
 		category: null,
 		priority: null,
+		preHookScript: null,
+		afterHookScript: null,
 		createdAt: "2026-05-21T00:00:00.000Z",
 		updatedAt: "2026-05-21T00:00:00.000Z",
 	};

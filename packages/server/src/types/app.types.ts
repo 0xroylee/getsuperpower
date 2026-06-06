@@ -55,6 +55,8 @@ export interface WorkspaceProjectRecord {
 	lead: string | null;
 	category: string | null;
 	priority: number | null;
+	preHookScript: string | null;
+	afterHookScript: string | null;
 	ownerId: string;
 	createdAt: string;
 	updatedAt: string;

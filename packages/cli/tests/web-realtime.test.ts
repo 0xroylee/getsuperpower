@@ -209,6 +209,8 @@ function projectRecord(
 		repoName: null,
 		baseBranch: null,
 		localFolder: null,
+		preHookScript: null,
+		afterHookScript: null,
 		lead: null,
 		category: null,
 		priority: null,

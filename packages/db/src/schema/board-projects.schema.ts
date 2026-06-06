@@ -17,6 +17,8 @@ export const boardProjectsTable = pgTable("board_projects", {
 	lead: text("lead"),
 	category: text("category"),
 	priority: integer("priority"),
+	preHookScript: text("pre_hook_script"),
+	afterHookScript: text("after_hook_script"),
 	ownerId: text("owner_id").notNull(),
 	createdAt: timestamp("created_at", { mode: "string" }).notNull(),
 	updatedAt: timestamp("updated_at", { mode: "string" }).notNull(),

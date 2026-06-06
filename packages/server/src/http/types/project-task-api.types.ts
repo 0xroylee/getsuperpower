@@ -12,6 +12,8 @@ export interface CreateProjectPayload {
 	lead?: string | null;
 	category?: string | null;
 	priority?: number | null;
+	preHookScript?: string | null;
+	afterHookScript?: string | null;
 }
 
 export interface UpdateProjectPayload {
@@ -28,6 +30,8 @@ export interface UpdateProjectPayload {
 	lead?: string | null;
 	category?: string | null;
 	priority?: number | null;
+	preHookScript?: string | null;
+	afterHookScript?: string | null;
 }
 
 export interface CreateTaskPayload {

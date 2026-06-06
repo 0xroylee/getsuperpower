@@ -30,6 +30,8 @@ export const EMPTY_PROJECT_FORM_STATE: ProjectFormState = {
 	lead: "",
 	category: "",
 	priority: "",
+	preHookScript: "",
+	afterHookScript: "",
 };
 
 export function buildProjectCreateRequest(
@@ -85,6 +87,8 @@ export function formStateFromProject(
 		lead: project.lead ?? "",
 		category: project.category ?? "",
 		priority: project.priority === null ? "" : String(project.priority),
+		preHookScript: project.preHookScript ?? "",
+		afterHookScript: project.afterHookScript ?? "",
 	};
 }
 
@@ -123,6 +127,8 @@ function buildProjectFormRequestPayload(
 		lead: optionalText(form.lead),
 		category: optionalText(form.category),
 		priority: optionalPriority(form.priority),
+		preHookScript: optionalScript(form.preHookScript),
+		afterHookScript: optionalScript(form.afterHookScript),
 	};
 }
 
@@ -206,6 +212,10 @@ function resolveUpdateFallbackBranch(form: ProjectFormState): string {
 function optionalText(value: string): string | null {
 	const trimmed = value.trim();
 	return trimmed || null;
+}
+
+function optionalScript(value: string): string | null {
+	return value.trim() ? value : null;
 }
 
 function optionalPriority(value: string): number | null {

@@ -31,6 +31,8 @@ const createProjectSchema = z.object({
 	lead: optionalNullableString,
 	category: optionalNullableString,
 	priority: z.number().int().nullable().optional(),
+	preHookScript: optionalNullableString,
+	afterHookScript: optionalNullableString,
 });
 
 const updateProjectSchema = createProjectSchema.partial();

@@ -283,6 +283,8 @@ describe("loadConfig", () => {
 						repoName: "server-repo",
 						baseBranch: "trunk",
 						localFolder: path.join(tempDir, "repo"),
+						preHookScript: "bun install --frozen-lockfile",
+						afterHookScript: "echo done",
 					}),
 				],
 				async () => {
@@ -299,6 +301,10 @@ describe("loadConfig", () => {
 						name: "server-repo",
 						baseBranch: "trunk",
 					});
+					expect(config.projects[0]?.preHookScript).toBe(
+						"bun install --frozen-lockfile",
+					);
+					expect(config.projects[0]?.afterHookScript).toBe("echo done");
 				},
 			);
 		} finally {
@@ -740,6 +746,8 @@ function serverProjectRow(
 		lead: "Roy",
 		category: "platform",
 		priority: 3,
+		preHookScript: null,
+		afterHookScript: null,
 		ownerId: "owner-1",
 		createdAt: "2026-05-20T00:00:00.000Z",
 		updatedAt: "2026-05-20T00:00:00.000Z",

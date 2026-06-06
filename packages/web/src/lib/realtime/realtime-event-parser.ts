@@ -156,6 +156,8 @@ function parseProject(value: unknown): WorkspaceProjectRecord {
 		lead: readNullableString(row, "lead"),
 		category: readNullableString(row, "category"),
 		priority: readNullableNumber(row, "priority"),
+		preHookScript: readNullableString(row, "preHookScript"),
+		afterHookScript: readNullableString(row, "afterHookScript"),
 		createdAt: readString(row, "createdAt"),
 		updatedAt: readString(row, "updatedAt"),
 	};

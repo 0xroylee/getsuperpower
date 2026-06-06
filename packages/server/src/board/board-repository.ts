@@ -50,6 +50,8 @@ export function createBoardRepository(
 					lead: boardProjectsTable.lead,
 					category: boardProjectsTable.category,
 					priority: boardProjectsTable.priority,
+					preHookScript: boardProjectsTable.preHookScript,
+					afterHookScript: boardProjectsTable.afterHookScript,
 					createdAt: boardProjectsTable.createdAt,
 					updatedAt: boardProjectsTable.updatedAt,
 				})
@@ -76,6 +78,8 @@ export function createBoardRepository(
 					lead: boardProjectsTable.lead,
 					category: boardProjectsTable.category,
 					priority: boardProjectsTable.priority,
+					preHookScript: boardProjectsTable.preHookScript,
+					afterHookScript: boardProjectsTable.afterHookScript,
 					createdAt: boardProjectsTable.createdAt,
 					updatedAt: boardProjectsTable.updatedAt,
 				})

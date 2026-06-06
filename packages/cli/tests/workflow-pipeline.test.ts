@@ -1,15 +1,29 @@
 import { describe, expect, it } from "bun:test";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import type {
 	AgentAdapter,
 	AgentAdapterRunRequest,
 	AgentResult,
 } from "adapters";
 import type { ResolvedProjectConfig, RunState } from "../src/features/types";
+import {
+	runProjectHookScript,
+	runProjectHookScriptSafely,
+} from "../src/features/workflow/hooks/project-run-hooks";
 import { createBuiltInWorkflowMetadata } from "../src/features/workflow/pipeline/built-in-workflow-metadata";
 import { BuiltInWorkflowPhaseRunner } from "../src/features/workflow/pipeline/built-in-workflow-phase-runner";
-import { resolvePipelineFailureError } from "../src/features/workflow/pipeline/issue-pipeline-executor";
+import {
+	IssuePipelineExecutor,
+	resolvePipelineFailureError,
+} from "../src/features/workflow/pipeline/issue-pipeline-executor";
 import { PhaseRunner } from "../src/features/workflow/pipeline/phase-runner";
 import { PipelineManager } from "../src/features/workflow/pipeline/pipeline-manager";
+import type {
+	CommandResult,
+	RunCommandOptions,
+} from "../src/utils/types/shell.types";
 
 describe("workflow pipeline", () => {
 	it("records skipped phases and stops when skip leaves the stage unchanged", async () => {
@@ -122,6 +136,104 @@ describe("workflow pipeline", () => {
 			resolvePipelineFailureError({ ok: false, phaseResults: [result] }),
 		).toBe(diagnosticError);
 	});
+
+	it("runs project hook scripts through a temporary shell file", async () => {
+		const calls: Array<{
+			command: string;
+			args: string[];
+			options: RunCommandOptions;
+			script: string;
+		}> = [];
+
+		await runProjectHookScript({
+			config: fakeProject(),
+			hookName: "pre",
+			script: "echo setup\n",
+			commandRunner: async (command, args, options) => {
+				calls.push({
+					command,
+					args,
+					options,
+					script: await readFile(args[0] ?? "", "utf8"),
+				});
+				return successfulCommand();
+			},
+		});
+
+		expect(calls).toHaveLength(1);
+		expect(calls[0]?.command).toBe("sh");
+		expect(calls[0]?.args).toHaveLength(1);
+		expect(calls[0]?.options.cwd).toBe("/tmp/workspace");
+		expect(calls[0]?.options.timeoutMs).toBeGreaterThan(0);
+		expect(calls[0]?.script).toBe("echo setup\n");
+	});
+
+	it("throws pre-hook output when a project hook script fails", async () => {
+		await expect(
+			runProjectHookScript({
+				config: fakeProject(),
+				hookName: "pre",
+				script: "exit 1",
+				commandRunner: async () => ({
+					code: 1,
+					stdout: "setup stdout",
+					stderr: "setup stderr",
+				}),
+			}),
+		).rejects.toThrow("Project pre-hook failed: setup stderr");
+	});
+
+	it("records after-hook failures without throwing", async () => {
+		const result = await runProjectHookScriptSafely({
+			config: fakeProject(),
+			hookName: "after",
+			script: "exit 1",
+			commandRunner: async () => ({
+				code: 1,
+				stdout: "",
+				stderr: "post-run failed",
+			}),
+			loggerWarn: () => undefined,
+		});
+
+		expect(result).toEqual({
+			status: "failed",
+			error: "Project after-hook failed: post-run failed",
+		});
+	});
+
+	it("runs the after-hook when the pre-hook blocks the workflow", async () => {
+		const tempDir = await mkdtemp(path.join(os.tmpdir(), "devos-hooks-test-"));
+		const markerPath = path.join(tempDir, "marker.txt");
+		const config = {
+			...fakeProject(),
+			preHookScript: `echo pre >> "${markerPath}"\nexit 1\n`,
+			afterHookScript: `echo after >> "${markerPath}"\n`,
+		};
+		const executor = new IssuePipelineExecutor(
+			config,
+			fakeNotifications(),
+			fakeLinearClient() as never,
+			{ reviewOnly: false } as never,
+			"lease-owner",
+			1000,
+			{
+				ensureBaseBranchFresh: async () => undefined,
+				createAgentAdapter: () => {
+					throw new Error("workflow pipeline should not start");
+				},
+			} as never,
+		);
+
+		try {
+			await expect(executor.execute(fakeRunState("plan"))).rejects.toThrow(
+				"Project pre-hook failed",
+			);
+			await expect(readFile(markerPath, "utf8")).resolves.toBe("pre\nafter\n");
+		} finally {
+			await rm(tempDir, { force: true, recursive: true });
+		}
+	});
 });
 
 function fakeAgentAdapter(
@@ -212,5 +324,13 @@ function fakeRunState(stage: RunState["stage"]): RunState {
 		bugs: [],
 		startedAt: "2026-05-27T00:00:00.000Z",
 		updatedAt: "2026-05-27T00:00:00.000Z",
+	};
+}
+
+function successfulCommand(): CommandResult {
+	return {
+		code: 0,
+		stdout: "",
+		stderr: "",
 	};
 }

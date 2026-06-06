@@ -15,6 +15,8 @@ interface BoardProjectRow {
 	repoName: string | null;
 	baseBranch: string | null;
 	localFolder: string | null;
+	preHookScript?: string | null;
+	afterHookScript?: string | null;
 }
 
 export async function applyServerProjectMetadata(
@@ -95,12 +97,20 @@ function isBoardProjectRow(value: unknown): value is BoardProjectRow {
 		isNullableString(value.repoOwner) &&
 		isNullableString(value.repoName) &&
 		isNullableString(value.baseBranch) &&
-		isNullableString(value.localFolder)
+		isNullableString(value.localFolder) &&
+		isOptionalNullableString(value.preHookScript) &&
+		isOptionalNullableString(value.afterHookScript)
 	);
 }
 
 function isNullableString(value: unknown): value is string | null {
 	return value === null || typeof value === "string";
+}
+
+function isOptionalNullableString(
+	value: unknown,
+): value is string | null | undefined {
+	return value === undefined || isNullableString(value);
 }
 
 function applyProjectRows(
@@ -133,5 +143,7 @@ function applyProjectRow(
 			name: row.repoName ?? project.repo.name,
 			baseBranch: row.baseBranch ?? project.repo.baseBranch,
 		},
+		preHookScript: row.preHookScript ?? undefined,
+		afterHookScript: row.afterHookScript ?? undefined,
 	};
 }

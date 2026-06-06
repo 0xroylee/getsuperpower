@@ -37,6 +37,8 @@ function parseWorkspaceProjectRecord(payload: unknown): WorkspaceProjectRecord {
 		lead: readNullableString(row, "lead", endpoint),
 		category: readNullableString(row, "category", endpoint),
 		priority: readNullableNumber(row, "priority", endpoint),
+		preHookScript: readNullableString(row, "preHookScript", endpoint),
+		afterHookScript: readNullableString(row, "afterHookScript", endpoint),
 		createdAt: readString(row, "createdAt", endpoint),
 		updatedAt: readString(row, "updatedAt", endpoint),
 	};

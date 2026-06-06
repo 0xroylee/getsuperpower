@@ -22,6 +22,7 @@ import type { GitHubConnectionResponse } from "@/lib/api/types/client.types";
 
 import { RepositoryFields } from "./project-create-dialog-fields";
 import { Field } from "./project-form-field";
+import { ProjectHookFields } from "./project-hook-fields";
 import type {
 	ProjectDialogMode,
 	ProjectFormFieldName,
@@ -202,6 +203,7 @@ export function ProjectFormDialog({
 							onRetryRepositories={onRetryRepositories}
 							onUpdateField={onUpdateField}
 						/>
+						<ProjectHookFields form={form} onUpdateField={onUpdateField} />
 						{formError ? (
 							<Typography
 								className="rounded-md border border-red-900/60 bg-red-950/30 px-3 py-2"

@@ -13,6 +13,8 @@ export interface WorkspaceProjectRecord {
 	lead: string | null;
 	category: string | null;
 	priority: number | null;
+	preHookScript: string | null;
+	afterHookScript: string | null;
 	createdAt: string;
 	updatedAt: string;
 }
@@ -31,6 +33,8 @@ export interface ProjectCreateRequest {
 	lead?: string | null;
 	category?: string | null;
 	priority?: number | null;
+	preHookScript?: string | null;
+	afterHookScript?: string | null;
 }
 
 export interface ProjectUpdateRequest {
@@ -47,6 +51,8 @@ export interface ProjectUpdateRequest {
 	lead?: string | null;
 	category?: string | null;
 	priority?: number | null;
+	preHookScript?: string | null;
+	afterHookScript?: string | null;
 }
 
 export interface WorkspaceProjectsResponse {

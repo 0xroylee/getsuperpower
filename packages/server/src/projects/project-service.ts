@@ -37,6 +37,8 @@ export function createProjectService(
 					lead: input.lead ?? null,
 					category: input.category ?? null,
 					priority: input.priority ?? null,
+					preHookScript: normalizeHookScript(input.preHookScript),
+					afterHookScript: normalizeHookScript(input.afterHookScript),
 					ownerId: input.ownerId,
 					createdAt: now,
 					updatedAt: now,
@@ -57,7 +59,7 @@ export function createProjectService(
 			}
 			try {
 				const updated = await repository.updateProject(id, {
-					...input,
+					...normalizeProjectUpdateInput(input),
 					updatedAt: new Date().toISOString(),
 				});
 				return updated
@@ -81,5 +83,34 @@ export function createProjectService(
 					: { status: "invalid_payload" };
 			}
 		},
+	};
+}
+
+function normalizeHookScript(value: string | null | undefined): string | null {
+	if (value === undefined || value === null) {
+		return null;
+	}
+	return value.trim() ? value : null;
+}
+
+function normalizeProjectUpdateInput<T extends Record<string, unknown>>(
+	input: T,
+): T {
+	return {
+		...input,
+		...("preHookScript" in input
+			? {
+					preHookScript: normalizeHookScript(
+						input.preHookScript as string | null | undefined,
+					),
+				}
+			: {}),
+		...("afterHookScript" in input
+			? {
+					afterHookScript: normalizeHookScript(
+						input.afterHookScript as string | null | undefined,
+					),
+				}
+			: {}),
 	};
 }

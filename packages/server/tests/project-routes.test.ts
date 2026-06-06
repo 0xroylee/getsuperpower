@@ -47,6 +47,8 @@ describe("project routes", () => {
 					lead: "Roy",
 					category: "platform",
 					priority: 1,
+					preHookScript: "bun install --frozen-lockfile",
+					afterHookScript: "echo done",
 				}),
 			}),
 		);
@@ -62,6 +64,8 @@ describe("project routes", () => {
 			lead: string | null;
 			category: string | null;
 			priority: number | null;
+			preHookScript: string | null;
+			afterHookScript: string | null;
 		};
 		expect(created.name).toBe("Core");
 		expect(created.emoji).toBe("🧭");
@@ -72,12 +76,22 @@ describe("project routes", () => {
 		expect(created.lead).toBe("Roy");
 		expect(created.category).toBe("platform");
 		expect(created.priority).toBe(1);
+		expect(created.preHookScript).toBe("bun install --frozen-lockfile");
+		expect(created.afterHookScript).toBe("echo done");
 
 		const listResponse = await app(
 			new Request("http://localhost/api/projects", { method: "GET" }),
 		);
 		expect(listResponse.status).toBe(200);
-		expect((await listResponse.json()) as unknown[]).toHaveLength(1);
+		const listed = (await listResponse.json()) as Array<{
+			preHookScript: string | null;
+			afterHookScript: string | null;
+		}>;
+		expect(listed).toHaveLength(1);
+		expect(listed[0]).toMatchObject({
+			preHookScript: "bun install --frozen-lockfile",
+			afterHookScript: "echo done",
+		});
 
 		const readResponse = await app(
 			new Request(`http://localhost/api/projects/${created.id}`, {
@@ -85,21 +99,34 @@ describe("project routes", () => {
 			}),
 		);
 		expect(readResponse.status).toBe(200);
+		expect(await readResponse.json()).toMatchObject({
+			preHookScript: "bun install --frozen-lockfile",
+			afterHookScript: "echo done",
+		});
 
 		const updateResponse = await app(
 			new Request(`http://localhost/api/projects/${created.id}`, {
 				method: "PATCH",
 				headers: { "content-type": "application/json" },
-				body: JSON.stringify({ name: "Core Updated", priority: 2 }),
+				body: JSON.stringify({
+					name: "Core Updated",
+					priority: 2,
+					preHookScript: "   ",
+					afterHookScript: "echo post-run",
+				}),
 			}),
 		);
 		expect(updateResponse.status).toBe(200);
 		const updated = (await updateResponse.json()) as {
 			name: string;
 			priority: number | null;
+			preHookScript: string | null;
+			afterHookScript: string | null;
 		};
 		expect(updated.name).toBe("Core Updated");
 		expect(updated.priority).toBe(2);
+		expect(updated.preHookScript).toBeNull();
+		expect(updated.afterHookScript).toBe("echo post-run");
 
 		const deleteResponse = await app(
 			new Request(`http://localhost/api/projects/${created.id}`, {

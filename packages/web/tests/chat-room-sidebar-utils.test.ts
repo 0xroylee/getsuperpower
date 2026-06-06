@@ -270,6 +270,8 @@ function buildProject(
 		lead: null,
 		category: null,
 		priority: null,
+		preHookScript: null,
+		afterHookScript: null,
 		createdAt: "2026-05-25T00:00:00.000Z",
 		updatedAt: "2026-05-25T00:00:00.000Z",
 		...overrides,
