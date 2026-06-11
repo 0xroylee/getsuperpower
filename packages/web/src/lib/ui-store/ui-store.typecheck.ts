@@ -17,6 +17,8 @@ useUiStore.getState().updateDrafts({
 });
 useUiStore.getState().openModal("createRun", "workspace-1");
 useUiStore.getState().closeModal();
+useUiStore.getState().pinProject("project-1");
+useUiStore.getState().unpinProject("project-1");
 useUiStore.getState().resetViewFilters();
 useUiStore.getState().clearDrafts();
 useUiStore.getState().resetUiState();

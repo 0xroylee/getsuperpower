@@ -47,6 +47,7 @@ export interface UiStoreState {
 	viewFilters: UiViewFilters;
 	drafts: UiDraftState;
 	pinnedIssues: UiPinnedIssue[];
+	pinnedProjectIds: string[];
 	pinnedSessionIds: string[];
 	messageInputFocusRequest: UiMessageInputFocusRequest | null;
 	modal: UiModalState;
@@ -60,6 +61,8 @@ export interface UiStoreActions {
 	clearDrafts(): void;
 	pinIssue(issue: UiPinnedIssue): void;
 	unpinIssue(issueId: string): void;
+	pinProject(projectId: string): void;
+	unpinProject(projectId: string): void;
 	pinSession(sessionId: string): void;
 	unpinSession(sessionId: string): void;
 	requestMessageInputFocus(sessionId: string): void;

@@ -1,12 +1,12 @@
 "use client";
 
-import { ChevronDown, ChevronRight, ChevronUp, Folder } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { type ReactElement, useState } from "react";
 
 import { Skeleton } from "@/components/loading/skeleton";
 import { Button } from "@/components/ui/button";
 import { Typography } from "@/components/ui/typography";
-import { cn } from "@/lib/utils";
+import { ChatRoomProjectGroupRow } from "./chat-room-project-group-row";
 import { ChatRoomSessionRow } from "./chat-room-session-row";
 import {
 	buildProjectSessionListToggleMode,
@@ -24,9 +24,11 @@ export function ChatRoomSessionList({
 	projectGroups,
 	runningSessionIds,
 	onArchiveSession,
+	onPinProject,
 	onPinSession,
 	onSelectSession,
 	onToggleProjectGroup,
+	onUnpinProject,
 	onUnpinSession,
 }: ChatRoomSessionListProps): ReactElement {
 	const [expandedSessionListIds, setExpandedSessionListIds] = useState<
@@ -83,7 +85,6 @@ export function ChatRoomSessionList({
 							const isSessionListExpanded = expandedSessionListIds.has(
 								group.id,
 							);
-							const GroupIcon = isProjectExpanded ? ChevronDown : ChevronRight;
 							const visibleSessions = buildVisibleProjectSessions({
 								isExpanded: isSessionListExpanded,
 								sessions: group.sessions,
@@ -97,38 +98,14 @@ export function ChatRoomSessionList({
 								: ChevronDown;
 							return (
 								<div className="grid gap-1" key={group.id}>
-									<Button
-										aria-expanded={isProjectExpanded}
-										className={cn(
-											"h-9 min-w-0 justify-start gap-2 px-2 text-left text-sm",
-											group.isActive
-												? "bg-[#111110] text-zinc-100"
-												: "text-zinc-400 hover:bg-surface-active hover:text-zinc-200",
-										)}
-										onClick={() =>
-											onToggleProjectGroup(
-												group.id,
-												isProjectExpanded,
-												firstSessionId,
-											)
-										}
-										size="sm"
-										title={group.label}
-										type="button"
-										variant="ghost"
-									>
-										<GroupIcon className="shrink-0" size={14} />
-										<Folder className="shrink-0" size={14} />
-										<Typography as="span" className="min-w-0 flex-1 truncate">
-											{group.label}
-										</Typography>
-										<Typography
-											className="shrink-0 rounded bg-surface-active px-1.5 py-0.5 text-[11px] leading-none"
-											variant="muted"
-										>
-											{group.sessions.length}
-										</Typography>
-									</Button>
+									<ChatRoomProjectGroupRow
+										firstSessionId={firstSessionId}
+										group={group}
+										isExpanded={isProjectExpanded}
+										onPinProject={onPinProject}
+										onToggleProjectGroup={onToggleProjectGroup}
+										onUnpinProject={onUnpinProject}
+									/>
 									{isProjectExpanded ? (
 										<div className="grid gap-1">
 											{visibleSessions.sessions.map((session) => (

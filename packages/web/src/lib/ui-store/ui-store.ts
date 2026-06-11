@@ -1,6 +1,7 @@
 "use client";
 
 import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
 
 import type {
 	UiDraftState,
@@ -31,80 +32,109 @@ const createDefaultState = (): UiStoreState => ({
 	viewFilters: defaultViewFilters,
 	drafts: defaultDrafts,
 	pinnedIssues: [],
+	pinnedProjectIds: [],
 	pinnedSessionIds: [],
 	messageInputFocusRequest: null,
 	modal: defaultModalState,
 });
 
-export const useUiStore = create<UiStore>()((set) => ({
-	...createDefaultState(),
-	setSelectedWorkspaceId: (workspaceId) => {
-		set({ selectedWorkspaceId: workspaceId });
-	},
-	updateViewFilters: (partial) => {
-		set((state) => ({
-			viewFilters: { ...state.viewFilters, ...partial },
-		}));
-	},
-	resetViewFilters: () => {
-		set({ viewFilters: defaultViewFilters });
-	},
-	updateDrafts: (partial) => {
-		set((state) => ({ drafts: { ...state.drafts, ...partial } }));
-	},
-	clearDrafts: () => {
-		set({ drafts: defaultDrafts });
-	},
-	pinIssue: (issue) => {
-		set((state) => ({
-			pinnedIssues: [
-				issue,
-				...state.pinnedIssues.filter((item) => item.id !== issue.id),
-			],
-		}));
-	},
-	unpinIssue: (issueId) => {
-		set((state) => ({
-			pinnedIssues: state.pinnedIssues.filter((item) => item.id !== issueId),
-		}));
-	},
-	pinSession: (sessionId) => {
-		set((state) => ({
-			pinnedSessionIds: [
-				sessionId,
-				...state.pinnedSessionIds.filter((item) => item !== sessionId),
-			],
-		}));
-	},
-	unpinSession: (sessionId) => {
-		set((state) => ({
-			pinnedSessionIds: state.pinnedSessionIds.filter(
-				(item) => item !== sessionId,
-			),
-		}));
-	},
-	requestMessageInputFocus: (sessionId) => {
-		set((state) => ({
-			messageInputFocusRequest: {
-				id: (state.messageInputFocusRequest?.id ?? 0) + 1,
-				sessionId,
+export const useUiStore = create<UiStore>()(
+	persist(
+		(set) => ({
+			...createDefaultState(),
+			setSelectedWorkspaceId: (workspaceId) => {
+				set({ selectedWorkspaceId: workspaceId });
 			},
-		}));
-	},
-	clearMessageInputFocusRequest: (requestId) => {
-		set((state) =>
-			state.messageInputFocusRequest?.id === requestId
-				? { messageInputFocusRequest: null }
-				: {},
-		);
-	},
-	openModal: (kind, contextId = null) => {
-		set({ modal: { kind, contextId } });
-	},
-	closeModal: () => {
-		set({ modal: defaultModalState });
-	},
-	resetUiState: () => {
-		set(createDefaultState());
-	},
-}));
+			updateViewFilters: (partial) => {
+				set((state) => ({
+					viewFilters: { ...state.viewFilters, ...partial },
+				}));
+			},
+			resetViewFilters: () => {
+				set({ viewFilters: defaultViewFilters });
+			},
+			updateDrafts: (partial) => {
+				set((state) => ({ drafts: { ...state.drafts, ...partial } }));
+			},
+			clearDrafts: () => {
+				set({ drafts: defaultDrafts });
+			},
+			pinIssue: (issue) => {
+				set((state) => ({
+					pinnedIssues: [
+						issue,
+						...state.pinnedIssues.filter((item) => item.id !== issue.id),
+					],
+				}));
+			},
+			unpinIssue: (issueId) => {
+				set((state) => ({
+					pinnedIssues: state.pinnedIssues.filter(
+						(item) => item.id !== issueId,
+					),
+				}));
+			},
+			pinProject: (projectId) => {
+				set((state) => ({
+					pinnedProjectIds: [
+						projectId,
+						...state.pinnedProjectIds.filter((item) => item !== projectId),
+					],
+				}));
+			},
+			unpinProject: (projectId) => {
+				set((state) => ({
+					pinnedProjectIds: state.pinnedProjectIds.filter(
+						(item) => item !== projectId,
+					),
+				}));
+			},
+			pinSession: (sessionId) => {
+				set((state) => ({
+					pinnedSessionIds: [
+						sessionId,
+						...state.pinnedSessionIds.filter((item) => item !== sessionId),
+					],
+				}));
+			},
+			unpinSession: (sessionId) => {
+				set((state) => ({
+					pinnedSessionIds: state.pinnedSessionIds.filter(
+						(item) => item !== sessionId,
+					),
+				}));
+			},
+			requestMessageInputFocus: (sessionId) => {
+				set((state) => ({
+					messageInputFocusRequest: {
+						id: (state.messageInputFocusRequest?.id ?? 0) + 1,
+						sessionId,
+					},
+				}));
+			},
+			clearMessageInputFocusRequest: (requestId) => {
+				set((state) =>
+					state.messageInputFocusRequest?.id === requestId
+						? { messageInputFocusRequest: null }
+						: {},
+				);
+			},
+			openModal: (kind, contextId = null) => {
+				set({ modal: { kind, contextId } });
+			},
+			closeModal: () => {
+				set({ modal: defaultModalState });
+			},
+			resetUiState: () => {
+				set(createDefaultState());
+			},
+		}),
+		{
+			name: "devos-ui-store",
+			storage: createJSONStorage(() => localStorage),
+			partialize: (state) => ({
+				pinnedProjectIds: state.pinnedProjectIds,
+			}),
+		},
+	),
+);

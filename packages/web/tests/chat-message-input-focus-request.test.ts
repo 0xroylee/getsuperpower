@@ -35,13 +35,14 @@ describe("chat message input focus request", () => {
 		expect(useUiStore.getState().messageInputFocusRequest).toBeNull();
 	});
 
-	it("does not persist focus requests", async () => {
+	it("excludes focus requests from persisted state", async () => {
 		const storage = createMemoryStorage();
 		const useUiStore = await loadUiStoreWithStorage(storage);
 
 		useUiStore.getState().requestMessageInputFocus("session-1");
 
-		expect(storage.length).toBe(0);
+		const persisted = JSON.parse(storage.getItem("devos-ui-store") ?? "{}");
+		expect(persisted.state.messageInputFocusRequest).toBeUndefined();
 	});
 });
 

@@ -34,6 +34,7 @@ export interface ChatRoomSessionListProps {
 	projectGroups: ChatSessionProjectGroup[];
 	runningSessionIds: Set<string>;
 	onArchiveSession: (sessionId: string) => void;
+	onPinProject: (projectId: string) => void;
 	onPinSession: (sessionId: string) => void;
 	onSelectSession: (sessionId: string) => void;
 	onToggleProjectGroup: (
@@ -41,6 +42,7 @@ export interface ChatRoomSessionListProps {
 		isExpanded: boolean,
 		firstSessionId: string,
 	) => void;
+	onUnpinProject: (projectId: string) => void;
 	onUnpinSession: (sessionId: string) => void;
 }
 
@@ -48,7 +50,22 @@ export interface ChatSessionProjectGroup {
 	id: string;
 	label: string;
 	isActive: boolean;
+	isPinned: boolean;
+	isProject: boolean;
 	sessions: ChatSessionRecord[];
+}
+
+export interface ChatRoomProjectGroupRowProps {
+	firstSessionId: string;
+	group: ChatSessionProjectGroup;
+	isExpanded: boolean;
+	onPinProject: (projectId: string) => void;
+	onToggleProjectGroup: (
+		groupId: string,
+		isExpanded: boolean,
+		firstSessionId: string,
+	) => void;
+	onUnpinProject: (projectId: string) => void;
 }
 
 export interface ChatSessionSidebarContent {
@@ -64,6 +81,7 @@ export interface BuildChatSessionProjectGroupsInput {
 
 export interface BuildChatSessionSidebarContentInput
 	extends BuildChatSessionProjectGroupsInput {
+	pinnedProjectIds: string[];
 	pinnedSessionIds: string[];
 }
 

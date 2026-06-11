@@ -15,6 +15,7 @@ const DEFAULT_VISIBLE_PROJECT_SESSION_COUNT = 5;
 
 export function buildChatSessionSidebarContent({
 	activeSessionId,
+	pinnedProjectIds,
 	pinnedSessionIds,
 	projects,
 	sessions,
@@ -29,12 +30,41 @@ export function buildChatSessionSidebarContent({
 
 	return {
 		pinnedSessions,
-		projectGroups: buildChatSessionProjectGroups({
-			activeSessionId,
-			projects,
-			sessions: unpinnedSessions,
+		projectGroups: pinChatSessionProjectGroups({
+			pinnedProjectIds,
+			projectGroups: buildChatSessionProjectGroups({
+				activeSessionId,
+				projects,
+				sessions: unpinnedSessions,
+			}),
 		}),
 	};
+}
+
+function pinChatSessionProjectGroups({
+	pinnedProjectIds,
+	projectGroups,
+}: {
+	pinnedProjectIds: string[];
+	projectGroups: ChatSessionProjectGroup[];
+}): ChatSessionProjectGroup[] {
+	const pinnedIds = new Set(pinnedProjectIds);
+	const pinnedGroups: ChatSessionProjectGroup[] = [];
+	const unpinnedGroups: ChatSessionProjectGroup[] = [];
+
+	for (const group of projectGroups) {
+		const nextGroup = {
+			...group,
+			isPinned: group.isProject && pinnedIds.has(group.id),
+		};
+		if (nextGroup.isPinned) {
+			pinnedGroups.push(nextGroup);
+			continue;
+		}
+		unpinnedGroups.push(nextGroup);
+	}
+
+	return [...pinnedGroups, ...unpinnedGroups];
 }
 
 export function buildChatSessionProjectGroups({
@@ -57,6 +87,7 @@ export function buildChatSessionProjectGroups({
 			createSessionProjectGroup(
 				groupId,
 				project?.name ?? UNASSIGNED_GROUP_LABEL,
+				Boolean(project),
 			);
 
 		group.sessions.push(session);
@@ -98,11 +129,14 @@ export function buildProjectSessionListToggleMode(
 function createSessionProjectGroup(
 	id: string,
 	label: string,
+	isProject: boolean,
 ): ChatSessionProjectGroup {
 	return {
 		id,
 		label,
 		isActive: false,
+		isPinned: false,
+		isProject,
 		sessions: [],
 	};
 }

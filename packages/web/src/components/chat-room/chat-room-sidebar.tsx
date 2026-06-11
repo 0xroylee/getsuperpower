@@ -33,11 +33,15 @@ export function ChatRoomSidebar({
 	const [collapsedProjectIds, setCollapsedProjectIds] = useState<Set<string>>(
 		() => new Set(),
 	);
+	const pinnedProjectIds = useUiStore((state) => state.pinnedProjectIds);
 	const pinnedSessionIds = useUiStore((state) => state.pinnedSessionIds);
+	const pinProject = useUiStore((state) => state.pinProject);
 	const pinSession = useUiStore((state) => state.pinSession);
+	const unpinProject = useUiStore((state) => state.unpinProject);
 	const unpinSession = useUiStore((state) => state.unpinSession);
 	const { pinnedSessions, projectGroups } = buildChatSessionSidebarContent({
 		activeSessionId,
+		pinnedProjectIds,
 		pinnedSessionIds,
 		projects,
 		sessions,
@@ -151,9 +155,11 @@ export function ChatRoomSidebar({
 						projectGroups={projectGroups}
 						runningSessionIds={runningSessionIds}
 						onArchiveSession={onArchiveSession}
+						onPinProject={pinProject}
 						onPinSession={pinSession}
 						onSelectSession={onSelectSession}
 						onToggleProjectGroup={toggleProjectGroup}
+						onUnpinProject={unpinProject}
 						onUnpinSession={unpinSession}
 					/>
 				</div>

@@ -98,6 +98,7 @@ describe("chat room sidebar utilities", () => {
 
 		const content = buildChatSessionSidebarContent({
 			activeSessionId: "session-4",
+			pinnedProjectIds: [],
 			pinnedSessionIds: ["missing-session", "session-3", "session-1"],
 			projects: [projectA, projectB],
 			sessions: [
@@ -126,6 +127,53 @@ describe("chat room sidebar utilities", () => {
 		expect(
 			content.projectGroups[1]?.sessions.map((session) => session.id),
 		).toEqual(["session-4"]);
+	});
+
+	it("keeps pinned project groups above unpinned groups in existing relative order", () => {
+		const projectA = buildProject({ id: "project-a", name: "Project A" });
+		const projectB = buildProject({ id: "project-b", name: "Project B" });
+		const projectC = buildProject({ id: "project-c", name: "Project C" });
+
+		const content = buildChatSessionSidebarContent({
+			activeSessionId: "session-3",
+			pinnedProjectIds: [
+				"missing-project",
+				"unassigned",
+				"project-c",
+				"project-a",
+			],
+			pinnedSessionIds: [],
+			projects: [projectA, projectB, projectC],
+			sessions: [
+				buildSession({ id: "session-1", projectId: "project-a" }),
+				buildSession({ id: "session-2", projectId: "project-b" }),
+				buildSession({ id: "session-3", projectId: "project-c" }),
+				buildSession({ id: "session-4", projectId: null }),
+			],
+		});
+
+		expect(content.projectGroups.map((group) => group.id)).toEqual([
+			"project-a",
+			"project-c",
+			"project-b",
+			"unassigned",
+		]);
+		expect(content.projectGroups.map((group) => group.isPinned)).toEqual([
+			true,
+			true,
+			false,
+			false,
+		]);
+		expect(content.projectGroups[1]).toMatchObject({
+			id: "project-c",
+			isActive: true,
+			isPinned: true,
+		});
+		expect(content.projectGroups[3]).toMatchObject({
+			id: "unassigned",
+			isPinned: false,
+			isProject: false,
+		});
 	});
 
 	it("keeps all sessions visible when a project has five sessions", () => {
