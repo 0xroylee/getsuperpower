@@ -2,6 +2,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 const SERVER_FAST_TESTS = [
+	"packages/server/tests/api-docs-routes.test.ts",
+	"packages/server/tests/api-reference-markdown.test.ts",
 	"packages/server/tests/board-routes.test.ts",
 	"packages/server/tests/cli-command-executor-boundary.test.ts",
 	"packages/server/tests/cli-routes.test.ts",
@@ -19,6 +21,7 @@ const SERVER_FAST_TESTS = [
 	"packages/server/tests/recover-server-db.test.ts",
 	"packages/server/tests/request-schemas.test.ts",
 	"packages/server/tests/response.test.ts",
+	"packages/server/tests/scalar-api-reference-route.test.ts",
 	"packages/server/tests/server-runtime.test.ts",
 	"packages/server/tests/server-services.test.ts",
 	"packages/server/tests/startup-paths.test.ts",

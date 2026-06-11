@@ -34,6 +34,7 @@
 		"db:backup": "bun run --filter devos-db backup",
 		"db:view": "bun run ./scripts/view-server-db.ts",
 		"db:recover": "bun run ./scripts/recover-server-db.ts",
+		"docs:api": "bun run ./scripts/generate-api-reference.ts",
 		"smoke": "bun test packages/cli/tests/smoke-flow.test.ts",
 		"publish:version": "bun run --filter devos publish:version",
 		"test": "bun run ./scripts/test-lane.ts default",

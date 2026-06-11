@@ -157,20 +157,25 @@ function crudDocs(
 	item: string,
 	label: string,
 ): ApiRouteDoc[] {
+	const article = articleFor(item);
 	return [
 		doc("GET", `/api/${path}`, group, `List ${path}.`),
-		doc("POST", `/api/${path}`, group, `Create a ${item}.`, {
+		doc("POST", `/api/${path}`, group, `Create ${article} ${item}.`, {
 			requestBody: `${label} create payload.`,
 		}),
-		doc("GET", `/api/${path}/{id}`, group, `Read a ${item}.`, {
+		doc("GET", `/api/${path}/{id}`, group, `Read ${article} ${item}.`, {
 			pathParams: idParam,
 		}),
-		doc("PATCH", `/api/${path}/{id}`, group, `Update a ${item}.`, {
+		doc("PATCH", `/api/${path}/{id}`, group, `Update ${article} ${item}.`, {
 			pathParams: idParam,
 			requestBody: `${label} update payload.`,
 		}),
-		doc("DELETE", `/api/${path}/{id}`, group, `Delete a ${item}.`, {
+		doc("DELETE", `/api/${path}/{id}`, group, `Delete ${article} ${item}.`, {
 			pathParams: idParam,
 		}),
 	];
+}
+
+function articleFor(value: string): "a" | "an" {
+	return /^[aeiou]/i.test(value) ? "an" : "a";
 }

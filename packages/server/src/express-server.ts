@@ -1,6 +1,7 @@
 import type { Server } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { apiReference } from "@scalar/express-api-reference";
 import express, {
 	type ErrorRequestHandler,
 	type Express,
@@ -8,7 +9,6 @@ import express, {
 	type Response as ExpressResponse,
 } from "express";
 import * as OpenApiValidator from "express-openapi-validator";
-import swaggerUi from "swagger-ui-express";
 import { createExpressRequestLogger } from "./http/express-request-logger";
 import type { RouteHandler } from "./types/app.types";
 import type { ServerLogger } from "./types/logger.types";
@@ -20,6 +20,11 @@ const OPENAPI_SPEC_PATH = path.resolve(
 	"../../..",
 	"openapi.yaml",
 );
+export const API_REFERENCE_PATHS = ["/api-docs", "/openapi"] as const;
+export const API_REFERENCE_ROUTE_OPTIONS = {
+	pageTitle: "devos.ing API Reference",
+	url: "/openapi.yaml",
+} as const;
 
 export interface ExpressAppOptions {
 	logger?: ServerLogger;
@@ -36,13 +41,9 @@ export function createExpressApp(
 	app.get("/openapi.yaml", (_request, response) => {
 		response.type("application/yaml").sendFile(OPENAPI_SPEC_PATH);
 	});
-	app.use(
-		"/api-docs",
-		swaggerUi.serve,
-		swaggerUi.setup(undefined, {
-			swaggerOptions: { url: "/openapi.yaml" },
-		}),
-	);
+	for (const apiReferencePath of API_REFERENCE_PATHS) {
+		app.use(apiReferencePath, apiReference(API_REFERENCE_ROUTE_OPTIONS));
+	}
 	app.use(express.json());
 	app.use(
 		OpenApiValidator.middleware({
