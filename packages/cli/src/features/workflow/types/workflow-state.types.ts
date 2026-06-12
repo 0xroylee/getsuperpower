@@ -1,3 +1,4 @@
+import type { ImplementationSubAgentRun } from "./implementation-subagent.types";
 import type { WorkflowClarificationQuestion } from "./workflow-chat.types";
 
 export type WorkflowStage =
@@ -171,6 +172,7 @@ export interface RunState {
 	pullRequest?: PullRequestRef;
 	bugs: BugRecord[];
 	splitTasks?: SplitTaskRef[];
+	implementationSubAgents?: ImplementationSubAgentRun[];
 	codexUsage?: CodexUsageRecord[];
 	lease?: RunLease;
 	executionWorkspace?: {

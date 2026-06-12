@@ -1,6 +1,5 @@
-import { type AgentAdapter, runAdapterAgent } from "adapters";
+import type { AgentAdapter } from "adapters";
 import { issueBranchName } from "../../../integrations/github";
-import { buildFixPrompt, buildImplementPrompt } from "../../../skills/prompts";
 import { buildImplementationComment } from "../../../utils/comments";
 import { logger } from "../../../utils/logger";
 import type {
@@ -8,8 +7,6 @@ import type {
 	RunState,
 	WorkflowStage,
 } from "../../types";
-import { runAgentWithChatLog } from "../agents/agent-chat-log";
-import { resolveAgentLogMetadata } from "../agents/agent-log-metadata";
 import { buildIssueJobLogFields } from "../mission/issue-job-log-fields";
 import { saveRunState, transitionStage } from "../state";
 import type {
@@ -17,6 +14,9 @@ import type {
 	WorkflowTaskClient,
 } from "../types/workflow.types";
 import { appendCodexUsage } from "../usage/usage-state";
+import { runImplementationSubAgents } from "./implementation-subagent-orchestrator";
+import { parseImplementationSubAgentTasks } from "./implementation-subagent-plan";
+import { runSingleImplementationAgent } from "./single-implementation-agent";
 
 const NO_STAGED_CHANGES_ERROR =
 	"No staged changes found after implement step; cannot create PR";
@@ -59,37 +59,24 @@ export async function handleImplementingStage(
 		hasExistingPr,
 		state.bugs,
 	);
-	const prompt = fixRound
-		? await buildFixPrompt(
-				config.skills.implement,
-				state.issue,
-				state.planSummary ?? "",
-				state.testingSummary ?? state.reviewSummary ?? "",
-				state.bugs,
-				state.pullRequest,
-			)
-		: await buildImplementPrompt(
-				config.skills.implement,
-				state.issue,
-				state.planSummary ?? "",
-			);
-	const result = await runAgentWithChatLog({
-		workspacePath: config.workspacePath,
-		projectId: config.id,
-		issue: state.issue,
-		agentRole: "implementing",
-		...resolveAgentLogMetadata(config, "implementing"),
-		skillPath: config.skills.implement,
-		prompt,
-		invoke: ({ onStream } = { onStream: () => {} }) =>
-			runAdapterAgent(agent, {
-				role: "implementing",
-				prompt,
-				sessionId: codexSessionId,
-				skills: [{ name: "implementation", path: config.skills.implement }],
-				onStream,
-			}),
-	});
+	const subAgentTasks = fixRound
+		? []
+		: parseImplementationSubAgentTasks(state.planSummary);
+	const useSubAgents = subAgentTasks.length > 0 && !config.dryRun;
+	const result = useSubAgents
+		? await runImplementationSubAgents({
+				config,
+				runtime,
+				state,
+				tasks: subAgentTasks,
+			})
+		: await runSingleImplementationAgent({
+				agent,
+				codexSessionId,
+				config,
+				fixRound,
+				state,
+			});
 	state.implementationSummary = result.finalMessage || result.stdout;
 	appendCodexUsage(state, "implementing", result.usage, {
 		agentBackend: result.backend,
@@ -102,6 +89,14 @@ export async function handleImplementingStage(
 				title: `[codex] ${state.issue.key}: ${state.issue.title}`,
 				url: "https://example.invalid/dry-run",
 			};
+		} else if (useSubAgents) {
+			const branch = requirePullRequestBranch(state);
+			state.pullRequest = await runtime.createDraftPrFromPublishedBranch(
+				config,
+				state.issue.key,
+				state.issue.title,
+				branch,
+			);
 		} else {
 			state.pullRequest = await runtime
 				.createDraftPrFromWorktree(
@@ -124,16 +119,20 @@ export async function handleImplementingStage(
 		if (!state.pullRequest?.branch) {
 			throw new Error("Missing pull request branch for feedback pass");
 		}
-		const updated = await runtime.updateDraftPrFromWorktree(
-			config,
-			state.pullRequest.branch,
-			state.issue.key,
-		);
-		if (!updated) {
-			logger.info(
-				buildIssueJobLogFields(state, "in_progress"),
-				"No code changes after feedback; skipping PR update",
+		if (useSubAgents) {
+			await runtime.pushImplementationBranch(config, state.pullRequest.branch);
+		} else {
+			const updated = await runtime.updateDraftPrFromWorktree(
+				config,
+				state.pullRequest.branch,
+				state.issue.key,
 			);
+			if (!updated) {
+				logger.info(
+					buildIssueJobLogFields(state, "in_progress"),
+					"No code changes after feedback; skipping PR update",
+				);
+			}
 		}
 	}
 	if (state.pullRequest) {
@@ -180,6 +179,13 @@ function noImplementationChangesError(
 	);
 	Object.assign(error, { cause });
 	return error;
+}
+
+function requirePullRequestBranch(state: RunState): string {
+	if (!state.pullRequest?.branch) {
+		throw new Error("Missing pull request branch after sub-agent merge");
+	}
+	return state.pullRequest.branch;
 }
 
 export async function prepareImplementationBranchForStage(

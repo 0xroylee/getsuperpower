@@ -128,17 +128,46 @@ export interface WorkflowRuntime {
 		pullRequest: PullRequestRef | undefined,
 		branchName?: string,
 	): Promise<string>;
+	ensureImplementationSubAgentWorktree(
+		config: ResolvedProjectConfig,
+		details: {
+			parentBranch: string;
+			branch: string;
+			worktreePath: string;
+		},
+	): Promise<void>;
+	commitImplementationSubAgentWorktree(
+		config: ResolvedProjectConfig,
+		details: {
+			taskId: string;
+			message: string;
+		},
+	): Promise<boolean>;
+	mergeImplementationSubAgentBranch(
+		config: ResolvedProjectConfig,
+		branch: string,
+	): Promise<void>;
 	createDraftPrFromWorktree(
 		config: ResolvedProjectConfig,
 		issueKey: string,
 		issueTitle: string,
 		branchName?: string,
 	): Promise<PullRequestRef>;
+	createDraftPrFromPublishedBranch(
+		config: ResolvedProjectConfig,
+		issueKey: string,
+		issueTitle: string,
+		branch: string,
+	): Promise<PullRequestRef>;
 	updateDraftPrFromWorktree(
 		config: ResolvedProjectConfig,
 		prBranch: string,
 		issueKey: string,
 	): Promise<boolean>;
+	pushImplementationBranch(
+		config: ResolvedProjectConfig,
+		branch: string,
+	): Promise<void>;
 	commentOnPr(
 		config: ResolvedProjectConfig,
 		pr: PullRequestRef,

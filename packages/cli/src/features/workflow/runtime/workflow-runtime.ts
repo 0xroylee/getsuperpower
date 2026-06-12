@@ -14,6 +14,15 @@ import {
 	updateDraftPrFromWorktree,
 } from "../../../integrations/github";
 import {
+	createDraftPrFromPublishedBranch,
+	pushImplementationBranch,
+} from "../../../integrations/github/published-branch-pr";
+import {
+	commitImplementationSubAgentWorktree,
+	ensureImplementationSubAgentWorktree,
+	mergeImplementationSubAgentBranch,
+} from "../../../integrations/github/worktree-merge";
+import {
 	sendHumanReviewRequiredEmail,
 	sendTaskOutcomeEmail,
 } from "../../../integrations/notifications";
@@ -32,9 +41,14 @@ export function createWorkflowRuntime(
 		findOpenPullRequestForIssue,
 		getPullRequestMergeStatus,
 		prepareImplementationBranch,
+		ensureImplementationSubAgentWorktree,
+		commitImplementationSubAgentWorktree,
+		mergeImplementationSubAgentBranch,
 		removeIssueWorktree,
 		createDraftPrFromWorktree,
+		createDraftPrFromPublishedBranch,
 		updateDraftPrFromWorktree,
+		pushImplementationBranch,
 		commentOnPr,
 		markPrReadyForReview,
 		squashMergePullRequest,

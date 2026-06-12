@@ -21,3 +21,14 @@ export interface RemoveWorktreeResult {
 	removed: boolean;
 	reason?: string;
 }
+
+export interface EnsureSubAgentWorktreeInput {
+	parentBranch: string;
+	branch: string;
+	worktreePath: string;
+}
+
+export interface CommitSubAgentWorktreeInput {
+	taskId: string;
+	message: string;
+}

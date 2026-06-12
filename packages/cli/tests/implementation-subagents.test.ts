@@ -10,50 +10,83 @@ import type {
 	WorkflowTaskClient,
 } from "../src/features/workflow/types/workflow.types";
 
-describe("handleImplementingStage", () => {
-	it("reports no-op implementations with agent output context", async () => {
+describe("implementation sub-agents", () => {
+	it("merges child worktree branches before creating the parent draft PR", async () => {
 		const workspacePath = await mkdtemp(
-			path.join(os.tmpdir(), "devos-implement-noop-"),
+			path.join(os.tmpdir(), "devos-implementation-subagents-"),
 		);
+		const events: string[] = [];
 		const config = createProject(workspacePath);
 		const state = createRunState(workspacePath);
-		const linkPullRequest = mock(async () => undefined);
-		const taskClient = createTaskClient({ linkPullRequest });
-		const createDraftPrFromWorktree = mock(async () => {
-			throw new Error(
-				"No staged changes found after implement step; cannot create PR",
-			);
+		const childWorktreeBase = path.join(
+			workspacePath,
+			".devos",
+			"projects",
+			"default",
+			"subagents",
+			"wor-56",
+			"ui-",
+		);
+		const parentAgent = createAgent("parent should not run", events);
+		const childAgent = createAgent(
+			"UI task completed",
+			events,
+			"child-session",
+		);
+		const runtime = createRuntime({
+			events,
+			childAgent,
+			childWorktreeBase,
 		});
-		const runtime = createRuntime({ createDraftPrFromWorktree });
-		const agent = createAgent("No code changes were necessary.");
+		const taskClient = createTaskClient();
 
-		let thrown: unknown;
-		try {
-			await handleImplementingStage(config, agent, taskClient, state, runtime);
-		} catch (error) {
-			thrown = error;
-		}
+		await handleImplementingStage(
+			config,
+			parentAgent,
+			taskClient,
+			state,
+			runtime,
+		);
 
-		expect(thrown).toBeInstanceOf(Error);
-		expect((thrown as Error).message).toContain(
-			"Implementation completed without file changes; no draft PR was created.",
-		);
-		expect((thrown as Error).message).toContain(
-			"Agent output: No code changes were necessary.",
-		);
-		expect(state.implementationSummary).toBe("No code changes were necessary.");
-		expect(linkPullRequest).not.toHaveBeenCalled();
+		expect(events[0]).toBe("prepare:WOR-56");
+		expect(events[1]).toMatch(/^ensure:codex\/wor-56-subagent-ui-[0-9a-z]+$/);
+		expect(events[2]).toBe("agent:child-session");
+		expect(events[3]).toBe("commit:ui");
+		expect(events[4]).toBe(events[1].replace("ensure:", "merge:"));
+		expect(events[5]).toBe("publish-pr:WOR-56");
+		expect(events).toHaveLength(6);
+		expect(parentAgent.runAgent).not.toHaveBeenCalled();
+		expect(runtime.createAgentAdapter).toHaveBeenCalledTimes(1);
+		expect(state.implementationSummary).toContain("UI task completed");
+		expect(state.implementationSubAgents).toEqual([
+			expect.objectContaining({
+				id: "ui",
+				status: "merged",
+				branch: expect.stringMatching(/^codex\/wor-56-subagent-ui-[0-9a-z]+$/),
+				worktreePath: expect.stringMatching(/ui-[0-9a-z]+$/),
+				sessionId: "child-session",
+				summary: "UI task completed",
+			}),
+		]);
+		expect(state.pullRequest?.url).toBe("https://example.test/pr/56");
+		expect(state.stage).toBe("in_review");
 	});
 });
 
-function createAgent(finalMessage: string): AgentAdapter {
+function createAgent(
+	finalMessage: string,
+	events: string[],
+	sessionId?: string,
+): AgentAdapter {
 	return {
 		runAgent: mock(async (request: AgentAdapterRunRequest) => {
 			expect(request.role).toBe("implementing");
+			events.push(`agent:${sessionId ?? "parent"}`);
 			return {
 				finalMessage,
 				stdout: "",
-				usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+				sessionId,
+				usage: { inputTokens: 1, outputTokens: 2, totalTokens: 3 },
 			};
 		}),
 		runPlan: mock(async () => {
@@ -111,21 +144,23 @@ function createRunState(workspacePath: string): RunState {
 		issue: {
 			id: "task_WOR-56",
 			key: "WOR-56",
-			title: "No-op implementation",
+			title: "Add sub-agent support",
 			url: "devos://tasks/WOR-56",
 		},
 		stage: "in_progress",
-		codexSessionId: "session-1",
-		planSummary: "Make the requested change.",
+		codexSessionId: "parent-session",
+		planSummary: [
+			"SUCCESS_GOAL: Sub-agent code is merged before PR creation.",
+			"IMPLEMENTATION_SUBAGENTS_JSON:",
+			'[{"id":"ui","title":"Update UI","description":"Implement the UI slice","ownedPaths":["packages/web"],"verification":"bun test packages/web"}]',
+		].join("\n"),
 		bugs: [],
-		startedAt: "2026-06-05T00:00:00.000Z",
-		updatedAt: "2026-06-05T00:00:00.000Z",
+		startedAt: "2026-06-12T00:00:00.000Z",
+		updatedAt: "2026-06-12T00:00:00.000Z",
 	};
 }
 
-function createTaskClient(input: {
-	linkPullRequest: WorkflowTaskClient["linkPullRequest"];
-}): WorkflowTaskClient {
+function createTaskClient(): WorkflowTaskClient {
 	return {
 		fetchWork: async () => [],
 		fetchIssueByIdentifier: async () => null,
@@ -136,7 +171,7 @@ function createTaskClient(input: {
 		createBacklogTask: async () => ({
 			id: "task-1",
 			identifier: "WOR-56",
-			title: "No-op implementation",
+			title: "parent",
 			url: "devos://tasks/WOR-56",
 		}),
 		createTodoIssueFromPlan: async () => ({
@@ -148,31 +183,53 @@ function createTaskClient(input: {
 		applyStageLabel: async () => undefined,
 		clearWorkflowStageLabels: async () => undefined,
 		comment: async () => undefined,
-		linkPullRequest: input.linkPullRequest,
+		linkPullRequest: async () => undefined,
 	};
 }
 
 function createRuntime(input: {
-	createDraftPrFromWorktree: WorkflowRuntime["createDraftPrFromWorktree"];
+	events: string[];
+	childAgent: AgentAdapter;
+	childWorktreeBase: string;
 }): WorkflowRuntime {
 	return {
-		createTaskClient: () => createTaskClient({ linkPullRequest: undefined }),
-		createAgentAdapter: () => createAgent("unused"),
+		createTaskClient: () => createTaskClient(),
+		createAgentAdapter: mock((config: ResolvedProjectConfig) => {
+			expect(config.executionPath.startsWith(input.childWorktreeBase)).toBe(
+				true,
+			);
+			return input.childAgent;
+		}),
 		ensureBaseBranchFresh: async () => undefined,
 		ensureIssueWorktree: async () => "",
 		prepareWorktreeDependencies: async () => undefined,
 		removeIssueWorktree: async () => ({ removed: false }),
 		findOpenPullRequestForIssue: async () => undefined,
 		getPullRequestMergeStatus: async () => ({}),
-		prepareImplementationBranch: async () => "WOR-56",
-		ensureImplementationSubAgentWorktree: async () => undefined,
-		commitImplementationSubAgentWorktree: async () => false,
-		mergeImplementationSubAgentBranch: async () => undefined,
-		createDraftPrFromWorktree: input.createDraftPrFromWorktree,
-		createDraftPrFromPublishedBranch: async () => ({
-			branch: "codex/eng-1",
-			title: "[codex] ENG-1: Demo",
-			url: "https://example.invalid/pr",
+		prepareImplementationBranch: mock(async (_config, issueKey) => {
+			input.events.push(`prepare:${issueKey}`);
+			return "codex/wor-56";
+		}),
+		ensureImplementationSubAgentWorktree: mock(async (_config, details) => {
+			input.events.push(`ensure:${details.branch}`);
+		}),
+		commitImplementationSubAgentWorktree: mock(async (_config, details) => {
+			input.events.push(`commit:${details.taskId}`);
+			return true;
+		}),
+		mergeImplementationSubAgentBranch: mock(async (_config, branch) => {
+			input.events.push(`merge:${branch}`);
+		}),
+		createDraftPrFromWorktree: mock(async () => {
+			throw new Error("staged-change PR creation should not run");
+		}),
+		createDraftPrFromPublishedBranch: mock(async (_config, issueKey) => {
+			input.events.push(`publish-pr:${issueKey}`);
+			return {
+				branch: "codex/wor-56",
+				title: "[codex] WOR-56: Add sub-agent support",
+				url: "https://example.test/pr/56",
+			};
 		}),
 		updateDraftPrFromWorktree: async () => true,
 		pushImplementationBranch: async () => undefined,
