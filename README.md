@@ -75,8 +75,11 @@ ponytrail revert <snapshot-id> --dry-run
 Apply the revert:
 
 ```bash
-ponytrail revert <snapshot-id> --yes
+npx ponytrail revert <snapshot-id>
 ```
+
+The CLI prints the planned file actions and asks before applying them. Use
+`--yes` for non-interactive scripts.
 
 Revert restores files from the snapshot's `pre` state. If a file did not exist before the snapshot, Ponytrail deletes it during the revert.
 

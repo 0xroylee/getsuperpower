@@ -2,7 +2,7 @@
 
 import { homedir } from "node:os";
 import { basename, isAbsolute, join, resolve } from "node:path";
-import { intro, isCancel, outro, select, text } from "@clack/prompts";
+import { confirm, intro, isCancel, outro, select, text } from "@clack/prompts";
 import { Command } from "commander";
 import pc from "picocolors";
 import {
@@ -52,6 +52,13 @@ export type GoalClarificationPrompter = (
 
 export type ProjectNamePrompter = (defaultName: string) => Promise<string>;
 
+export interface RevertApprovalPromptInput {
+  snapshotId: string;
+  actions: SnapshotRevertAction[];
+}
+
+export type RevertApprovalPrompter = (input: RevertApprovalPromptInput) => Promise<boolean>;
+
 type SnapshotHistoryMode = "tree" | "details";
 
 const defaultManifestPath = ".ponytrail/manifest.json";
@@ -62,12 +69,14 @@ export interface BuildProgramOptions {
   streamRunner?: CliStreamRunner;
   clarificationPrompter?: GoalClarificationPrompter;
   projectNamePrompter?: ProjectNamePrompter;
+  revertApprovalPrompter?: RevertApprovalPrompter;
 }
 
 export function buildProgram(options: BuildProgramOptions = {}): Command {
   const rootDir = options.cwd ?? process.cwd();
   const clarificationPrompter = options.clarificationPrompter ?? promptForGoalClarifications;
   const projectNamePrompter = options.projectNamePrompter ?? promptForProjectName;
+  const revertApprovalPrompter = options.revertApprovalPrompter ?? promptForRevertApproval;
   const program = new Command();
 
   program
@@ -248,17 +257,28 @@ export function buildProgram(options: BuildProgramOptions = {}): Command {
           yes: boolean;
         },
       ) => {
-        if (!commandOptions.dryRun && !commandOptions.yes) {
-          throw new Error("Use --dry-run to preview or --yes to apply the revert.");
-        }
-
         const plan = await planSnapshotRevert({ rootDir, snapshotId });
-        printSnapshotRevertPlan(plan.actions, commandOptions.dryRun);
+        const shouldPreview = commandOptions.dryRun || !commandOptions.yes;
+        printSnapshotRevertPlan(plan.actions, shouldPreview);
 
-        if (!commandOptions.dryRun) {
-          await applySnapshotRevert(plan);
-          console.log(pc.green(`Reverted snapshot ${snapshotId}`));
+        if (commandOptions.dryRun) {
+          return;
         }
+
+        const approved =
+          commandOptions.yes ||
+          (await revertApprovalPrompter({
+            snapshotId,
+            actions: plan.actions,
+          }));
+
+        if (!approved) {
+          console.log(pc.dim("Revert cancelled."));
+          return;
+        }
+
+        await applySnapshotRevert(plan);
+        console.log(pc.green(`Reverted snapshot ${snapshotId}`));
       },
     );
 
@@ -535,6 +555,22 @@ async function promptForGoalClarifications(
 
   outro(pc.green("Goal details captured"));
   return { answers };
+}
+
+async function promptForRevertApproval(input: RevertApprovalPromptInput): Promise<boolean> {
+  if (!process.stdin.isTTY) {
+    console.log(pc.dim("Run from an interactive terminal or pass --yes to apply the revert."));
+    return false;
+  }
+
+  const answer = await confirm({
+    message: `Apply revert ${input.snapshotId}?`,
+    active: `Apply ${input.actions.length} file action${input.actions.length === 1 ? "" : "s"}`,
+    inactive: "Cancel",
+    initialValue: false,
+  });
+
+  return answer === true && !isCancel(answer);
 }
 
 function resolvePath(rootDir: string, path: string): string {
