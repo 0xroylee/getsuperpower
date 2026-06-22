@@ -2,34 +2,44 @@
 
 # Ponytrail
 
-Ponytrail records agent file-change snapshots, shows the snapshot history tree, and can restore files from a previous snapshot.
+**Every change, on the trail.**
 
-## Onboard
+Ponytrail is a small CLI and bundled agent skill for recording why files changed,
+showing those changes as a local history tree, and reverting files from a
+previous snapshot.
 
-Run guided setup. The CLI asks for your workspace name, creates local `.ponytrail` files, and installs the bundled `pony-trail` skill for Claude, GitHub Copilot, and Codex:
+It keeps the trail in `.pony-trail/` inside your project. Treat that folder as
+local runtime state; it should stay out of git.
+
+## Install The Skill
+
+Install the bundled `pony-trail` skill into your local agent tools:
 
 ```bash
-npx ponytrail onboard
+npx ponytrail skills install pony-trail
 ```
 
 With Bun:
 
 ```bash
-bunx ponytrail onboard
+bunx ponytrail skills install pony-trail
 ```
+
+The installer records a local skill-install snapshot before writing agent skill
+files, so the install can be found later in `ponytrail history --details`.
 
 ## View History
 
-Show the local snapshot tree:
+Show the snapshot tree:
 
 ```bash
-ponytrail history
+npx ponytrail history
 ```
 
-Include detailed commit metadata:
+Include action, summary, checks, result, and rollback details:
 
 ```bash
-ponytrail history --details
+npx ponytrail history --details
 ```
 
 Effect preview:
@@ -48,8 +58,8 @@ Snapshot history
 Filter to one session or print machine-readable output:
 
 ```bash
-ponytrail history --session <session-id>
-ponytrail history --json
+npx ponytrail history --session <session-id>
+npx ponytrail history --json
 ```
 
 Snapshots are read from:
@@ -60,16 +70,12 @@ Snapshots are read from:
   sessions/<session-id>/tree.md
 ```
 
-`ponytrail skills install` and `ponytrail onboard` also record a project-local
-skill-install commit before they write agent skill files, so the install can be
-found later in `ponytrail history --details`.
-
 ## Revert A Snapshot
 
-Preview the file actions first:
+Preview the planned file actions:
 
 ```bash
-ponytrail revert <snapshot-id> --dry-run
+npx ponytrail revert <snapshot-id> --dry-run
 ```
 
 Apply the revert:
@@ -78,11 +84,12 @@ Apply the revert:
 npx ponytrail revert <snapshot-id>
 ```
 
-The CLI prints the planned file actions and asks before applying them. In
-non-interactive environments, Ponytrail prints the plan and cancels without
-changing files.
+Ponytrail prints the planned file actions and asks for approval before changing
+files. In non-interactive environments, it prints the plan and cancels without
+mutating the project.
 
-Revert restores files from the snapshot's `pre` state. If a file did not exist before the snapshot, Ponytrail deletes it during the revert.
+Revert restores files from the snapshot's `pre` state. If a file did not exist
+before the snapshot, Ponytrail deletes it during the revert.
 
 ## Local Development
 
