@@ -3,7 +3,10 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  calculateDefaultSetupRequiredApprovals,
   createDefaultManifest,
+  createDefaultSetupReviewBots,
+  createSetupManifest,
   loadManifest,
   ManifestSchema,
   writeManifest,
@@ -127,5 +130,136 @@ describe("manifest", () => {
     } finally {
       await rm(rootDir, { recursive: true, force: true });
     }
+  });
+});
+
+describe("setup manifest", () => {
+  test("calculates the default over-60-percent approval threshold", () => {
+    expect(calculateDefaultSetupRequiredApprovals(3)).toBe(2);
+    expect(calculateDefaultSetupRequiredApprovals(4)).toBe(3);
+    expect(calculateDefaultSetupRequiredApprovals(5)).toBe(4);
+  });
+
+  test("creates the standard setup bot roster with a 3 of 4 decision rule", () => {
+    const manifest = ManifestSchema.parse(createSetupManifest({ name: "Setup Court" }));
+
+    expect(manifest.metadata.name).toBe("Setup Court");
+    expect(manifest.deliberation.decisionRule.voters).toBe(4);
+    expect(manifest.deliberation.decisionRule.requiredApprovals).toBe(3);
+    expect(manifest.deliberation.decisionRule.voterIds).toEqual([
+      "product_manager_bot",
+      "project_manager_bot",
+      "senior_engineer_bot",
+      "testing_bot",
+    ]);
+    expect(manifest.defaultGoalTemplate.approvalRule.goalDirectionPanel).toEqual({
+      requiredApprovals: 3,
+      voters: ["product_manager_bot", "project_manager_bot", "senior_engineer_bot", "testing_bot"],
+    });
+    expect(manifest.bots.map((bot) => bot.id)).toEqual([
+      "requirements_brainstorm_bot",
+      "goal_draft_bot",
+      "product_manager_bot",
+      "project_manager_bot",
+      "senior_engineer_bot",
+      "testing_bot",
+      "requirement_judge_bot",
+    ]);
+  });
+
+  test("creates a custom setup roster and derives a 4 of 5 decision rule", () => {
+    const reviewBots = [
+      ...createDefaultSetupReviewBots(),
+      {
+        id: "security_bot",
+        displayName: "Security Bot",
+        role: "Security",
+        panel: "requirement_court",
+        instruction: "Review data, permission, and security risk before voting.",
+        modelId: "security_model",
+        modelName: "security-review-model",
+        votes: true,
+      },
+    ];
+
+    const manifest = ManifestSchema.parse(
+      createSetupManifest({
+        name: "Security Court",
+        reviewBots,
+      }),
+    );
+    const securityBot = manifest.bots.find((bot) => bot.id === "security_bot");
+    const judgeBot = manifest.bots.find((bot) => bot.id === "requirement_judge_bot");
+
+    expect(manifest.deliberation.decisionRule.voters).toBe(5);
+    expect(manifest.deliberation.decisionRule.requiredApprovals).toBe(4);
+    expect(manifest.deliberation.decisionRule.voterIds).toContain("security_bot");
+    expect(manifest.workerExecutionGate.mayStartWhen).toContain("requirement_court.approvals >= 4");
+    expect(manifest.models.some((model) => model.id === "security_model")).toBe(true);
+    expect(manifest.bots.some((bot) => bot.id === "security_bot")).toBe(true);
+    expect(securityBot?.model).toBe("security_model");
+    expect(judgeBot?.instruction).toContain("4-of-5 approval rule");
+    expect(judgeBot?.instruction).not.toContain("3-of-4");
+  });
+
+  test("rejects duplicate setup bot ids before manifest construction", () => {
+    const reviewBots = createDefaultSetupReviewBots();
+    const productBot = reviewBots.find((bot) => bot.id === "product_manager_bot");
+
+    if (!productBot) {
+      throw new Error("Missing default product manager setup bot.");
+    }
+
+    expect(() =>
+      createSetupManifest({
+        name: "Duplicate Court",
+        reviewBots: [
+          ...reviewBots,
+          {
+            ...productBot,
+            displayName: "Duplicate Product Manager Bot",
+          },
+        ],
+      }),
+    ).toThrow("Duplicate setup bot id: product_manager_bot");
+  });
+
+  test("rejects setup bot ids reserved for built-in bots", () => {
+    expect(() =>
+      createSetupManifest({
+        name: "Reserved Id Court",
+        reviewBots: [
+          ...createDefaultSetupReviewBots(),
+          {
+            id: "goal_draft_bot",
+            displayName: "Draft Collision Bot",
+            role: "Draft Collision",
+            panel: "requirement_court",
+            instruction: "This setup review bot id collides with a built-in drafting bot.",
+            modelId: "draft_collision_model",
+            modelName: "draft-collision-review-model",
+            votes: true,
+          },
+        ],
+      }),
+    ).toThrow("Setup bot id is reserved: goal_draft_bot");
+  });
+
+  test("rejects setup manifests without voting bots", () => {
+    expect(() =>
+      createSetupManifest({
+        name: "No Voters",
+        reviewBots: createDefaultSetupReviewBots().map((bot) => ({ ...bot, votes: false })),
+      }),
+    ).toThrow("At least one voting setup bot is required.");
+  });
+
+  test("rejects custom approval counts outside the voter range", () => {
+    expect(() =>
+      createSetupManifest({
+        name: "Too Many Required",
+        requiredApprovals: 5,
+      }),
+    ).toThrow("Required approvals must be between 1 and 4.");
   });
 });
