@@ -9,6 +9,7 @@ export interface RequirementDiscussionEntry {
   round: number;
   message: string;
   visibleThinking: RequirementPonyVisibleThinking;
+  run: RequirementPonyRunMetadata;
   line: string;
   vote: ReviewVote["vote"];
   confidence: number;
@@ -70,10 +71,20 @@ export interface RequirementPonyRunInput {
 export interface RequirementPonyResponse {
   message: string;
   visibleThinking?: RequirementPonyVisibleThinking;
+  run?: RequirementPonyRunMetadata;
   evidence?: string[];
   vote: ReviewVote["vote"];
   confidence: number;
   requiredChanges: string[];
+}
+
+export type RequirementPonyRunMode = "local" | "worker";
+
+export interface RequirementPonyRunMetadata {
+  mode: RequirementPonyRunMode;
+  workerId?: string | undefined;
+  adapterId?: string | undefined;
+  runId?: string | undefined;
 }
 
 export interface RequirementPonyVisibleThinking {
@@ -195,12 +206,17 @@ function createDiscussionEntry(
     round,
     message,
     visibleThinking,
+    run: response.run ?? createLocalRunMetadata(),
     line: `${bot.id}: ${message}`,
     vote: response.vote,
     confidence: response.confidence,
     evidence: response.evidence ?? [],
     requiredChanges: response.requiredChanges,
   };
+}
+
+function createLocalRunMetadata(): RequirementPonyRunMetadata {
+  return { mode: "local" };
 }
 
 function createDefaultVisibleThinking(

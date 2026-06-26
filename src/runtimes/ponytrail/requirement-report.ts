@@ -1,5 +1,9 @@
 import { isAbsolute, join, relative } from "node:path";
-import type { DetailedRequirement, RequirementCourtResult } from "./requirement-court";
+import type {
+  DetailedRequirement,
+  RequirementCourtResult,
+  RequirementPonyRunMetadata,
+} from "./requirement-court";
 
 export interface RequirementCourtTextReportOptions {
   discussionHeading?: string | undefined;
@@ -110,6 +114,7 @@ function pushVisibleThinkingTranscript(
         `Concern: ${entry.visibleThinking.concern}`,
         `Recommendation: ${entry.visibleThinking.recommendation}`,
         `Vote: ${entry.vote} (${Math.round(entry.confidence * 100)}% confidence)`,
+        `Run: ${formatRequirementPonyRun(entry.run)}`,
       );
       pushList(lines, "Evidence", entry.evidence);
       pushList(lines, "Required changes", entry.requiredChanges);
@@ -130,6 +135,18 @@ function pushList(lines: string[], label: string, values: string[]): void {
 
 function formatHeading(value: string, style: RequirementCourtTextReportStyle): string {
   return style.heading ? style.heading(value) : value;
+}
+
+export function formatRequirementPonyRun(run: RequirementPonyRunMetadata): string {
+  if (run.mode === "worker") {
+    const worker = run.workerId ?? "unknown";
+    const adapter = run.adapterId ? ` via ${run.adapterId}` : "";
+    const runId = run.runId ? ` (${run.runId})` : "";
+
+    return `worker ${worker}${adapter}${runId}`;
+  }
+
+  return "local deterministic pony";
 }
 
 function slugifyRequirementCourtReportTitle(title: string): string {

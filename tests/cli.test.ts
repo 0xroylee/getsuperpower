@@ -95,6 +95,7 @@ describe("cli", () => {
       "--manifest",
       "--worker",
       "--research",
+      "--no-research",
       "--json",
       "--markdown",
       "--skip-markdown",
@@ -777,26 +778,33 @@ describe("cli", () => {
     }
   });
 
-  test("ponyrace prints pony race discussion and does not stream by default", async () => {
+  test("ponyrace can opt out of worker-backed pony sessions for local discussion", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "ponytrail-cli-"));
     const logs: string[] = [];
+    const invocations: CliInvocation[] = [];
     const originalLog = console.log;
+    const streamRunner: CliStreamRunner = async function* (invocation) {
+      invocations.push(invocation);
+      yield { type: "start", invocation };
+      yield { type: "exit", exitCode: 1 };
+    };
 
     console.log = (...values: unknown[]) => {
       logs.push(values.join(" "));
     };
 
     try {
-      await buildProgram({ cwd: rootDir }).parseAsync(
+      await buildProgram({ cwd: rootDir, streamRunner }).parseAsync(
         ["onboard", "--dir", ".", "--name", "CLI Court", "--home", rootDir],
         { from: "user" },
       );
 
-      await buildProgram({ cwd: rootDir }).parseAsync(
-        ["ponyrace", "Add", "CSV", "import", "to", "admin", "dashboard"],
+      await buildProgram({ cwd: rootDir, streamRunner }).parseAsync(
+        ["ponyrace", "--no-research", "Add", "CSV", "import", "to", "admin", "dashboard"],
         { from: "user" },
       );
 
+      expect(invocations).toHaveLength(0);
       expect(stripAnsiLines(logs)).toContain("Pony race");
       expect(logs.some((line) => line.includes("product_manager_bot: I think"))).toBe(true);
       expect(logs.some((line) => line.includes("project_manager_bot: I think"))).toBe(true);
@@ -880,7 +888,7 @@ describe("cli", () => {
     }
   });
 
-  test("ponyrace research mode runs each pony through the selected worker adapter and prints evidence", async () => {
+  test("ponyrace runs each pony through the selected worker adapter by default and prints evidence", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "ponytrail-cli-"));
     const logs: string[] = [];
     const invocations: CliInvocation[] = [];
@@ -918,7 +926,7 @@ describe("cli", () => {
       logs.splice(0);
 
       await buildProgram({ cwd: rootDir, streamRunner }).parseAsync(
-        ["ponyrace", "--research", "--worker", "codex", "Add", "CSV", "import", "to", "admin"],
+        ["ponyrace", "--worker", "codex", "Add", "CSV", "import", "to", "admin"],
         { from: "user" },
       );
 
@@ -931,6 +939,9 @@ describe("cli", () => {
       expect(prompt).toContain("Do not approve without at least one concrete evidence item.");
       expect(stripAnsiLines(logs)).toContain("Pony race");
       expect(stripAnsiLines(logs)).toContain("Visible thinking transcript");
+      expect(stripAnsiLines(logs)).toContain(
+        "Run: worker codex via codex-cli (round-1-product_manager_bot)",
+      );
       expect(stripAnsiLines(logs)).toContain("Evidence:");
       expect(logs.some((line) => line.includes("Skill-guided evidence"))).toBe(true);
       expect(logs.some((line) => line.includes("product_manager_bot: approve (0.93)"))).toBe(true);
@@ -957,7 +968,18 @@ describe("cli", () => {
       logs.splice(0);
 
       await buildProgram({ cwd: rootDir }).parseAsync(
-        ["ponyrace", "--worker", "codex", "Verify", "streaming", "order", "and", "human", "gate"],
+        [
+          "ponyrace",
+          "--no-research",
+          "--worker",
+          "codex",
+          "Verify",
+          "streaming",
+          "order",
+          "and",
+          "human",
+          "gate",
+        ],
         { from: "user" },
       );
 
@@ -997,7 +1019,7 @@ describe("cli", () => {
       logs.splice(0);
 
       await buildProgram({ cwd: rootDir }).parseAsync(
-        ["ponyrace", "Add", "CSV", "import", "to", "admin", "dashboard"],
+        ["ponyrace", "--no-research", "Add", "CSV", "import", "to", "admin", "dashboard"],
         { from: "user" },
       );
 
@@ -1087,7 +1109,18 @@ describe("cli", () => {
       logs.splice(0);
 
       await buildProgram({ cwd: rootDir }).parseAsync(
-        ["ponyrace", "--markdown", reportPath, "Add", "CSV", "import", "to", "admin", "dashboard"],
+        [
+          "ponyrace",
+          "--no-research",
+          "--markdown",
+          reportPath,
+          "Add",
+          "CSV",
+          "import",
+          "to",
+          "admin",
+          "dashboard",
+        ],
         { from: "user" },
       );
 
@@ -1102,6 +1135,7 @@ describe("cli", () => {
       expect(report).toContain("Focus:");
       expect(report).toContain("Concern:");
       expect(report).toContain("Recommendation:");
+      expect(report).toContain("Run: local deterministic pony");
       expect(report).toContain("Vote: approve");
       expect(report).toContain("## Judge Summary");
       expect(report).toContain("Approvals: 4/4");

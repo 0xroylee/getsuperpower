@@ -369,7 +369,8 @@ export function buildProgram(options: BuildProgramOptions = {}): Command {
     .argument("<request...>", "raw goal request")
     .option("-m, --manifest <path>", "manifest path", defaultManifestPath)
     .option("-w, --worker <id>", "accepted for compatibility; worker execution is gated")
-    .option("--research", "run each review pony through the selected worker CLI", false)
+    .option("--research", "run each review pony through the selected worker CLI", true)
+    .option("--no-research", "use the local deterministic pony runner instead of worker CLI runs")
     .option("--json", "print JSON output", false)
     .option("--markdown <path>", "write Markdown report to a path")
     .option("--skip-markdown", "skip writing the default Markdown report", false)
@@ -443,6 +444,7 @@ export function buildProgram(options: BuildProgramOptions = {}): Command {
           rootDir,
           clarificationPrompter,
           manifestPath: commandOptions.manifest,
+          research: false,
           ponyRunner,
           jsonOutput: false,
         });
@@ -760,6 +762,7 @@ async function runGoalCommandFlow(
     rootDir: input.rootDir,
     clarificationPrompter: input.clarificationPrompter,
     manifestPath: input.manifestPath,
+    research: false,
     ponyRunner: input.ponyRunner,
     jsonOutput: false,
   });
@@ -916,8 +919,12 @@ function createActivePonyRunner(
   manifest: RunRequirementCourtInput["manifest"],
   input: RunGoalFlowInput,
 ): RequirementPonyRunner {
-  if (!input.research) {
-    return input.ponyRunner ?? createLocalRequirementPonyRunner();
+  if (input.ponyRunner) {
+    return input.ponyRunner;
+  }
+
+  if (input.research === false) {
+    return createLocalRequirementPonyRunner();
   }
 
   const worker = resolveResearchWorker(manifest, input.worker);
@@ -926,6 +933,7 @@ function createActivePonyRunner(
 
   return createCliRequirementPonyRunner({
     adapter,
+    workerId: worker.id,
     streamRunner,
     writeStdout() {},
     writeStderr(chunk) {

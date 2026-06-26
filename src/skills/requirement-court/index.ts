@@ -14,7 +14,11 @@ export type DefaultRequirementCourtSkillId =
   | "feasibility_review"
   | "verification_design"
   | "risk_review"
-  | "goal_rewrite";
+  | "goal_rewrite"
+  | "product_management_review"
+  | "project_management_review"
+  | "senior_engineering_review"
+  | "testing_review";
 
 interface SkillFileMetadata {
   id: DefaultRequirementCourtSkillId;
@@ -29,6 +33,10 @@ const DEFAULT_REQUIREMENT_COURT_SKILL_FOLDERS = [
   "verification-design",
   "risk-review",
   "goal-rewrite",
+  "product-management-review",
+  "project-management-review",
+  "senior-engineering-review",
+  "testing-review",
 ] as const;
 
 export const DEFAULT_REQUIREMENT_REVIEW_SKILL_IDS = [
@@ -132,7 +140,11 @@ function parseDefaultRequirementCourtSkillId(
     id === "feasibility_review" ||
     id === "verification_design" ||
     id === "risk_review" ||
-    id === "goal_rewrite"
+    id === "goal_rewrite" ||
+    id === "product_management_review" ||
+    id === "project_management_review" ||
+    id === "senior_engineering_review" ||
+    id === "testing_review"
   ) {
     return id;
   }

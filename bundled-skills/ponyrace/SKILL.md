@@ -21,6 +21,10 @@ the court reports, and then separately approves the written implementation plan
 before any implementation action or file edit.
 
 Superpowers approval is not worker execution approval.
+Choosing an approach, selecting an option number, or saying "let's do it"
+after alternatives are presented is direction approval only; it is not approval
+to edit files unless the written implementation plan has already been shown and
+explicitly approved.
 Implementation and file edits begin only after explicit human approval of the written implementation plan.
 
 Installed skill copies are refreshed through `ponyrace skills update` or
@@ -44,9 +48,10 @@ reinstall.
    `ponyrace ponyrace "<approved refined requirement>"`.
 6. If the user gives a manifest path, pass it with `--manifest <path>` instead
    of appending it to the requirement text.
-7. If the user asks for deep research, evidence-backed ponies, or less shallow
-   thinking, add `--research`. If they name a worker, pass it with
-   `--worker <id>`; otherwise use the manifest default worker.
+7. Ponyrace runs each review pony through the selected worker CLI by default.
+   If the user names a worker, pass it with `--worker <id>`; otherwise use the
+   manifest default worker. If the user explicitly asks for a fast/local
+   deterministic discussion without worker runs, pass `--no-research`.
 8. Preserve the important CLI output when reporting back:
    - pony discussion lines
    - visible thinking transcript
@@ -61,8 +66,11 @@ reinstall.
 10. After the human approves the requirement direction, invoke
     `superpowers:writing-plans` and write the implementation plan through that
     skill's workflow.
-11. Stop after the implementation plan and ask for explicit human approval of
-    the written implementation plan.
+11. Stop after the implementation plan and show the plan. Ask for explicit
+    human approval of the written implementation plan. Short replies such as
+    `1`, `option 1`, `yes to the direction`, `sounds good`, `approve the
+    requirement`, or `continue` before this point approve only the requirement
+    direction, not file edits.
 12. Begin implementation only after explicit human approval of the written
     implementation plan.
 
@@ -78,13 +86,16 @@ reinstall.
 - Do not treat Superpowers brainstorming approval, 3-of-4 court approval, any
   bot vote, or human confirmation of the requirement direction as approval to
   edit files.
+- Do not treat approach selection, option selection, or approval of a proposed
+  direction as approval to edit files. If no written implementation plan has
+  been presented and explicitly approved, stop and write the plan first.
 - Do not take any implementation action or file edit before explicit human
   approval of the written implementation plan.
 - Do not edit installed skill copies as part of changing the bundled source.
   Installed skill copies are refreshed through `ponyrace skills update` or
   reinstall.
-- Do not call `--research` a guarantee of correctness; it means each pony must
-  run through the selected worker CLI and return visible evidence before
-  approval.
+- Do not call worker-backed pony review a guarantee of correctness; it means
+  each pony must run through the selected worker CLI and return visible
+  evidence before approval.
 - If `ponyrace` is unavailable and this is not the local Ponyrace repo, say the
   CLI is unavailable and ask the user how they want to run it.

@@ -1,5 +1,5 @@
 import type { RequirementCourtResult } from "./requirement-court";
-import { getDetailedRequirementChanges } from "./requirement-report";
+import { formatRequirementPonyRun, getDetailedRequirementChanges } from "./requirement-report";
 
 export function renderRequirementCourtMarkdown(result: RequirementCourtResult): string {
   const lines = [`# Pony race: ${result.detailedRequirement.title}`, "", "## Discussion", ""];
@@ -26,6 +26,8 @@ export function renderRequirementCourtMarkdown(result: RequirementCourtResult): 
         `Recommendation: ${entry.visibleThinking.recommendation}`,
         "",
         `Vote: ${entry.vote} (${Math.round(entry.confidence * 100)}% confidence)`,
+        "",
+        `Run: ${formatRequirementPonyRun(entry.run)}`,
         "",
       );
       pushList(lines, "Evidence", entry.evidence);

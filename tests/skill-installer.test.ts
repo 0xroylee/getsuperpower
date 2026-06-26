@@ -99,6 +99,11 @@ describe("skill installer", () => {
     expect(skill).toContain("Human confirmation: pending");
     expect(skill).toContain("explicit human approval of the written implementation plan");
     expect(skill).toContain("before any implementation action or file edit");
+    expect(skill).toContain("Choosing an approach, selecting an option number");
+    expect(skill).toContain("direction approval only; it is not approval");
+    expect(skill).toContain("Short replies such as");
+    expect(skill).toContain("approve only the requirement");
+    expect(skill).toContain("If no written implementation plan has");
     expect(skill).toContain("Installed skill copies are refreshed through");
     expect(skill).toContain("Superpowers approval is not worker execution approval");
     expect(skill).not.toContain('ponyrace ponyrace "<request>"');

@@ -229,6 +229,7 @@ describe("worker CLI adapters", () => {
 
     const ponyRunner = createCliRequirementPonyRunner({
       adapter: getCliWorkerAdapter("codex-cli"),
+      workerId: "codex",
       streamRunner,
       writeStdout() {},
       writeStderr() {},
@@ -254,6 +255,12 @@ describe("worker CLI adapters", () => {
       vote: "approve",
       confidence: 0.92,
       requiredChanges: [],
+      run: {
+        mode: "worker",
+        workerId: "codex",
+        adapterId: "codex-cli",
+        runId: "round-1-engineer_bot",
+      },
     });
     expect(invocations).toHaveLength(1);
     expect(invocations[0]?.args.join(" ")).toContain("Requirement pony review");
@@ -344,6 +351,7 @@ describe("worker CLI adapters", () => {
 
     const ponyRunner = createCliRequirementPonyRunner({
       adapter: getCliWorkerAdapter("claude-cli"),
+      workerId: "claude",
       streamRunner,
       writeStdout(chunk) {
         stdoutChunks.push(chunk);
@@ -371,6 +379,12 @@ describe("worker CLI adapters", () => {
       evidence: ["The testing skill requires observable acceptance evidence."],
       vote: "approve",
       confidence: 0.86,
+      run: {
+        mode: "worker",
+        workerId: "claude",
+        adapterId: "claude-cli",
+        runId: "round-1-testing_bot",
+      },
     });
   });
 });

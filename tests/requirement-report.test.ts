@@ -33,6 +33,7 @@ describe("requirement court reporting", () => {
 
     expect(orderedSections.every((index) => index >= 0)).toBe(true);
     expect(orderedSections).toEqual([...orderedSections].sort((left, right) => left - right));
+    expect(lines).toContain("Run: local deterministic pony");
     expect(lines).toContain("What will change:");
     expect(lines).toContain("- Add CSV import to admin dashboard");
   });

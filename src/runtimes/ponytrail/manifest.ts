@@ -386,7 +386,7 @@ export function createDefaultManifest(options: DefaultManifestOptions = {}): Man
         model: "product_manager_model",
         temperature: 0.1,
         panel: "requirement_court",
-        skills: ["intent_alignment", "scope_control"],
+        skills: ["intent_alignment", "scope_control", "product_management_review"],
         instruction:
           "Discuss whether the requirement preserves the human's product intent, user value, and scope boundary before voting.",
         approvalConditions: [
@@ -407,7 +407,7 @@ export function createDefaultManifest(options: DefaultManifestOptions = {}): Man
         model: "project_manager_model",
         temperature: 0.1,
         panel: "requirement_court",
-        skills: ["scope_control", "risk_review"],
+        skills: ["scope_control", "risk_review", "project_management_review"],
         instruction:
           "Discuss whether the requirement can be planned, sequenced, tracked, and delivered as a manageable unit of work before voting.",
         approvalConditions: [
@@ -428,7 +428,7 @@ export function createDefaultManifest(options: DefaultManifestOptions = {}): Man
         model: "engineer_model",
         temperature: 0.1,
         panel: "requirement_court",
-        skills: ["feasibility_review", "scope_control", "risk_review"],
+        skills: ["feasibility_review", "scope_control", "risk_review", "senior_engineering_review"],
         instruction:
           "Discuss whether the requirement is technically feasible and bounded enough for an implementation agent before voting.",
         approvalConditions: [
@@ -449,7 +449,7 @@ export function createDefaultManifest(options: DefaultManifestOptions = {}): Man
         model: "testing_model",
         temperature: 0.1,
         panel: "requirement_court",
-        skills: ["verification_design", "risk_review"],
+        skills: ["verification_design", "risk_review", "testing_review"],
         instruction:
           "Discuss whether the requirement has observable acceptance criteria, edge cases, and evidence from a tester's perspective before voting.",
         approvalConditions: [
@@ -568,6 +568,7 @@ export function createDefaultSetupReviewBots(): SetupReviewBotInput[] {
       modelId: "product_manager_model",
       modelName: "product-manager-review-model",
       votes: true,
+      skills: ["intent_alignment", "scope_control", "product_management_review"],
     },
     {
       id: "project_manager_bot",
@@ -577,6 +578,7 @@ export function createDefaultSetupReviewBots(): SetupReviewBotInput[] {
       modelId: "project_manager_model",
       modelName: "project-manager-review-model",
       votes: true,
+      skills: ["scope_control", "risk_review", "project_management_review"],
     },
     {
       id: "senior_engineer_bot",
@@ -586,6 +588,7 @@ export function createDefaultSetupReviewBots(): SetupReviewBotInput[] {
       modelId: "senior_engineer_model",
       modelName: "senior-engineer-review-model",
       votes: true,
+      skills: ["feasibility_review", "scope_control", "risk_review", "senior_engineering_review"],
     },
     {
       id: "testing_bot",
@@ -595,6 +598,7 @@ export function createDefaultSetupReviewBots(): SetupReviewBotInput[] {
       modelId: "testing_model",
       modelName: "testing-review-model",
       votes: true,
+      skills: ["verification_design", "risk_review", "testing_review"],
     },
   ];
 }

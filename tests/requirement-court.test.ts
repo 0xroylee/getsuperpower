@@ -43,8 +43,14 @@ describe("requirement court", () => {
     expect(result.discussion[0]?.visibleThinking).toEqual({
       focus: expect.stringContaining("product"),
       concern: expect.stringContaining("product"),
-      recommendation: expect.stringContaining("Skills used: Intent Alignment, Scope Control"),
+      recommendation: expect.stringContaining("Product Management Review"),
     });
+    expect(result.discussion.map((entry) => entry.visibleThinking.recommendation)).toEqual([
+      expect.stringContaining("Product Management Review"),
+      expect.stringContaining("Project Management Review"),
+      expect.stringContaining("Senior Engineering Review"),
+      expect.stringContaining("Testing Review"),
+    ]);
     expect(result.verdict.approved).toBe(true);
     expect(result.judge.botId).toBe("requirement_judge_bot");
     expect(result.judge.summary).toContain("Approvals: 4/4");

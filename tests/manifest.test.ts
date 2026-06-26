@@ -11,10 +11,7 @@ import {
   ManifestSchema,
   writeManifest,
 } from "../src/runtimes/ponytrail/manifest";
-import {
-  DEFAULT_REQUIREMENT_REVIEW_SKILL_IDS,
-  loadDefaultRequirementCourtSkills,
-} from "../src/skills";
+import { loadDefaultRequirementCourtSkills } from "../src/skills";
 
 describe("manifest", () => {
   test("creates a default 4-bot requirement court with a non-voting Judge", () => {
@@ -59,6 +56,21 @@ describe("manifest", () => {
       ["requirement_judge_bot", "judge_model"],
     ]);
     expect(parsed.bots.find((bot) => bot.id === "requirement_judge_bot")?.type).toBe("judge_bot");
+    const reviewBotSkills = Object.fromEntries(
+      parsed.bots.filter((bot) => bot.type === "review_bot").map((bot) => [bot.id, bot.skills]),
+    );
+
+    expect(reviewBotSkills).toEqual({
+      product_manager_bot: ["intent_alignment", "scope_control", "product_management_review"],
+      project_manager_bot: ["scope_control", "risk_review", "project_management_review"],
+      engineer_bot: [
+        "feasibility_review",
+        "scope_control",
+        "risk_review",
+        "senior_engineering_review",
+      ],
+      testing_bot: ["verification_design", "risk_review", "testing_review"],
+    });
   });
 
   test("builds default skills from editable runtime skill files", async () => {
@@ -80,6 +92,20 @@ describe("manifest", () => {
     );
 
     expect(manifestSkillIds).toEqual(sourceSkillIds);
+    expect(sourceSkillIds).toEqual(
+      [
+        "feasibility_review",
+        "goal_rewrite",
+        "intent_alignment",
+        "product_management_review",
+        "project_management_review",
+        "risk_review",
+        "scope_control",
+        "senior_engineering_review",
+        "testing_review",
+        "verification_design",
+      ].sort(),
+    );
     for (const skill of sourceSkills) {
       expect(manifest.skills[skill.id]).toEqual({
         displayName: skill.displayName,
@@ -91,15 +117,22 @@ describe("manifest", () => {
     expect(manifest.skills.feasibility_review?.instruction).toContain(
       "Check repo, tool, permission, and time constraints",
     );
+    expect(manifest.skills.product_management_review?.instruction).toContain("product intent");
+    expect(manifest.skills.project_management_review?.instruction).toContain("delivery sequence");
+    expect(manifest.skills.senior_engineering_review?.instruction).toContain("architecture fit");
+    expect(manifest.skills.testing_review?.instruction).toContain("falsifiable evidence");
 
     const setupManifest = createSetupManifest();
     const setupReviewBots = setupManifest.bots.filter((bot) => bot.type === "review_bot");
 
     expect(setupReviewBots.map((bot) => [bot.id, bot.skills])).toEqual([
-      ["product_manager_bot", [...DEFAULT_REQUIREMENT_REVIEW_SKILL_IDS]],
-      ["project_manager_bot", [...DEFAULT_REQUIREMENT_REVIEW_SKILL_IDS]],
-      ["senior_engineer_bot", [...DEFAULT_REQUIREMENT_REVIEW_SKILL_IDS]],
-      ["testing_bot", [...DEFAULT_REQUIREMENT_REVIEW_SKILL_IDS]],
+      ["product_manager_bot", ["intent_alignment", "scope_control", "product_management_review"]],
+      ["project_manager_bot", ["scope_control", "risk_review", "project_management_review"]],
+      [
+        "senior_engineer_bot",
+        ["feasibility_review", "scope_control", "risk_review", "senior_engineering_review"],
+      ],
+      ["testing_bot", ["verification_design", "risk_review", "testing_review"]],
     ]);
   });
 

@@ -3,12 +3,14 @@ import { VoteValueSchema } from "../runtimes/ponytrail/manifest";
 import type {
   RequirementPonyResponse,
   RequirementPonyRunInput,
+  RequirementPonyRunMetadata,
   RequirementPonyRunner,
 } from "../runtimes/ponytrail/requirement-court";
 import type { CliStreamEvent, CliStreamRunner, WorkerCliAdapter } from "./adapters/types";
 
 export interface CliRequirementPonyRunnerOptions {
   adapter: WorkerCliAdapter;
+  workerId?: string | undefined;
   streamRunner: CliStreamRunner;
   writeStdout?: ((chunk: string) => void) | undefined;
   writeStderr?: ((chunk: string) => void) | undefined;
@@ -47,7 +49,10 @@ export function createCliRequirementPonyRunner(
       );
     }
 
-    return parseRequirementPonyResponse(result.stdout);
+    return {
+      ...parseRequirementPonyResponse(result.stdout),
+      run: createWorkerRunMetadata(input, options),
+    };
   };
 }
 
@@ -60,6 +65,7 @@ function createLocalPonyResponse(input: RequirementPonyRunInput): RequirementPon
   return {
     message,
     evidence: skillGuidance.map((skill) => `${skill.id}: ${skill.instruction}`),
+    run: { mode: "local" },
     vote: "approve",
     confidence: 0.8,
     requiredChanges: [],
@@ -198,6 +204,18 @@ async function collectStreamingPonyResult(
     exitCode,
     stdout: stdout.join(""),
     stderr: stderr.join(""),
+  };
+}
+
+function createWorkerRunMetadata(
+  input: RequirementPonyRunInput,
+  options: CliRequirementPonyRunnerOptions,
+): RequirementPonyRunMetadata {
+  return {
+    mode: "worker",
+    workerId: options.workerId ?? options.adapter.id,
+    adapterId: options.adapter.id,
+    runId: `round-${input.round}-${input.bot.id}`,
   };
 }
 
