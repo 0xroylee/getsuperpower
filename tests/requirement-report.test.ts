@@ -5,6 +5,7 @@ import { draftGoalContract } from "../src/runtimes/ponytrail/goal";
 import { createDefaultManifest } from "../src/runtimes/ponytrail/manifest";
 import { runRequirementCourt } from "../src/runtimes/ponytrail/requirement-court";
 import {
+  createRequirementCourtHtmlReportPath,
   createRequirementCourtMarkdownReportPath,
   formatRequirementCourtReportPathForOutput,
   renderRequirementCourtTextReport,
@@ -18,6 +19,7 @@ describe("requirement court reporting", () => {
       discussionHeading: "Pony race",
       includeVisibleThinking: true,
       markdownReportPath: ".ponyrace/ponyrace/report.md",
+      htmlReportPath: ".ponyrace/ponyrace/report.html",
     });
 
     const orderedSections = [
@@ -26,6 +28,7 @@ describe("requirement court reporting", () => {
       "Visible thinking transcript",
       "Judge summary",
       "Markdown report: .ponyrace/ponyrace/report.md",
+      "HTML approval report: .ponyrace/ponyrace/report.html",
       "Final votes",
       "Detailed requirement",
       "Human confirmation: pending",
@@ -41,13 +44,18 @@ describe("requirement court reporting", () => {
   test("keeps report path creation deterministic and relative to the workspace when possible", async () => {
     const result = await createCourtResult();
     const rootDir = "/tmp/ponytrail-workspace";
-    const reportPath = createRequirementCourtMarkdownReportPath(
+    const markdownReportPath = createRequirementCourtMarkdownReportPath(
+      rootDir,
+      result,
+      new Date("2026-06-25T09:30:00Z"),
+    );
+    const htmlReportPath = createRequirementCourtHtmlReportPath(
       rootDir,
       result,
       new Date("2026-06-25T09:30:00Z"),
     );
 
-    expect(reportPath).toBe(
+    expect(markdownReportPath).toBe(
       join(
         rootDir,
         ".ponyrace",
@@ -55,8 +63,19 @@ describe("requirement court reporting", () => {
         "2026-06-25T09-30-00Z-add-csv-import-to-admin-dashboard.md",
       ),
     );
-    expect(formatRequirementCourtReportPathForOutput(rootDir, reportPath)).toBe(
+    expect(htmlReportPath).toBe(
+      join(
+        rootDir,
+        ".ponyrace",
+        "ponyrace",
+        "2026-06-25T09-30-00Z-add-csv-import-to-admin-dashboard.html",
+      ),
+    );
+    expect(formatRequirementCourtReportPathForOutput(rootDir, markdownReportPath)).toBe(
       ".ponyrace/ponyrace/2026-06-25T09-30-00Z-add-csv-import-to-admin-dashboard.md",
+    );
+    expect(formatRequirementCourtReportPathForOutput(rootDir, htmlReportPath)).toBe(
+      ".ponyrace/ponyrace/2026-06-25T09-30-00Z-add-csv-import-to-admin-dashboard.html",
     );
     expect(formatRequirementCourtReportPathForOutput(rootDir, "/tmp/outside-report.md")).toBe(
       "/tmp/outside-report.md",

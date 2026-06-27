@@ -9,6 +9,7 @@ export interface RequirementCourtTextReportOptions {
   discussionHeading?: string | undefined;
   includeVisibleThinking?: boolean | undefined;
   markdownReportPath?: string | undefined;
+  htmlReportPath?: string | undefined;
   style?: RequirementCourtTextReportStyle | undefined;
 }
 
@@ -39,6 +40,9 @@ export function renderRequirementCourtTextReport(
   lines.push("", formatHeading("Judge summary", style), result.judge.summary);
   if (options.markdownReportPath) {
     lines.push(`Markdown report: ${options.markdownReportPath}`);
+  }
+  if (options.htmlReportPath) {
+    lines.push(`HTML approval report: ${options.htmlReportPath}`);
   }
 
   lines.push("", formatHeading("Final votes", style));
@@ -74,6 +78,23 @@ export function createRequirementCourtMarkdownReportPath(
   result: RequirementCourtResult,
   timestamp: Date = new Date(),
 ): string {
+  return createRequirementCourtReportPath(rootDir, result, "md", timestamp);
+}
+
+export function createRequirementCourtHtmlReportPath(
+  rootDir: string,
+  result: RequirementCourtResult,
+  timestamp: Date = new Date(),
+): string {
+  return createRequirementCourtReportPath(rootDir, result, "html", timestamp);
+}
+
+function createRequirementCourtReportPath(
+  rootDir: string,
+  result: RequirementCourtResult,
+  extension: "md" | "html",
+  timestamp: Date,
+): string {
   const timestampSlug = timestamp
     .toISOString()
     .replace(/\.\d{3}Z$/u, "Z")
@@ -83,7 +104,9 @@ export function createRequirementCourtMarkdownReportPath(
     rootDir,
     ".ponyrace",
     "ponyrace",
-    `${timestampSlug}-${slugifyRequirementCourtReportTitle(result.detailedRequirement.title)}.md`,
+    `${timestampSlug}-${slugifyRequirementCourtReportTitle(
+      result.detailedRequirement.title,
+    )}.${extension}`,
   );
 }
 
