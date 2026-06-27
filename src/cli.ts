@@ -2,7 +2,7 @@
 
 import { mkdir, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { basename, dirname, isAbsolute, join, resolve } from "node:path";
+import { basename, dirname, extname, isAbsolute, join, resolve } from "node:path";
 import { confirm, intro, isCancel, outro, select, text } from "@clack/prompts";
 import { Command } from "commander";
 import pc from "picocolors";
@@ -26,6 +26,7 @@ import {
   createCompactSetupManifest,
   createDefaultSetupReviewBots,
   createOnboardingFiles,
+  createRequirementCourtHtmlReportPath,
   createRequirementCourtMarkdownReportPath,
   draftGoalFromBrainstorm,
   formatRequirementCourtReportPathForOutput,
@@ -42,6 +43,7 @@ import {
   recordSnapshotPost,
   recordSnapshotPre,
   rejectGoalDraft,
+  renderRequirementCourtHtml,
   renderRequirementCourtMarkdown,
   renderRequirementCourtTextReport,
   runRequirementCourt,
@@ -882,30 +884,55 @@ async function printRequirementCourtResultAndArtifacts(
   result: RequirementCourtResult,
   input: RunGoalFlowInput,
 ): Promise<void> {
-  const markdownReportPath = await writeMarkdownReport(result, input);
+  const reportPaths = await writeRequirementCourtReports(result, input);
 
   printRequirementCourtResult(result, {
     discussionHeading: input.discussionHeading,
     printVisibleThinking: input.printVisibleThinking,
-    markdownReportPath,
+    markdownReportPath: reportPaths.markdown,
+    htmlReportPath: reportPaths.html,
   });
 }
 
-async function writeMarkdownReport(
+interface RequirementCourtReportPaths {
+  markdown?: string | undefined;
+  html?: string | undefined;
+}
+
+async function writeRequirementCourtReports(
   result: RequirementCourtResult,
   input: RunGoalFlowInput,
-): Promise<string | undefined> {
+): Promise<RequirementCourtReportPaths> {
   if (!input.markdownReport) {
-    return undefined;
+    return {};
   }
 
-  const reportPath = input.markdownReport.path
+  const timestamp = new Date();
+  const markdownReportPath = input.markdownReport.path
     ? resolvePath(input.rootDir, input.markdownReport.path)
-    : createRequirementCourtMarkdownReportPath(input.rootDir, result);
+    : createRequirementCourtMarkdownReportPath(input.rootDir, result, timestamp);
+  const htmlReportPath = input.markdownReport.path
+    ? replacePathExtension(markdownReportPath, ".html")
+    : createRequirementCourtHtmlReportPath(input.rootDir, result, timestamp);
 
-  await mkdir(dirname(reportPath), { recursive: true });
-  await writeFile(reportPath, renderRequirementCourtMarkdown(result));
-  return formatRequirementCourtReportPathForOutput(input.rootDir, reportPath);
+  await mkdir(dirname(markdownReportPath), { recursive: true });
+  await writeFile(markdownReportPath, renderRequirementCourtMarkdown(result));
+  await mkdir(dirname(htmlReportPath), { recursive: true });
+  await writeFile(htmlReportPath, renderRequirementCourtHtml(result));
+
+  return {
+    markdown: formatRequirementCourtReportPathForOutput(input.rootDir, markdownReportPath),
+    html: formatRequirementCourtReportPathForOutput(input.rootDir, htmlReportPath),
+  };
+}
+
+function replacePathExtension(path: string, extension: string): string {
+  const currentExtension = extname(path);
+  if (!currentExtension) {
+    return `${path}${extension}`;
+  }
+
+  return `${path.slice(0, -currentExtension.length)}${extension}`;
 }
 
 function createRunRequirementCourtInput(
@@ -965,6 +992,7 @@ interface RequirementCourtOutputOptions {
   discussionHeading?: string | undefined;
   printVisibleThinking?: boolean | undefined;
   markdownReportPath?: string | undefined;
+  htmlReportPath?: string | undefined;
 }
 
 function printRequirementCourtResult(
@@ -975,6 +1003,7 @@ function printRequirementCourtResult(
     discussionHeading: options.discussionHeading,
     includeVisibleThinking: options.printVisibleThinking,
     markdownReportPath: options.markdownReportPath,
+    htmlReportPath: options.htmlReportPath,
     style: { heading: pc.cyan },
   })) {
     console.log(line);

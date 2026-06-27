@@ -1079,18 +1079,29 @@ describe("cli", () => {
 
       const lines = stripAnsiLines(logs);
       const judgeSummaryIndex = lines.findIndex((line) => line.includes("Judge summary"));
-      const reportLineIndex = lines.findIndex((line) => line.startsWith("Markdown report: "));
+      const markdownLineIndex = lines.findIndex((line) => line.startsWith("Markdown report: "));
+      const htmlLineIndex = lines.findIndex((line) => line.startsWith("HTML approval report: "));
       const finalVotesIndex = lines.findIndex((line) => line.includes("Final votes"));
-      const reportPath = lines[reportLineIndex]?.replace("Markdown report: ", "") ?? "";
+      const markdownPath = lines[markdownLineIndex]?.replace("Markdown report: ", "") ?? "";
+      const htmlPath = lines[htmlLineIndex]?.replace("HTML approval report: ", "") ?? "";
 
-      expect(reportPath.startsWith(".ponyrace/ponyrace/")).toBe(true);
-      expect(reportPath.endsWith("-add-csv-import-to-admin-dashboard.md")).toBe(true);
-      expect(reportLineIndex).toBeGreaterThan(judgeSummaryIndex);
-      expect(reportLineIndex).toBeLessThan(finalVotesIndex);
+      expect(markdownPath.startsWith(".ponyrace/ponyrace/")).toBe(true);
+      expect(markdownPath.endsWith("-add-csv-import-to-admin-dashboard.md")).toBe(true);
+      expect(htmlPath.startsWith(".ponyrace/ponyrace/")).toBe(true);
+      expect(htmlPath.endsWith("-add-csv-import-to-admin-dashboard.html")).toBe(true);
+      expect(markdownLineIndex).toBeGreaterThan(judgeSummaryIndex);
+      expect(htmlLineIndex).toBe(markdownLineIndex + 1);
+      expect(htmlLineIndex).toBeLessThan(finalVotesIndex);
 
-      const report = await readFile(join(rootDir, reportPath), "utf8");
-      expect(report).toContain("# Pony race: Add CSV import to admin dashboard");
-      expect(report).toContain("Human confirmation: pending");
+      const markdownReport = await readFile(join(rootDir, markdownPath), "utf8");
+      expect(markdownReport).toContain("# Pony race: Add CSV import to admin dashboard");
+      expect(markdownReport).toContain("Human confirmation: pending");
+
+      const htmlReport = await readFile(join(rootDir, htmlPath), "utf8");
+      expect(htmlReport).toContain("<!doctype html>");
+      expect(htmlReport).toContain("Should I approve this?");
+      expect(htmlReport).toContain("What exactly changes?");
+      expect(htmlReport).toContain("Human confirmation: pending");
     } finally {
       console.log = originalLog;
       await rm(rootDir, { recursive: true, force: true });
@@ -1179,8 +1190,13 @@ describe("cli", () => {
       );
 
       const report = await readFile(join(rootDir, reportPath), "utf8");
+      const htmlReport = await readFile(join(rootDir, "outputs", "ponyrace-report.html"), "utf8");
 
       expect(stripAnsiLines(logs)).toContain(`Markdown report: ${reportPath}`);
+      expect(stripAnsiLines(logs)).toContain("HTML approval report: outputs/ponyrace-report.html");
+      expect(htmlReport).toContain("<title>Approve: Add CSV import to admin dashboard</title>");
+      expect(htmlReport).toContain("What did the review bots say?");
+      expect(htmlReport).toContain("Product Manager Bot");
       expect(report).toContain("# Pony race: Add CSV import to admin dashboard");
       expect(report).toContain("## Discussion");
       expect(report).toContain("product_manager_bot: I think");
