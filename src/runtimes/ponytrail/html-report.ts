@@ -17,54 +17,73 @@ export function renderRequirementCourtHtml(result: RequirementCourtResult): stri
   <style>
     :root {
       color-scheme: light;
-      --bg: #f7f8fa;
-      --panel: #ffffff;
-      --ink: #1f2933;
-      --muted: #667085;
-      --line: #d9dee7;
-      --accent: #2563eb;
-      --approve: #157347;
-      --amend: #9a6700;
-      --reject: #b42318;
+      --page-bg: #f7f3ed;
+      --panel: #fffdf9;
+      --panel-soft: #fbf7f0;
+      --ink: #211c18;
+      --muted: #766b61;
+      --line: rgba(69, 56, 44, 0.14);
+      --accent: #b86b43;
+      --accent-soft: #f7e5d8;
+      --approve: #24745a;
+      --approve-soft: #e6f1ec;
+      --amend: #9a6a24;
+      --amend-soft: #f5ead5;
+      --reject: #ad3d32;
+      --shadow: 0 24px 80px rgba(49, 39, 29, 0.12);
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      background: var(--bg);
+      background:
+        radial-gradient(circle at top left, rgba(184, 107, 67, 0.16), transparent 28rem),
+        linear-gradient(180deg, #fbf8f3 0%, var(--page-bg) 52%, #f3eee6 100%);
       color: var(--ink);
-      font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font: 16px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
     }
     main {
-      width: min(1120px, calc(100% - 32px));
+      width: min(1080px, calc(100% - 32px));
       margin: 0 auto;
-      padding: 32px 0 48px;
+      padding: 40px 0 56px;
     }
-    header, section, article {
+    .approval-hero, .review-section, .review-card, .bot-card {
       background: var(--panel);
       border: 1px solid var(--line);
-      border-radius: 8px;
+      border-radius: 22px;
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, var(--shadow);
     }
-    header {
-      padding: 28px;
-      margin-bottom: 18px;
+    .approval-hero {
+      padding: 34px;
+      margin-bottom: 20px;
     }
-    section {
-      padding: 22px;
+    .review-section {
+      padding: 26px;
       margin-top: 18px;
     }
-    article {
-      padding: 16px;
+    .review-card, .bot-card {
+      padding: 18px;
+      box-shadow: 0 14px 40px rgba(49, 39, 29, 0.06);
     }
     h1, h2, h3 {
       margin: 0;
       line-height: 1.2;
     }
     h1 {
-      font-size: 32px;
+      max-width: 820px;
+      font-size: 40px;
+      font-weight: 760;
       letter-spacing: 0;
     }
-    h2 { font-size: 22px; }
-    h3 { font-size: 17px; }
+    h2 {
+      font-size: 22px;
+      font-weight: 720;
+      letter-spacing: 0;
+    }
+    h3 {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
     p { margin: 10px 0 0; }
     ul {
       margin: 12px 0 0;
@@ -72,22 +91,47 @@ export function renderRequirementCourtHtml(result: RequirementCourtResult): stri
     }
     li + li { margin-top: 6px; }
     .muted { color: var(--muted); }
-    .status-row {
+    .eyebrow, .section-kicker {
+      margin: 0 0 10px;
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+    .hero-copy {
+      max-width: 760px;
+      color: var(--muted);
+      font-size: 17px;
+    }
+    .approval-summary {
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
-      margin-top: 18px;
+      margin-top: 22px;
     }
-    .pill {
+    .status-pill {
       display: inline-flex;
       align-items: center;
-      min-height: 30px;
-      padding: 4px 10px;
+      min-height: 34px;
+      padding: 6px 12px;
       border: 1px solid var(--line);
       border-radius: 999px;
-      background: #f9fafb;
+      background: rgba(255, 255, 255, 0.62);
       font-size: 14px;
+      font-weight: 620;
       color: var(--muted);
+      backdrop-filter: blur(12px);
+    }
+    .status-pending {
+      border-color: rgba(184, 107, 67, 0.28);
+      background: var(--accent-soft);
+      color: #744023;
+    }
+    .status-approved {
+      border-color: rgba(36, 116, 90, 0.22);
+      background: var(--approve-soft);
+      color: var(--approve);
     }
     .grid {
       display: grid;
@@ -101,18 +145,23 @@ export function renderRequirementCourtHtml(result: RequirementCourtResult): stri
     }
     .check {
       display: flex;
+      justify-content: space-between;
       gap: 10px;
       align-items: flex-start;
-      padding: 10px 12px;
+      padding: 12px 14px;
       border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #fbfcfe;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.68);
     }
-    .check-mark {
+    .check-status {
       color: var(--approve);
+      font-size: 13px;
       font-weight: 700;
     }
-    .needs-review .check-mark {
+    .needs-review {
+      background: var(--amend-soft);
+    }
+    .needs-review .check-status {
       color: var(--amend);
     }
     .round {
@@ -120,6 +169,7 @@ export function renderRequirementCourtHtml(result: RequirementCourtResult): stri
       padding: 0;
       border: 0;
       background: transparent;
+      box-shadow: none;
     }
     .cards {
       display: grid;
@@ -133,21 +183,41 @@ export function renderRequirementCourtHtml(result: RequirementCourtResult): stri
       gap: 12px;
       align-items: flex-start;
     }
-    .vote-approve { color: var(--approve); }
-    .vote-amend { color: var(--amend); }
-    .vote-reject { color: var(--reject); }
+    .vote-badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 720;
+      white-space: nowrap;
+    }
+    .vote-approve {
+      background: var(--approve-soft);
+      color: var(--approve);
+    }
+    .vote-amend {
+      background: var(--amend-soft);
+      color: var(--amend);
+    }
+    .vote-reject {
+      background: #f9e4e1;
+      color: var(--reject);
+    }
     .timeline {
       grid-template-columns: repeat(5, minmax(0, 1fr));
     }
-    .step {
+    .timeline-step {
       border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 12px;
-      background: #fbfcfe;
+      border-radius: 16px;
+      padding: 14px;
+      background: var(--panel-soft);
       min-height: 72px;
     }
-    .step strong {
+    .timeline-step strong {
       display: block;
+      margin-bottom: 6px;
     }
     .list-group {
       margin-top: 14px;
@@ -157,6 +227,9 @@ export function renderRequirementCourtHtml(result: RequirementCourtResult): stri
       font-size: 14px;
       color: var(--muted);
       text-transform: uppercase;
+    }
+    .review-card ul, .bot-card ul {
+      color: #332a22;
     }
     @media (max-width: 760px) {
       main {
@@ -171,32 +244,35 @@ export function renderRequirementCourtHtml(result: RequirementCourtResult): stri
     @media print {
       body { background: #ffffff; }
       main { width: 100%; padding: 0; }
-      header, section, article { break-inside: avoid; }
+      .approval-hero, .review-section, .review-card, .bot-card { break-inside: avoid; box-shadow: none; }
     }
   </style>
 </head>
 <body>
   <main>
-    <header>
-      <p class="muted">Ponytrail approval packet</p>
+    <header class="approval-hero">
+      <p class="eyebrow">Ponytrail approval review</p>
       <h1>${escapeHtml(title)}</h1>
-      <p>${escapeHtml(result.detailedRequirement.intent)}</p>
-      <div class="status-row">
-        <span class="pill">Human confirmation: ${escapeHtml(result.humanConfirmation)}</span>
-        <span class="pill">Review verdict: ${
+      <p class="hero-copy">${escapeHtml(result.detailedRequirement.intent)}</p>
+      <div class="approval-summary">
+        <span class="status-pill status-pending">Human approval pending</span>
+        <span class="status-pill">Human confirmation: ${escapeHtml(result.humanConfirmation)}</span>
+        <span class="status-pill status-approved">Review ${
           result.verdict.approved ? "approved" : "not approved"
         }</span>
-        <span class="pill">Approvals: ${result.verdict.approvals}</span>
+        <span class="status-pill">${result.verdict.approvals} approvals</span>
       </div>
     </header>
 
-    <section>
+    <section class="review-section">
+      <p class="section-kicker">Approval gate</p>
       <h2>Should I approve this?</h2>
       <p class="muted">Approve only if the scope, evidence, and remaining risks match the intended change.</p>
       ${renderApprovalChecklist(result)}
     </section>
 
-    <section>
+    <section class="review-section">
+      <p class="section-kicker">Scope</p>
       <h2>What exactly changes?</h2>
       <div class="grid">
         ${renderListPanel("Will change", getDetailedRequirementChanges(result.detailedRequirement))}
@@ -204,7 +280,8 @@ export function renderRequirementCourtHtml(result: RequirementCourtResult): stri
       </div>
     </section>
 
-    <section>
+    <section class="review-section">
+      <p class="section-kicker">Evidence</p>
       <h2>How will we know it worked?</h2>
       <div class="grid">
         ${renderListPanel("Acceptance criteria", result.detailedRequirement.acceptanceCriteria)}
@@ -212,7 +289,8 @@ export function renderRequirementCourtHtml(result: RequirementCourtResult): stri
       </div>
     </section>
 
-    <section>
+    <section class="review-section">
+      <p class="section-kicker">Risk</p>
       <h2>Risks and open questions</h2>
       <div class="grid">
         ${renderListPanel("Risks", result.detailedRequirement.risks)}
@@ -220,18 +298,20 @@ export function renderRequirementCourtHtml(result: RequirementCourtResult): stri
       </div>
     </section>
 
-    <section>
+    <section class="review-section">
+      <p class="section-kicker">Role review</p>
       <h2>What did the review bots say?</h2>
       ${result.rounds.map(renderRound).join("\n")}
     </section>
 
-    <section>
+    <section class="review-section">
+      <p class="section-kicker">Next path</p>
       <h2>What happens next?</h2>
       <div class="timeline">
         ${["brainstorm", "plan", "human approval", "implementation", "verification"]
           .map(
             (step, index) =>
-              `<div class="step"><strong>${index + 1}. ${step}</strong><span class="muted">${renderTimelineCaption(
+              `<div class="timeline-step"><strong>${index + 1}. ${step}</strong><span class="muted">${renderTimelineCaption(
                 step,
               )}</span></div>`,
           )
@@ -270,15 +350,15 @@ function renderApprovalChecklist(result: RequirementCourtResult): string {
 
 function renderCheck(check: { label: string; met: boolean }): string {
   const className = check.met ? "check" : "check needs-review";
-  const mark = check.met ? "OK" : "REVIEW";
+  const status = check.met ? "Ready" : "Needs review";
 
-  return `<div class="${className}"><span class="check-mark">${mark}</span><span>${escapeHtml(
+  return `<div class="${className}"><span>${escapeHtml(
     check.label,
-  )}</span></div>`;
+  )}</span><span class="check-status">${status}</span></div>`;
 }
 
 function renderListPanel(title: string, values: string[]): string {
-  return `<article>
+  return `<article class="review-card">
     <h3>${escapeHtml(title)}</h3>
     ${renderList(values)}
   </article>`;
@@ -302,13 +382,13 @@ function renderRound(round: RequirementCourtRound): string {
 }
 
 function renderDiscussionEntry(entry: RequirementDiscussionEntry): string {
-  return `<article>
+  return `<article class="bot-card">
     <div class="card-head">
       <div>
         <h3>${escapeHtml(entry.displayName)}</h3>
         <p class="muted">${escapeHtml(entry.botId)} - ${escapeHtml(entry.role)}</p>
       </div>
-      <strong class="vote-${entry.vote}">${escapeHtml(entry.vote)} - ${Math.round(
+      <strong class="vote-badge vote-${entry.vote}">${escapeHtml(entry.vote)} - ${Math.round(
         entry.confidence * 100,
       )}%</strong>
     </div>

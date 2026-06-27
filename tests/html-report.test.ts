@@ -35,6 +35,29 @@ describe("requirement court HTML approval report", () => {
     expect(html).toContain("verification");
   });
 
+  test("renders a Claude and Apple inspired review style", () => {
+    const result = createCourtResult({ exclude: [] });
+
+    const html = renderRequirementCourtHtml(result);
+
+    expect(html).toContain("--page-bg: #f7f3ed;");
+    expect(html).toContain("--accent: #b86b43;");
+    expect(html).toContain("--shadow: 0 24px 80px rgba(49, 39, 29, 0.12);");
+    expect(html).toContain('class="approval-hero"');
+    expect(html).toContain("Ponytrail approval review");
+    expect(html).toContain("Human approval pending");
+    expect(html).toContain('class="approval-summary"');
+    expect(html).toContain('class="status-pill status-pending"');
+    expect(html).toContain('class="review-section"');
+    expect(html).toContain('class="review-card"');
+    expect(html).toContain('class="bot-card"');
+    expect(html).toContain('class="timeline-step"');
+    expect(html).toContain(">Ready<");
+    expect(html).toContain(">Needs review<");
+    expect(html).not.toContain("OK</span>");
+    expect(html).not.toContain("REVIEW</span>");
+  });
+
   test("escapes user and model text before inserting it into HTML", () => {
     const result = createCourtResult({
       title: 'Render <script>alert("x")</script> approval',
