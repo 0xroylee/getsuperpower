@@ -328,7 +328,9 @@ async function resolveSuperpowersSkill(
   options: ResolveInstallSkillSourceOptions,
 ): Promise<ResolvedInstallSkillSource> {
   const homeDir = options.homeDir ?? process.env.HOME ?? process.cwd();
-  const skillPath = await findSuperpowersSkillPath(homeDir, skill.skillFolder);
+  const skillPath =
+    (await findSuperpowersSkillPath(homeDir, skill.skillFolder)) ??
+    (await findInstalledSuperpowersSkillPath(homeDir, skill));
 
   if (!skillPath) {
     throw new MissingSuperpowersSkillError({
@@ -342,6 +344,16 @@ async function resolveSuperpowersSkill(
     name: skill.installName,
     path: skillPath,
   };
+}
+
+async function findInstalledSuperpowersSkillPath(
+  homeDir: string,
+  skill: SupportedSuperpowersSkill,
+): Promise<string | null> {
+  return (
+    (await findInstalledSkillPath(homeDir, skill.installName)) ??
+    (await findInstalledSkillPath(homeDir, skill.skillFolder))
+  );
 }
 
 async function findSuperpowersSkillPath(

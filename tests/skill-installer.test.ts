@@ -173,6 +173,28 @@ describe("skill installer", () => {
     }
   });
 
+  test("resolves superpowers brainstorming from installed local skill folders", async () => {
+    const homeDir = await mkdtemp(join(tmpdir(), "skill-installer-home-"));
+    const sourceDir = join(homeDir, ".agents", "skills", "brainstorming");
+
+    try {
+      await writeSuperpowersSkill(sourceDir, {
+        name: "brainstorming",
+        description: "You MUST use this before any creative work.",
+      });
+
+      const source = await resolveInstallSkillSource("superpowers:brainstorming", { homeDir });
+
+      expect(source).toEqual({
+        kind: "path",
+        name: "superpowers-brainstorming",
+        path: sourceDir,
+      });
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
   test("explains how to install superpowers brainstorming when the plugin cache is missing", async () => {
     const homeDir = await mkdtemp(join(tmpdir(), "skill-installer-home-"));
 
