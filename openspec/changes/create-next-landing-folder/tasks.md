@@ -20,8 +20,8 @@
 
 ## 3. Plan Implementation
 
-- [ ] Write the implementation plan in `docs/superpowers/plans/`.
-- [ ] Include TDD slices for the Next app scaffold, ported components, Tailwind
+- [x] Write the implementation plan in `docs/superpowers/plans/`.
+- [x] Include TDD slices for the Next app scaffold, ported components, Tailwind
       setup, metadata, docs, and verification commands.
 
 ## 4. Implement With TDD
