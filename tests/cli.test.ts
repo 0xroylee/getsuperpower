@@ -45,6 +45,14 @@ async function writeSuperpowersProcessSkills(homeDir: string): Promise<void> {
 }
 
 describe("cli", () => {
+  const releaseReviewWorkflow = join(
+    import.meta.dir,
+    "..",
+    "examples",
+    "workflows",
+    "release-review",
+  );
+
   test("registers GetSuperpower and skill commands only", () => {
     const program = buildProgram();
 
@@ -88,6 +96,54 @@ describe("cli", () => {
         .find((command) => command.name() === "install")
         ?.options.map((option) => option.long),
     ).not.toContain("--prehook");
+  });
+
+  test("root help presents the GetSuperpower welcome", () => {
+    const program = buildProgram();
+    const output: string[] = [];
+
+    program.configureOutput({
+      writeOut: (value) => output.push(value),
+      writeErr: (value) => output.push(value),
+    });
+    program.outputHelp();
+
+    const help = stripAnsi(output.join(""));
+
+    expect(help).toContain("GETSUPERPOWER");
+    expect(help).toContain("Welcome to GetSuperpower.");
+    expect(help).toContain("Install and author workflow skill trees for agent work.");
+    expect(help).toContain("getsuperpower init release-review");
+    expect(help).toContain("getsuperpower validate ./release-review");
+    expect(help).toContain("getsuperpower clone https://github.com/acme/release-review.git");
+    expect(help).toContain("getsuperpower install ./release-review");
+    expect(help).toContain("getsuperpower deps ./release-review");
+    expect(help).toContain("bundle");
+    expect(help).toContain("Compatibility alias for GetSuperpower authoring.");
+    expect(help).not.toContain("ponyrace");
+    expect(help).not.toContain("history");
+    expect(help).not.toContain("revert");
+  });
+
+  test("no-command invocation prints welcome help", async () => {
+    const program = buildProgram();
+    const output: string[] = [];
+
+    program.exitOverride();
+    program.configureOutput({
+      writeOut: (value) => output.push(value),
+      writeErr: (value) => output.push(value),
+    });
+
+    await expect(program.parseAsync([], { from: "user" })).rejects.toMatchObject({
+      code: "commander.help",
+      exitCode: 0,
+    });
+
+    const text = stripAnsi(output.join(""));
+    expect(text).toContain("GETSUPERPOWER");
+    expect(text).toContain("Welcome to GetSuperpower.");
+    expect(text).toContain("Usage: getsuperpower");
   });
 
   test("prints the CLI version with -v", async () => {
@@ -149,7 +205,7 @@ describe("cli", () => {
     }
   });
 
-  test("workflow install installs product-dev skills and lists the installed GetSuperpower", async () => {
+  test("workflow install installs example workflow skills and lists the installed GetSuperpower", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "ponytrail-workflow-cli-"));
     const homeDir = await mkdtemp(join(tmpdir(), "ponytrail-workflow-home-"));
     const logs: string[] = [];
@@ -163,21 +219,26 @@ describe("cli", () => {
       await writeSuperpowersProcessSkills(homeDir);
 
       await buildProgram({ cwd: rootDir }).parseAsync(
-        ["workflow", "install", "product-dev", "--home", homeDir, "--agents", "codex"],
+        ["workflow", "install", releaseReviewWorkflow, "--home", homeDir, "--agents", "codex"],
         { from: "user" },
       );
       await buildProgram({ cwd: rootDir }).parseAsync(["workflow", "list"], { from: "user" });
 
       await expect(
-        stat(join(rootDir, ".getsuperpower", "workflows", "product-dev.json")),
+        stat(join(rootDir, ".getsuperpower", "workflows", "release-review.json")),
       ).resolves.toBeTruthy();
-      for (const skill of ["superpowers-brainstorming", "superpowers-writing-plans"]) {
+      for (const skill of [
+        "release-risk-review",
+        "superpowers-brainstorming",
+        "superpowers-writing-plans",
+        "pony-trail",
+      ]) {
         await expect(
           stat(join(homeDir, ".agents", "skills", skill, "SKILL.md")),
         ).resolves.toBeTruthy();
       }
-      expect(stripAnsiLines(logs)).toContain("GetSuperpower installed: product-dev");
-      expect(stripAnsiLines(logs)).toContain("product-dev 0.1.0");
+      expect(stripAnsiLines(logs)).toContain("GetSuperpower installed: release-review");
+      expect(stripAnsiLines(logs)).toContain("release-review 0.1.0");
     } finally {
       console.log = originalLog;
       await rm(rootDir, { recursive: true, force: true });
@@ -185,7 +246,7 @@ describe("cli", () => {
     }
   });
 
-  test("clone installs product-dev skills and records the workflow from the root command", async () => {
+  test("clone installs example workflow skills and records the workflow from the root command", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "ponytrail-clone-cli-"));
     const homeDir = await mkdtemp(join(tmpdir(), "ponytrail-clone-home-"));
     const logs: string[] = [];
@@ -199,19 +260,24 @@ describe("cli", () => {
       await writeSuperpowersProcessSkills(homeDir);
 
       await buildProgram({ cwd: rootDir }).parseAsync(
-        ["clone", "product-dev", "--home", homeDir, "--agents", "codex"],
+        ["clone", releaseReviewWorkflow, "--home", homeDir, "--agents", "codex"],
         { from: "user" },
       );
 
       await expect(
-        stat(join(rootDir, ".getsuperpower", "workflows", "product-dev.json")),
+        stat(join(rootDir, ".getsuperpower", "workflows", "release-review.json")),
       ).resolves.toBeTruthy();
-      for (const skill of ["superpowers-brainstorming", "superpowers-writing-plans"]) {
+      for (const skill of [
+        "release-risk-review",
+        "superpowers-brainstorming",
+        "superpowers-writing-plans",
+        "pony-trail",
+      ]) {
         await expect(
           stat(join(homeDir, ".agents", "skills", skill, "SKILL.md")),
         ).resolves.toBeTruthy();
       }
-      expect(stripAnsiLines(logs)).toContain("GetSuperpower installed: product-dev");
+      expect(stripAnsiLines(logs)).toContain("GetSuperpower installed: release-review");
     } finally {
       console.log = originalLog;
       await rm(rootDir, { recursive: true, force: true });

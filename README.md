@@ -11,17 +11,18 @@ TDD, and archive the result without the user calling each skill separately.
 
 ## Quick Start
 
-Install or clone the default product-development GetSuperpower:
+Install a workflow example from the GetSuperpower git repository:
 
 ```bash
-npx getsuperpower@latest install product-dev
+npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/openspec-superpowers'
 ```
 
-Install workflow examples from the GetSuperpower git repository:
+Install other workflow examples the same way:
 
 ```bash
 npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/release-review'
-npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/openspec-superpowers'
+npx getsuperpower@latest clone 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/real-engineering'
+npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/development-design-delivery'
 ```
 
 List installed GetSuperpowers:
@@ -122,6 +123,7 @@ The full guide is in [`docs/workflow-author-guide.md`](docs/workflow-author-guid
 | Example | Use it for | Notes |
 | --- | --- | --- |
 | `examples/workflows/openspec-superpowers` | OpenSpec Delivery: proposal -> design -> plan -> TDD -> verification -> archive. | Includes `$openspec-delivery`. |
+| `examples/workflows/development-design-delivery` | Product-minded engineering: shape -> interface design -> plan -> TDD -> review -> evidence. | Includes `$development-design-delivery`. |
 | `examples/workflows/real-engineering` | RTK, `pony-trail`, Superpowers, and Matt Pocock skills together. | Fetches Matt Pocock skills if missing. |
 | `examples/workflows/release-review` | Small release-risk review workflow. | Good starter example. |
 
@@ -135,8 +137,8 @@ npx getsuperpower@latest skills install mattpocock/skills
 
 | Command | Purpose |
 | --- | --- |
-| `npx getsuperpower@latest install product-dev` | Install the default GetSuperpower. |
-| `npx getsuperpower@latest clone product-dev` | Same as install; deploy a GetSuperpower by name or source. |
+| `npx getsuperpower@latest install <path-or-git-url>` | Install a GetSuperpower from a local path or public git source. |
+| `npx getsuperpower@latest clone <path-or-git-url>` | Same as install; deploy a GetSuperpower from a local path or public git source. |
 | `npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/release-review'` | Install a GetSuperpower from a public git repo. |
 | `npx getsuperpower@latest deps <source>` | Show required skills before install or clone. |
 | `npx getsuperpower@latest list` | Show installed GetSuperpowers. |
@@ -169,6 +171,15 @@ bun run build
 bun test
 bun run check
 bun scripts/smoke-public-git-install.ts
+```
+
+Landing app:
+
+```bash
+cd landing
+bun install
+bun run dev
+bun run build
 ```
 
 ## Compatibility
