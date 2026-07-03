@@ -21,7 +21,7 @@ import { installAgentSkill, parseSkillInstallAgents, type SkillInstallResult } f
 
 type SkillChangeOperation = "install" | "update";
 
-const CLI_VERSION = "0.3.1";
+const CLI_VERSION = "0.3.3";
 
 interface CommanderVersionInternals {
   _outputConfiguration: {
