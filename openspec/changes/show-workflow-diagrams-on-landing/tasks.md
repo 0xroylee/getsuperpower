@@ -29,25 +29,27 @@
 
 ## 4. Implement With TDD
 
-- [ ] Confirm public test seams with the human owner before writing tests.
-- [ ] Add failing landing source-contract tests that workflow cards link to
+- [x] Confirm public test seams with the human owner before writing tests.
+- [x] Add failing landing source-contract tests that workflow cards link to
       `/workflows/[slug]`.
-- [ ] Add failing tests that a route page exists for workflow details and uses
+- [x] Add failing tests that a route page exists for workflow details and uses
       local static workflow data.
-- [ ] Add failing tests that unknown slugs use `notFound()`.
-- [ ] Extend workflow content with any detail-page fields needed by the route.
-- [ ] Update `landing/components/workflow-card.tsx` to render a route link.
-- [ ] Add `landing/app/workflows/[slug]/page.tsx`.
-- [ ] Adapt `WorkflowDetail` for route-level rendering or create a focused
+- [x] Add failing tests that unknown slugs use `notFound()`.
+- [x] Extend workflow content with any detail-page fields needed by the route.
+- [x] Update `landing/components/workflow-card.tsx` to render a route link.
+- [x] Add `landing/app/workflows/[slug]/page.tsx`.
+- [x] Adapt `WorkflowDetail` for route-level rendering or create a focused
       route detail component.
-- [ ] Remove landing-page selected-workflow state if route-only detail is
+- [x] Remove landing-page selected-workflow state if route-only detail is
       approved.
-- [ ] Run focused landing tests and type checks.
+- [x] Run focused landing tests and type checks.
 
 ## 5. Verify And Archive
 
-- [ ] Run landing app typecheck and build checks.
-- [ ] Run `rtk bun run check`.
-- [ ] Smoke the landing page and detail pages in desktop and mobile viewports.
-- [ ] Record Pony Trail post-change evidence.
+- [x] Run landing app typecheck and build checks.
+- [x] Run `rtk bun run check`.
+- [x] Smoke the landing page and detail pages with local HTTP route and content
+      checks. Browser viewport smoke was attempted, but Playwright Chromium was
+      blocked by the local macOS sandbox.
+- [x] Record Pony Trail post-change evidence.
 - [ ] Run `/opsx:archive` after human approval.
