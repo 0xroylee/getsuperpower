@@ -274,13 +274,15 @@ async function installGetSuperpowerSkillDependency(input: {
       throw error;
     }
 
-    if (!input.installedExternalPackages.has(externalPackage)) {
+    const externalInstallKey = getSkillsCliInstallKeyForSource(input.source) ?? externalPackage;
+
+    if (!input.installedExternalPackages.has(externalInstallKey)) {
       console.log(keyValue("Installing external skill dependency", externalPackage));
       await input.installExternalSkillDependency({
         source: input.source,
         homeDir: input.homeDir,
       });
-      input.installedExternalPackages.add(externalPackage);
+      input.installedExternalPackages.add(externalInstallKey);
     }
 
     try {
@@ -358,6 +360,35 @@ export function getSkillsCliPackageForSource(source: string): string | null {
   return `${owner}/${repo}`;
 }
 
+function getSkillsCliInstallKeyForSource(source: string): string | null {
+  const skillName = getSkillsCliSkillNameForSource(source);
+  if (!skillName) {
+    return getSkillsCliPackageForSource(source);
+  }
+
+  const packageName = getSkillsCliPackageForSource(source);
+  return packageName ? `${packageName}:${skillName}` : null;
+}
+
+function getSkillsCliSkillNameForSource(source: string): string | null {
+  if (source.startsWith("superpowers:")) {
+    return source.slice("superpowers:".length).trim() || null;
+  }
+
+  if (source.startsWith("mattpocock:")) {
+    return source.slice("mattpocock:".length).trim() || null;
+  }
+
+  const mattPocockGithubPrefix = "github:mattpocock/skills/";
+  if (source.startsWith(mattPocockGithubPrefix)) {
+    const suffix = source.slice(mattPocockGithubPrefix.length);
+    const skillPath = suffix.startsWith("skills/") ? suffix.slice("skills/".length) : suffix;
+    return skillPath.trim() || null;
+  }
+
+  return null;
+}
+
 function isBareSkillsCliPackage(source: string): boolean {
   return /^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/.test(source);
 }
@@ -370,9 +401,15 @@ export async function installExternalSkillDependencyWithSkillsCli(
     throw new Error(`No skills CLI package is known for dependency: ${input.source}`);
   }
 
+  const args = ["--yes", "skills@latest", "add", packageName, "--yes", "--global"];
+  const skillName = getSkillsCliSkillNameForSource(input.source);
+  if (skillName) {
+    args.push("--skill", skillName, "--agent", "codex");
+  }
+
   const result = await (input.runCommand ?? runExternalSkillCommand)({
     executable: "npx",
-    args: ["--yes", "skills@latest", "add", packageName, "--yes", "--global"],
+    args,
     cwd: input.homeDir,
     env: {
       ...process.env,

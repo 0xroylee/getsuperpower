@@ -738,13 +738,14 @@ describe("getsuperpower command module", () => {
     ).resolves.toBeTruthy();
   });
 
-  test("uses the skills CLI once before retrying missing Superpowers workflow skills", async () => {
+  test("uses the skills CLI before retrying each missing Superpowers workflow skill", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "getsuperpower-"));
     const homeDir = await mkdtemp(join(tmpdir(), "getsuperpower-home-"));
     const bundleDir = join(rootDir, "superpowers-bundle");
     const externalInstalls: Array<{ source: string; homeDir: string }> = [];
     const skillInstalls: string[] = [];
     const printedSkills: string[] = [];
+    const installedExternalSources = new Set<string>();
     const program = new Command();
 
     await mkdir(bundleDir, { recursive: true });
@@ -782,10 +783,14 @@ describe("getsuperpower command module", () => {
       rootDir,
       installSkill: async (input) => {
         skillInstalls.push(input.source);
-        if (input.source === "superpowers:brainstorming" && externalInstalls.length === 0) {
+        if (
+          (input.source === "superpowers:brainstorming" ||
+            input.source === "superpowers:writing-plans") &&
+          !installedExternalSources.has(input.source)
+        ) {
           throw new MissingSuperpowersSkillError({
-            displayName: "brainstorming",
-            source: "superpowers:brainstorming",
+            displayName: input.source.replace("superpowers:", ""),
+            source: input.source,
           });
         }
 
@@ -802,6 +807,7 @@ describe("getsuperpower command module", () => {
       },
       installExternalSkillDependency: async (input) => {
         externalInstalls.push(input);
+        installedExternalSources.add(input.source);
       },
     });
 
@@ -814,8 +820,12 @@ describe("getsuperpower command module", () => {
       "superpowers:brainstorming",
       "superpowers:brainstorming",
       "superpowers:writing-plans",
+      "superpowers:writing-plans",
     ]);
-    expect(externalInstalls).toEqual([{ source: "superpowers:brainstorming", homeDir }]);
+    expect(externalInstalls).toEqual([
+      { source: "superpowers:brainstorming", homeDir },
+      { source: "superpowers:writing-plans", homeDir },
+    ]);
     expect(printedSkills).toEqual(["superpowers-brainstorming", "superpowers-writing-plans"]);
     await expect(
       stat(join(rootDir, ".getsuperpower", "workflows", "superpowers-bundle.json")),
@@ -884,7 +894,18 @@ describe("getsuperpower command module", () => {
     expect(commands).toEqual([
       {
         executable: "npx",
-        args: ["--yes", "skills@latest", "add", "mattpocock/skills", "--yes", "--global"],
+        args: [
+          "--yes",
+          "skills@latest",
+          "add",
+          "mattpocock/skills",
+          "--yes",
+          "--global",
+          "--skill",
+          "tdd",
+          "--agent",
+          "codex",
+        ],
         cwd: homeDir,
         env: expect.objectContaining({ HOME: homeDir }),
       },
@@ -930,7 +951,18 @@ describe("getsuperpower command module", () => {
     expect(commands).toEqual([
       {
         executable: "npx",
-        args: ["--yes", "skills@latest", "add", "obra/superpowers", "--yes", "--global"],
+        args: [
+          "--yes",
+          "skills@latest",
+          "add",
+          "obra/superpowers",
+          "--yes",
+          "--global",
+          "--skill",
+          "brainstorming",
+          "--agent",
+          "codex",
+        ],
         cwd: homeDir,
         env: expect.objectContaining({ HOME: homeDir }),
       },
