@@ -55,9 +55,7 @@ export default async function WorkflowPage({ params }: WorkflowPageProps) {
           <h1 className="mt-5 text-4xl font-semibold leading-tight text-white sm:text-5xl">
             {workflow.name}
           </h1>
-          <p className="mt-5 max-w-2xl text-base leading-7 text-white/48">
-            {workflow.description}
-          </p>
+          <p className="mt-5 max-w-2xl text-base leading-7 text-white/48">{workflow.description}</p>
 
           <div className="mt-8 rounded-lg border border-white/10 bg-white/[0.035] p-4">
             <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-white/35">
@@ -82,9 +80,7 @@ export default async function WorkflowPage({ params }: WorkflowPageProps) {
 
         <aside className="rounded-lg border border-white/10 bg-white/[0.035] p-5">
           <div className="mb-5">
-            <p className="mb-2 text-xs uppercase tracking-[0.18em] text-white/35">
-              Workflow steps
-            </p>
+            <p className="mb-2 text-xs uppercase tracking-[0.18em] text-white/35">Workflow steps</p>
             <h2 className="text-xl font-medium text-white/90">Ordered skill path</h2>
           </div>
 

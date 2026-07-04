@@ -79,7 +79,7 @@ describe("landing app source contract", () => {
     const card = readLandingFile("components/workflow-card.tsx");
 
     expect(card).toContain('import Link from "next/link"');
-    expect(card).toContain('href={`/workflows/${slug}`}');
+    expect(card).toContain(`href={\`/workflows/\${slug}\`}`);
     expect(card).toContain("View workflow");
     expect(card).not.toContain("isSelected");
     expect(card).not.toContain("onViewWorkflow");
