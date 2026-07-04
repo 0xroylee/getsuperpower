@@ -19,7 +19,7 @@ describe("package metadata", () => {
     const packageMetadata = await readPackageMetadata();
 
     expect(packageMetadata.name).toBe("getsuperpower");
-    expect(packageMetadata.version).toBe("0.3.3");
+    expect(packageMetadata.version).toBe("0.3.4");
     expect(packageMetadata.scripts?.build).toBe(
       "bun build --target=bun --outfile=dist/cli.js src/cli.ts",
     );

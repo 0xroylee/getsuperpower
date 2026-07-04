@@ -147,7 +147,7 @@ describe("cli", () => {
 
   test("prints the CLI version with -v", async () => {
     const program = buildProgram();
-    const expectedVersion = "0.3.3";
+    const expectedVersion = "0.3.4";
     const output: string[] = [];
 
     expect(program.version()).toBe(expectedVersion);
