@@ -1,7 +1,7 @@
 # Create Your Own GetSuperpower
 
 This guide shows the shortest path from an idea to a GetSuperpower that other
-users can install or clone.
+users can install.
 
 Vocabulary:
 
@@ -37,7 +37,7 @@ The authoring skill should help you produce or review:
 - `skills/<workflow-name>/SKILL.md`: the entry skill users call
 - `skills/<local-skill>/SKILL.md`: any local skills used by the workflow
 - validation commands: `getsuperpower validate`, `getsuperpower deps`, and a
-  local `install` or `clone` smoke test
+  local `install` smoke test
 
 Use the rest of this guide as the checklist for what that skill should create.
 If you are editing by hand, follow the same steps yourself.
@@ -103,9 +103,9 @@ Example:
   "description": "Clarify, review, plan, and preserve evidence for support fixes.",
   "skills": [
     { "source": "./skills/support-triage" },
-    { "source": "superpowers:brainstorming" },
+    { "source": "superpowers:brainstorming", "repo": "obra/superpowers" },
     { "source": "./skills/support-review" },
-    { "source": "superpowers:writing-plans" }
+    { "source": "superpowers:writing-plans", "repo": "obra/superpowers" }
   ],
   "steps": [
     {
@@ -131,6 +131,10 @@ Example:
 
 Keep every `steps[].skill` value exactly equal to one of the `skills[].source`
 values.
+
+For a skill installed from the Skills CLI, keep `source` as the original skill
+name used by workflow steps, and set `repo` to the package passed to
+`npx skills add`, such as `obra/superpowers` or `mattpocock/skills`.
 
 The entry skill itself belongs in `skills[]`, but it does not need its own step.
 It is the callable wrapper that instructs the agent to run the declared steps.
@@ -217,15 +221,11 @@ Show the dependencies before installing:
 bun run dev -- deps examples/workflows/support-triage
 ```
 
-Install or clone it into a project:
+Install it into a project:
 
 ```bash
 bun run dev -- install examples/workflows/support-triage
-bun run dev -- clone examples/workflows/support-triage
 ```
-
-`clone` is the same operation as `install`; it exists so shared GetSuperpowers
-feel natural to adopt from another author.
 
 Then list installed GetSuperpowers:
 
@@ -254,6 +254,18 @@ GetSuperpower lives at:
 
 ```text
 git@github.com:0xroylee/getsuperpower.git
+```
+
+Checked-in examples under `examples/workflows` can be installed by folder alias:
+
+```bash
+npx getsuperpower@latest install support-triage
+```
+
+That alias resolves to:
+
+```bash
+npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/support-triage'
 ```
 
 If you have write access:

@@ -12,7 +12,7 @@ import {
 } from "./plugins";
 import {
   createWorkflowBundleScaffold,
-  getWorkflowSkillInstallSources,
+  getWorkflowSkillInstallDependencies,
   installWorkflowBundle,
   listInstalledWorkflowBundles,
   loadWorkflowBundle,
@@ -51,6 +51,7 @@ export type GetSuperpowerSkillInstallPrinter = (
 
 export interface GetSuperpowerExternalSkillDependencyInstallInput {
   source: string;
+  repo?: string;
   homeDir: string;
   runCommand?: GetSuperpowerExternalSkillCommandRunner;
 }
@@ -107,8 +108,6 @@ export interface ConfigureGetSuperpowerCommandOptions {
   onboardCommandRunner?: GetSuperpowerOnboardCommandRunner;
 }
 
-type GetSuperpowerInstallVerb = "install" | "clone";
-
 interface GetSuperpowerInstallCommandOptions {
   dir: string;
   agents: string;
@@ -129,7 +128,7 @@ export function configureGetSuperpowerCommand(
   const workflowCommand = program
     .command("workflow")
     .description("Compatibility alias for GetSuperpower install and list commands.");
-  configureInstallCommand(workflowCommand, options, { includeClone: false });
+  configureInstallCommand(workflowCommand, options);
   configureListCommand(workflowCommand, options.rootDir);
 
   return program;
@@ -192,23 +191,14 @@ function configureAuthorCommands(
 function configureInstallCommand(
   command: Command,
   options: ConfigureGetSuperpowerCommandOptions,
-  commandOptions: { includeClone?: boolean } = {},
-): void {
-  configureInstallLikeCommand(command, options, "install");
-  if (commandOptions.includeClone !== false) {
-    configureInstallLikeCommand(command, options, "clone");
-  }
-}
-
-function configureInstallLikeCommand(
-  command: Command,
-  options: ConfigureGetSuperpowerCommandOptions,
-  verb: GetSuperpowerInstallVerb,
 ): void {
   command
-    .command(verb)
+    .command("install")
     .description("Install a GetSuperpower and its skills.")
-    .argument("<source>", "local GetSuperpower path, workflow.json path, or public git source")
+    .argument(
+      "<source>",
+      "workflow alias, local GetSuperpower path, workflow.json path, or public git source",
+    )
     .option(
       "--dir <dir>",
       "project directory that receives .getsuperpower/workflows",
@@ -242,10 +232,11 @@ async function runGetSuperpowerInstall(
   const installedExternalPackages = new Set<string>();
 
   try {
-    for (const skillSource of getWorkflowSkillInstallSources(bundle)) {
+    for (const skillDependency of getWorkflowSkillInstallDependencies(bundle)) {
       const skillResult = await installGetSuperpowerSkillDependency({
         rootDir: targetDir,
-        source: skillSource,
+        source: skillDependency.source,
+        ...(skillDependency.repo ? { repo: skillDependency.repo } : {}),
         homeDir,
         agents: installAgents,
         installSkill: options.installSkill,
@@ -271,6 +262,7 @@ async function runGetSuperpowerInstall(
 async function installGetSuperpowerSkillDependency(input: {
   rootDir: string;
   source: string;
+  repo?: string;
   homeDir: string;
   agents: ReturnType<typeof parseSkillInstallAgents>;
   installSkill: GetSuperpowerSkillInstaller;
@@ -280,18 +272,26 @@ async function installGetSuperpowerSkillDependency(input: {
   try {
     return await installWorkflowSkillDependency(input);
   } catch (error) {
-    const externalPackage = getSkillsCliPackageForMissingDependency(input.source, error);
+    const externalPackage = getSkillsCliPackageForMissingDependency(
+      input.source,
+      input.repo,
+      error,
+    );
     if (!externalPackage) {
       throw error;
     }
 
-    if (!input.installedExternalPackages.has(externalPackage)) {
+    const externalInstallKey =
+      getSkillsCliInstallKeyForSource(input.source, input.repo) ?? externalPackage;
+
+    if (!input.installedExternalPackages.has(externalInstallKey)) {
       console.log(keyValue("Installing external skill dependency", externalPackage));
       await input.installExternalSkillDependency({
         source: input.source,
+        ...(input.repo ? { repo: input.repo } : {}),
         homeDir: input.homeDir,
       });
-      input.installedExternalPackages.add(externalPackage);
+      input.installedExternalPackages.add(externalInstallKey);
     }
 
     try {
@@ -327,12 +327,16 @@ function installWorkflowSkillDependency(input: {
   });
 }
 
-function getSkillsCliPackageForMissingDependency(source: string, error: unknown): string | null {
+function getSkillsCliPackageForMissingDependency(
+  source: string,
+  repo: string | undefined,
+  error: unknown,
+): string | null {
   if (!isMissingBootstrappableSkillError(error)) {
     return null;
   }
 
-  return getSkillsCliPackageForSource(source);
+  return getSkillsCliPackageForDependency(source, repo);
 }
 
 function isMissingBootstrappableSkillError(
@@ -369,6 +373,59 @@ export function getSkillsCliPackageForSource(source: string): string | null {
   return `${owner}/${repo}`;
 }
 
+function getSkillsCliPackageForDependency(source: string, repo: string | undefined): string | null {
+  return normalizeSkillsCliRepoSource(repo) ?? getSkillsCliPackageForSource(source);
+}
+
+function normalizeSkillsCliRepoSource(repo: string | undefined): string | null {
+  const trimmed = repo?.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const markdownLinkMatch = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(trimmed);
+  if (!markdownLinkMatch) {
+    return trimmed;
+  }
+
+  const label = markdownLinkMatch[1]?.trim();
+  const url = markdownLinkMatch[2]?.trim();
+  if (label && isBareSkillsCliPackage(label)) {
+    return label;
+  }
+
+  return url || null;
+}
+
+function getSkillsCliInstallKeyForSource(source: string, repo?: string): string | null {
+  const skillName = getSkillsCliSkillNameForSource(source);
+  if (!skillName) {
+    return getSkillsCliPackageForDependency(source, repo);
+  }
+
+  const packageName = getSkillsCliPackageForDependency(source, repo);
+  return packageName ? `${packageName}:${skillName}` : null;
+}
+
+function getSkillsCliSkillNameForSource(source: string): string | null {
+  if (source.startsWith("superpowers:")) {
+    return source.slice("superpowers:".length).trim() || null;
+  }
+
+  if (source.startsWith("mattpocock:")) {
+    return source.slice("mattpocock:".length).trim() || null;
+  }
+
+  const mattPocockGithubPrefix = "github:mattpocock/skills/";
+  if (source.startsWith(mattPocockGithubPrefix)) {
+    const suffix = source.slice(mattPocockGithubPrefix.length);
+    const skillPath = suffix.startsWith("skills/") ? suffix.slice("skills/".length) : suffix;
+    return skillPath.trim() || null;
+  }
+
+  return null;
+}
+
 function isBareSkillsCliPackage(source: string): boolean {
   return /^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/.test(source);
 }
@@ -376,14 +433,20 @@ function isBareSkillsCliPackage(source: string): boolean {
 export async function installExternalSkillDependencyWithSkillsCli(
   input: GetSuperpowerExternalSkillDependencyInstallInput,
 ): Promise<void> {
-  const packageName = getSkillsCliPackageForSource(input.source);
+  const packageName = getSkillsCliPackageForDependency(input.source, input.repo);
   if (!packageName) {
     throw new Error(`No skills CLI package is known for dependency: ${input.source}`);
   }
 
+  const args = ["--yes", "skills@latest", "add", packageName, "--yes", "--global"];
+  const skillName = getSkillsCliSkillNameForSource(input.source);
+  if (skillName) {
+    args.push("--skill", skillName, "--agent", "codex");
+  }
+
   const result = await (input.runCommand ?? runExternalSkillCommand)({
     executable: "npx",
-    args: ["--yes", "skills@latest", "add", packageName, "--yes", "--global"],
+    args,
     cwd: input.homeDir,
     env: {
       ...process.env,

@@ -40,10 +40,10 @@ function fakeSkillInstallResult(input: {
   };
 }
 
-async function writeGitWorkflowFixture(checkoutDir: string): Promise<void> {
-  await mkdir(join(checkoutDir, "skills", "git-entry"), { recursive: true });
+async function writeGitWorkflowFixtureAt(workflowDir: string): Promise<void> {
+  await mkdir(join(workflowDir, "skills", "git-entry"), { recursive: true });
   await writeFile(
-    join(checkoutDir, "skills", "git-entry", "SKILL.md"),
+    join(workflowDir, "skills", "git-entry", "SKILL.md"),
     [
       "---",
       "name: git-entry",
@@ -54,7 +54,7 @@ async function writeGitWorkflowFixture(checkoutDir: string): Promise<void> {
     ].join("\n"),
   );
   await writeFile(
-    join(checkoutDir, "workflow.json"),
+    join(workflowDir, "workflow.json"),
     JSON.stringify(
       {
         schemaVersion: "0.1",
@@ -68,6 +68,10 @@ async function writeGitWorkflowFixture(checkoutDir: string): Promise<void> {
       2,
     ),
   );
+}
+
+async function writeGitWorkflowFixture(checkoutDir: string): Promise<void> {
+  await writeGitWorkflowFixtureAt(checkoutDir);
 }
 
 describe("getsuperpower command module", () => {
@@ -86,7 +90,6 @@ describe("getsuperpower command module", () => {
       "init",
       "validate",
       "install",
-      "clone",
       "list",
       "deps",
       "onboard",
@@ -97,85 +100,6 @@ describe("getsuperpower command module", () => {
       "dependencies",
       "dependence",
     ]);
-  });
-
-  test("clone installs a GetSuperpower through the same install path", async () => {
-    const rootDir = await mkdtemp(join(tmpdir(), "getsuperpower-"));
-    const homeDir = await mkdtemp(join(tmpdir(), "getsuperpower-home-"));
-    const bundleDir = join(rootDir, "clone-bundle");
-    const localSkillDir = join(bundleDir, "skills", "clone-entry");
-    const skillInstalls: string[] = [];
-    const printedSkills: string[] = [];
-    const logs: string[] = [];
-    const originalLog = console.log;
-    const program = new Command();
-
-    console.log = (...values: unknown[]) => {
-      logs.push(values.join(" "));
-    };
-
-    try {
-      await mkdir(localSkillDir, { recursive: true });
-      await writeFile(
-        join(localSkillDir, "SKILL.md"),
-        [
-          "---",
-          "name: clone-entry",
-          'description: "Entry skill for clone behavior test."',
-          "---",
-          "",
-          "# clone-entry",
-        ].join("\n"),
-      );
-      await writeFile(
-        join(bundleDir, "workflow.json"),
-        JSON.stringify(
-          {
-            schemaVersion: "0.1",
-            name: "clone-bundle",
-            version: "0.1.0",
-            description: "Uses one local skill.",
-            skills: [{ source: "./skills/clone-entry" }],
-            steps: [{ id: "entry", title: "Entry", skill: "./skills/clone-entry" }],
-          },
-          null,
-          2,
-        ),
-      );
-
-      configureGetSuperpowerCommand(program, {
-        rootDir,
-        installSkill: async (input) => {
-          skillInstalls.push(input.source);
-          return {
-            skillInstall: fakeSkillInstallResult({
-              source: input.source,
-              skillName: "clone-entry",
-              destination: join(homeDir, ".agents", "skills", "clone-entry"),
-            }),
-          };
-        },
-        printSkillInstallResult: (result) => {
-          printedSkills.push(result.skillName);
-        },
-      });
-
-      await program.parseAsync(
-        ["clone", bundleDir, "--dir", rootDir, "--home", homeDir, "--agents", "codex"],
-        { from: "user" },
-      );
-
-      expect(skillInstalls).toEqual([localSkillDir]);
-      expect(printedSkills).toEqual(["clone-entry"]);
-      expect(stripAnsiLines(logs)).toContain("GetSuperpower installed: clone-bundle");
-      await expect(
-        stat(join(rootDir, ".getsuperpower", "workflows", "clone-bundle.json")),
-      ).resolves.toBeTruthy();
-    } finally {
-      console.log = originalLog;
-      await rm(rootDir, { recursive: true, force: true });
-      await rm(homeDir, { recursive: true, force: true });
-    }
   });
 
   test("install supports a public git workflow source", async () => {
@@ -232,6 +156,88 @@ describe("getsuperpower command module", () => {
     await rm(homeDir, { recursive: true, force: true });
   });
 
+  test("install supports a workflow alias source", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "getsuperpower-alias-"));
+    const homeDir = await mkdtemp(join(tmpdir(), "getsuperpower-alias-home-"));
+    const source = "openspec-superpowers";
+    const canonicalUrl =
+      "https://github.com/0xroylee/getsuperpower.git#examples/workflows/openspec-superpowers";
+    const skillInstalls: string[] = [];
+    const printedSkills: string[] = [];
+    const commands: WorkflowGitCommand[] = [];
+    const logs: string[] = [];
+    const originalLog = console.log;
+    const program = new Command();
+    let checkoutDir = "";
+
+    console.log = (...values: unknown[]) => {
+      logs.push(values.join(" "));
+    };
+
+    try {
+      configureGetSuperpowerCommand(program, {
+        rootDir,
+        workflowGitCommandRunner: async (command) => {
+          commands.push(command);
+          if (command.args[0] === "clone") {
+            checkoutDir = command.args.at(-1) ?? "";
+            await writeGitWorkflowFixtureAt(
+              join(checkoutDir, "examples", "workflows", "openspec-superpowers"),
+            );
+            return { stdout: "", stderr: "", exitCode: 0 };
+          }
+          return { stdout: "abc123\n", stderr: "", exitCode: 0 };
+        },
+        installSkill: async (input) => {
+          skillInstalls.push(input.source);
+          return {
+            skillInstall: fakeSkillInstallResult({
+              source: input.source,
+              skillName: "git-entry",
+              destination: join(homeDir, ".agents", "skills", "git-entry"),
+            }),
+          };
+        },
+        printSkillInstallResult: (result) => {
+          printedSkills.push(result.skillName);
+        },
+      });
+
+      await program.parseAsync(
+        ["install", source, "--dir", rootDir, "--home", homeDir, "--agents", "codex"],
+        { from: "user" },
+      );
+
+      expect(commands[0]?.args).toEqual([
+        "clone",
+        "--depth",
+        "1",
+        "https://github.com/0xroylee/getsuperpower.git",
+        checkoutDir,
+      ]);
+      expect(skillInstalls).toEqual([
+        join(checkoutDir, "examples", "workflows", "openspec-superpowers", "skills", "git-entry"),
+      ]);
+      expect(printedSkills).toEqual(["git-entry"]);
+      expect(stripAnsiLines(logs)).toContain("GetSuperpower installed: git-workflow");
+      expect(stripAnsiLines(logs).join("\n")).not.toContain(canonicalUrl);
+      const installed = JSON.parse(
+        await readFile(join(rootDir, ".getsuperpower", "workflows", "git-workflow.json"), "utf8"),
+      );
+      expect(installed.source).toEqual({
+        kind: "git",
+        url: canonicalUrl,
+        commit: "abc123",
+        subdirectory: "examples/workflows/openspec-superpowers",
+      });
+      await expect(stat(checkoutDir)).rejects.toThrow();
+    } finally {
+      console.log = originalLog;
+      await rm(rootDir, { recursive: true, force: true });
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
   test("validate supports a public git workflow source", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "getsuperpower-git-validate-"));
     const source = "https://github.com/acme/git-workflow.git";
@@ -275,6 +281,50 @@ describe("getsuperpower command module", () => {
     }
   });
 
+  test("validate supports a workflow alias source", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "getsuperpower-alias-validate-"));
+    const logs: string[] = [];
+    const originalLog = console.log;
+    const program = new Command();
+    let checkoutDir = "";
+
+    console.log = (...values: unknown[]) => {
+      logs.push(values.join(" "));
+    };
+
+    try {
+      configureGetSuperpowerCommand(program, {
+        rootDir,
+        workflowGitCommandRunner: async (command) => {
+          if (command.args[0] === "clone") {
+            checkoutDir = command.args.at(-1) ?? "";
+            await writeGitWorkflowFixtureAt(
+              join(checkoutDir, "examples", "workflows", "openspec-superpowers"),
+            );
+            return { stdout: "", stderr: "", exitCode: 0 };
+          }
+          return { stdout: "abc123\n", stderr: "", exitCode: 0 };
+        },
+        installSkill: async () => {
+          throw new Error("install is not exercised by this validate test");
+        },
+        printSkillInstallResult: () => {},
+      });
+
+      await program.parseAsync(["validate", "openspec-superpowers"], { from: "user" });
+
+      expect(stripAnsiLines(logs)).toEqual([
+        "GetSuperpower valid: git-workflow@0.1.0",
+        "Steps: 1",
+        "Skills: 1",
+      ]);
+      await expect(stat(checkoutDir)).rejects.toThrow();
+    } finally {
+      console.log = originalLog;
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
   test("deps supports a public git workflow source", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "getsuperpower-git-deps-"));
     const source = "https://github.com/acme/git-workflow.git";
@@ -305,6 +355,49 @@ describe("getsuperpower command module", () => {
       });
 
       await program.parseAsync(["deps", source], { from: "user" });
+
+      expect(stripAnsiLines(logs)).toEqual([
+        "GetSuperpower dependencies: git-workflow",
+        "- ./skills/git-entry",
+      ]);
+      await expect(stat(checkoutDir)).rejects.toThrow();
+    } finally {
+      console.log = originalLog;
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  test("deps supports a workflow alias source", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "getsuperpower-alias-deps-"));
+    const logs: string[] = [];
+    const originalLog = console.log;
+    const program = new Command();
+    let checkoutDir = "";
+
+    console.log = (...values: unknown[]) => {
+      logs.push(values.join(" "));
+    };
+
+    try {
+      configureGetSuperpowerCommand(program, {
+        rootDir,
+        workflowGitCommandRunner: async (command) => {
+          if (command.args[0] === "clone") {
+            checkoutDir = command.args.at(-1) ?? "";
+            await writeGitWorkflowFixtureAt(
+              join(checkoutDir, "examples", "workflows", "openspec-superpowers"),
+            );
+            return { stdout: "", stderr: "", exitCode: 0 };
+          }
+          return { stdout: "abc123\n", stderr: "", exitCode: 0 };
+        },
+        installSkill: async () => {
+          throw new Error("install is not exercised by this deps test");
+        },
+        printSkillInstallResult: () => {},
+      });
+
+      await program.parseAsync(["deps", "openspec-superpowers"], { from: "user" });
 
       expect(stripAnsiLines(logs)).toEqual([
         "GetSuperpower dependencies: git-workflow",
@@ -586,7 +679,7 @@ describe("getsuperpower command module", () => {
     const rootDir = await mkdtemp(join(tmpdir(), "getsuperpower-"));
     const homeDir = await mkdtemp(join(tmpdir(), "getsuperpower-home-"));
     const bundleDir = join(rootDir, "matt-bundle");
-    const externalInstalls: Array<{ source: string; homeDir: string }> = [];
+    const externalInstalls: Array<{ source: string; repo?: string; homeDir: string }> = [];
     const skillInstalls: string[] = [];
     const printedSkills: string[] = [];
     const program = new Command();
@@ -600,7 +693,7 @@ describe("getsuperpower command module", () => {
           name: "matt-bundle",
           version: "0.1.0",
           description: "Uses one Matt Pocock skill.",
-          skills: [{ source: "mattpocock:tdd" }],
+          skills: [{ source: "mattpocock:tdd", repo: "mattpocock/skills" }],
           steps: [{ id: "tdd", title: "Implement with TDD", skill: "mattpocock:tdd" }],
         },
         null,
@@ -638,20 +731,23 @@ describe("getsuperpower command module", () => {
     );
 
     expect(skillInstalls).toEqual(["mattpocock:tdd", "mattpocock:tdd"]);
-    expect(externalInstalls).toEqual([{ source: "mattpocock:tdd", homeDir }]);
+    expect(externalInstalls).toEqual([
+      { source: "mattpocock:tdd", repo: "mattpocock/skills", homeDir },
+    ]);
     expect(printedSkills).toEqual(["tdd"]);
     await expect(
       stat(join(rootDir, ".getsuperpower", "workflows", "matt-bundle.json")),
     ).resolves.toBeTruthy();
   });
 
-  test("uses the skills CLI once before retrying missing Superpowers workflow skills", async () => {
+  test("uses the skills CLI before retrying each missing Superpowers workflow skill", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "getsuperpower-"));
     const homeDir = await mkdtemp(join(tmpdir(), "getsuperpower-home-"));
     const bundleDir = join(rootDir, "superpowers-bundle");
-    const externalInstalls: Array<{ source: string; homeDir: string }> = [];
+    const externalInstalls: Array<{ source: string; repo?: string; homeDir: string }> = [];
     const skillInstalls: string[] = [];
     const printedSkills: string[] = [];
+    const installedExternalSources = new Set<string>();
     const program = new Command();
 
     await mkdir(bundleDir, { recursive: true });
@@ -665,7 +761,7 @@ describe("getsuperpower command module", () => {
           description: "Uses two Superpowers process skills.",
           skills: [
             { source: "superpowers:brainstorming" },
-            { source: "superpowers:writing-plans" },
+            { source: "superpowers:writing-plans", repo: "obra/superpowers" },
           ],
           steps: [
             {
@@ -689,10 +785,14 @@ describe("getsuperpower command module", () => {
       rootDir,
       installSkill: async (input) => {
         skillInstalls.push(input.source);
-        if (input.source === "superpowers:brainstorming" && externalInstalls.length === 0) {
+        if (
+          (input.source === "superpowers:brainstorming" ||
+            input.source === "superpowers:writing-plans") &&
+          !installedExternalSources.has(input.source)
+        ) {
           throw new MissingSuperpowersSkillError({
-            displayName: "brainstorming",
-            source: "superpowers:brainstorming",
+            displayName: input.source.replace("superpowers:", ""),
+            source: input.source,
           });
         }
 
@@ -709,6 +809,7 @@ describe("getsuperpower command module", () => {
       },
       installExternalSkillDependency: async (input) => {
         externalInstalls.push(input);
+        installedExternalSources.add(input.source);
       },
     });
 
@@ -721,8 +822,12 @@ describe("getsuperpower command module", () => {
       "superpowers:brainstorming",
       "superpowers:brainstorming",
       "superpowers:writing-plans",
+      "superpowers:writing-plans",
     ]);
-    expect(externalInstalls).toEqual([{ source: "superpowers:brainstorming", homeDir }]);
+    expect(externalInstalls).toEqual([
+      { source: "superpowers:brainstorming", homeDir },
+      { source: "superpowers:writing-plans", repo: "obra/superpowers", homeDir },
+    ]);
     expect(printedSkills).toEqual(["superpowers-brainstorming", "superpowers-writing-plans"]);
     await expect(
       stat(join(rootDir, ".getsuperpower", "workflows", "superpowers-bundle.json")),
@@ -733,7 +838,7 @@ describe("getsuperpower command module", () => {
     const rootDir = await mkdtemp(join(tmpdir(), "getsuperpower-"));
     const homeDir = await mkdtemp(join(tmpdir(), "getsuperpower-home-"));
     const bundleDir = join(rootDir, "matt-bundle");
-    const externalInstalls: Array<{ source: string; homeDir: string }> = [];
+    const externalInstalls: Array<{ source: string; repo?: string; homeDir: string }> = [];
     const program = new Command();
 
     await mkdir(bundleDir, { recursive: true });
@@ -745,7 +850,7 @@ describe("getsuperpower command module", () => {
           name: "matt-bundle",
           version: "0.1.0",
           description: "Uses one Matt Pocock skill.",
-          skills: [{ source: "mattpocock:tdd" }],
+          skills: [{ source: "mattpocock:tdd", repo: "mattpocock/skills" }],
           steps: [{ id: "tdd", title: "Implement with TDD", skill: "mattpocock:tdd" }],
         },
         null,
@@ -772,15 +877,18 @@ describe("getsuperpower command module", () => {
     ).rejects.toThrow(
       "The skills CLI ran for mattpocock/skills, but mattpocock:tdd is still missing.",
     );
-    expect(externalInstalls).toEqual([{ source: "mattpocock:tdd", homeDir }]);
+    expect(externalInstalls).toEqual([
+      { source: "mattpocock:tdd", repo: "mattpocock/skills", homeDir },
+    ]);
   });
 
-  test("installs the skills CLI package non-interactively before adding external dependencies", async () => {
+  test("installs the declared skills CLI repo non-interactively before adding external dependencies", async () => {
     const homeDir = await mkdtemp(join(tmpdir(), "getsuperpower-home-"));
     const commands: GetSuperpowerExternalSkillCommand[] = [];
 
     await installExternalSkillDependencyWithSkillsCli({
       source: "mattpocock:tdd",
+      repo: "mattpocock/skills",
       homeDir,
       runCommand: async (command) => {
         commands.push(command);
@@ -791,10 +899,49 @@ describe("getsuperpower command module", () => {
     expect(commands).toEqual([
       {
         executable: "npx",
-        args: ["--yes", "skills@latest", "add", "mattpocock/skills", "--yes", "--global"],
+        args: [
+          "--yes",
+          "skills@latest",
+          "add",
+          "mattpocock/skills",
+          "--yes",
+          "--global",
+          "--skill",
+          "tdd",
+          "--agent",
+          "codex",
+        ],
         cwd: homeDir,
         env: expect.objectContaining({ HOME: homeDir }),
       },
+    ]);
+  });
+
+  test("normalizes markdown repository links before invoking the Skills CLI", async () => {
+    const homeDir = await mkdtemp(join(tmpdir(), "getsuperpower-home-"));
+    const commands: GetSuperpowerExternalSkillCommand[] = [];
+
+    await installExternalSkillDependencyWithSkillsCli({
+      source: "superpowers:brainstorming",
+      repo: "[obra/superpowers](https://github.com/obra/superpowers)",
+      homeDir,
+      runCommand: async (command) => {
+        commands.push(command);
+        return { stdout: "", stderr: "", exitCode: 0 };
+      },
+    });
+
+    expect(commands[0]?.args).toEqual([
+      "--yes",
+      "skills@latest",
+      "add",
+      "obra/superpowers",
+      "--yes",
+      "--global",
+      "--skill",
+      "brainstorming",
+      "--agent",
+      "codex",
     ]);
   });
 
@@ -837,7 +984,18 @@ describe("getsuperpower command module", () => {
     expect(commands).toEqual([
       {
         executable: "npx",
-        args: ["--yes", "skills@latest", "add", "obra/superpowers", "--yes", "--global"],
+        args: [
+          "--yes",
+          "skills@latest",
+          "add",
+          "obra/superpowers",
+          "--yes",
+          "--global",
+          "--skill",
+          "brainstorming",
+          "--agent",
+          "codex",
+        ],
         cwd: homeDir,
         env: expect.objectContaining({ HOME: homeDir }),
       },

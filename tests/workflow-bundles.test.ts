@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   createWorkflowBundleScaffold,
+  getWorkflowSkillInstallDependencies,
   getWorkflowSkillInstallSources,
   installWorkflowBundle,
   listInstalledWorkflowBundles,
@@ -13,9 +14,12 @@ import {
 } from "../src/runtimes/ponytrail/workflow-bundles";
 
 describe("workflow bundles", () => {
-  test("rejects bare workflow names now that bundled workflows are removed", async () => {
-    await expect(loadWorkflowBundle("product-dev")).rejects.toThrow(
-      "Unsupported GetSuperpower source: product-dev",
+  test("rejects bare sources that are not valid workflow aliases", async () => {
+    await expect(loadWorkflowBundle("ProductDev")).rejects.toThrow(
+      "Unsupported GetSuperpower source: ProductDev",
+    );
+    await expect(loadWorkflowBundle("product_dev")).rejects.toThrow(
+      "Unsupported GetSuperpower source: product_dev",
     );
   });
 
@@ -43,6 +47,65 @@ describe("workflow bundles", () => {
     );
 
     await expect(loadWorkflowBundle(bundleDir)).rejects.toThrow("Duplicate workflow step id: same");
+  });
+
+  test("loads workflow skill repository metadata for external skill installs", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "workflow-bundle-repo-"));
+    const bundleDir = join(rootDir, "repo-skills");
+    await mkdir(bundleDir, { recursive: true });
+    await writeFile(
+      join(bundleDir, "workflow.json"),
+      JSON.stringify(
+        {
+          schemaVersion: "0.1",
+          name: "repo-skills",
+          version: "0.1.0",
+          description: "Uses repo metadata for Skills CLI installs.",
+          skills: [
+            {
+              source: "superpowers:brainstorming",
+              repo: "obra/superpowers",
+            },
+          ],
+          steps: [
+            {
+              id: "brainstorming",
+              title: "Shape the work",
+              skill: "superpowers:brainstorming",
+            },
+          ],
+        },
+        null,
+        2,
+      ),
+    );
+
+    try {
+      const bundle = await loadWorkflowBundle(bundleDir);
+
+      expect(bundle.manifest.skills).toEqual([
+        {
+          source: "superpowers:brainstorming",
+          repo: "obra/superpowers",
+        },
+      ]);
+      expect(getWorkflowSkillInstallDependencies(bundle)).toEqual([
+        {
+          source: "superpowers:brainstorming",
+          repo: "obra/superpowers",
+        },
+      ]);
+      const install = await installWorkflowBundle({ rootDir, bundle });
+      const installed = JSON.parse(await readFile(install.path, "utf8"));
+      expect(installed.skills).toEqual([
+        {
+          source: "superpowers:brainstorming",
+          repo: "obra/superpowers",
+        },
+      ]);
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
   });
 
   test("scaffolds an authorable workflow bundle with a local skill", async () => {
@@ -177,6 +240,15 @@ describe("workflow bundles", () => {
       "mattpocock:tdd",
       "pony-trail",
     ]);
+    expect(
+      bundle.manifest.skills
+        .filter((skill) => skill.source.includes(":"))
+        .map((skill) => [skill.source, skill.repo]),
+    ).toEqual([
+      ["superpowers:brainstorming", "obra/superpowers"],
+      ["superpowers:writing-plans", "obra/superpowers"],
+      ["mattpocock:tdd", "mattpocock/skills"],
+    ]);
     expect(bundle.manifest.steps.map((step) => [step.id, step.skill])).toEqual([
       ["opsx-propose", "./skills/opsx-handoff-review"],
       ["opsx-review", "./skills/opsx-handoff-review"],
@@ -255,6 +327,94 @@ describe("workflow bundles", () => {
     expect(bundle.source).toEqual({ kind: "git", url: source, commit: "abc123" });
     expect(getWorkflowSkillInstallSources(bundle)).toEqual([
       join(checkoutDir, "skills", "git-entry"),
+    ]);
+
+    await bundle.cleanup?.();
+    await expect(stat(checkoutDir)).rejects.toThrow();
+    await rm(tempDir, { recursive: true, force: true });
+  });
+
+  test("loads a workflow alias from the canonical examples catalog", async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), "workflow-bundle-alias-"));
+    const source = "openspec-superpowers";
+    const canonicalUrl =
+      "https://github.com/0xroylee/getsuperpower.git#examples/workflows/openspec-superpowers";
+    const commands: WorkflowGitCommand[] = [];
+    let checkoutDir = "";
+
+    const bundle = await loadWorkflowBundle(source, {
+      tempDir,
+      runGitCommand: async (command) => {
+        commands.push(command);
+        if (command.args[0] === "clone") {
+          checkoutDir = command.args.at(-1) ?? "";
+          const workflowDir = join(checkoutDir, "examples", "workflows", "openspec-superpowers");
+          await mkdir(join(workflowDir, "skills", "openspec-delivery"), {
+            recursive: true,
+          });
+          await writeFile(
+            join(workflowDir, "skills", "openspec-delivery", "SKILL.md"),
+            [
+              "---",
+              "name: openspec-delivery",
+              'description: "Entry skill from the examples catalog."',
+              "---",
+              "",
+              "# openspec-delivery",
+            ].join("\n"),
+          );
+          await writeFile(
+            join(workflowDir, "workflow.json"),
+            JSON.stringify(
+              {
+                schemaVersion: "0.1",
+                name: "openspec-delivery",
+                version: "0.1.0",
+                description: "Installs from the examples catalog.",
+                skills: [{ source: "./skills/openspec-delivery" }],
+                steps: [
+                  {
+                    id: "entry",
+                    title: "Run OpenSpec delivery",
+                    skill: "./skills/openspec-delivery",
+                  },
+                ],
+              },
+              null,
+              2,
+            ),
+          );
+          return { stdout: "", stderr: "", exitCode: 0 };
+        }
+
+        return { stdout: "abc123\n", stderr: "", exitCode: 0 };
+      },
+    });
+
+    expect(commands.map((command) => command.args[0])).toEqual(["clone", "rev-parse"]);
+    expect(commands[0]?.args).toEqual([
+      "clone",
+      "--depth",
+      "1",
+      "https://github.com/0xroylee/getsuperpower.git",
+      checkoutDir,
+    ]);
+    expect(bundle.manifest.name).toBe("openspec-delivery");
+    expect(bundle.source).toEqual({
+      kind: "git",
+      url: canonicalUrl,
+      commit: "abc123",
+      subdirectory: "examples/workflows/openspec-superpowers",
+    });
+    expect(getWorkflowSkillInstallSources(bundle)).toEqual([
+      join(
+        checkoutDir,
+        "examples",
+        "workflows",
+        "openspec-superpowers",
+        "skills",
+        "openspec-delivery",
+      ),
     ]);
 
     await bundle.cleanup?.();
@@ -419,6 +579,30 @@ describe("workflow bundles", () => {
         },
       }),
     ).rejects.toThrow("No GetSuperpower workflow manifest was found");
+
+    await expect(stat(checkoutDir)).rejects.toThrow();
+    await rm(tempDir, { recursive: true, force: true });
+  });
+
+  test("reports missing workflow aliases with the checked examples path", async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), "workflow-bundle-alias-missing-"));
+    let checkoutDir = "";
+
+    await expect(
+      loadWorkflowBundle("missing-workflow", {
+        tempDir,
+        runGitCommand: async (command) => {
+          if (command.args[0] === "clone") {
+            checkoutDir = command.args.at(-1) ?? "";
+            await mkdir(join(checkoutDir, "examples", "workflows"), { recursive: true });
+            return { stdout: "", stderr: "", exitCode: 0 };
+          }
+          return { stdout: "abc123\n", stderr: "", exitCode: 0 };
+        },
+      }),
+    ).rejects.toThrow(
+      "GetSuperpower workflow alias not found: missing-workflow\nChecked: https://github.com/0xroylee/getsuperpower.git#examples/workflows/missing-workflow",
+    );
 
     await expect(stat(checkoutDir)).rejects.toThrow();
     await rm(tempDir, { recursive: true, force: true });

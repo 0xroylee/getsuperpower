@@ -11,7 +11,13 @@ TDD, and archive the result without the user calling each skill separately.
 
 ## Quick Start
 
-Install a workflow example from the GetSuperpower git repository:
+Install a workflow example by alias:
+
+```bash
+npx getsuperpower@latest install openspec-superpowers
+```
+
+The alias is shorthand for the checked-in workflow path:
 
 ```bash
 npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/openspec-superpowers'
@@ -20,9 +26,9 @@ npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#
 Install other workflow examples the same way:
 
 ```bash
-npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/release-review'
-npx getsuperpower@latest clone 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/real-engineering'
-npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/development-design-delivery'
+npx getsuperpower@latest install release-review
+npx getsuperpower@latest install real-engineering
+npx getsuperpower@latest install development-design-delivery
 ```
 
 List installed GetSuperpowers:
@@ -88,8 +94,8 @@ align `workflow.json`, and validate the bundle before you share it.
 Validate before sharing:
 
 ```bash
-npx getsuperpower@latest validate release-review
-npx getsuperpower@latest deps release-review
+npx getsuperpower@latest validate ./release-review
+npx getsuperpower@latest deps ./release-review
 ```
 
 The full guide is in [`docs/workflow-author-guide.md`](docs/workflow-author-guide.md).
@@ -103,7 +109,14 @@ The full guide is in [`docs/workflow-author-guide.md`](docs/workflow-author-guid
 | `examples/workflows/real-engineering` | RTK, `pony-trail`, Superpowers, and Matt Pocock skills together. | Fetches Matt Pocock skills if missing. |
 | `examples/workflows/release-review` | Small release-risk review workflow. | Good starter example. |
 
-GetSuperpower install automatically uses the Skills CLI to fetch missing `mattpocock:*` dependencies. If that automatic bootstrap fails, run the same package install through the CLI and retry:
+GetSuperpower install automatically uses each workflow skill's `repo` metadata
+to fetch missing external skills through the Skills CLI. For example,
+`{ "source": "superpowers:brainstorming", "repo": "obra/superpowers" }`
+keeps the original skill name in `source` and installs it with
+`npx skills add obra/superpowers --skill brainstorming`.
+
+If automatic bootstrap fails, run the same package install through the CLI and
+retry:
 
 ```bash
 npx getsuperpower@latest skills install mattpocock/skills
@@ -113,12 +126,11 @@ npx getsuperpower@latest skills install mattpocock/skills
 
 The GetSuperpower CLI supports workflow install, inspection, authoring, and skill management. Below are some of the most used commands:
 
-- `npx getsuperpower@latest install <path-or-git-url>`
-- `npx getsuperpower@latest clone <path-or-git-url>`
+- `npx getsuperpower@latest install <alias-or-path-or-git-url>`
 - `npx getsuperpower@latest deps <source>`
 - `npx getsuperpower@latest list`
 - `npx getsuperpower@latest init <name>`
-- `npx getsuperpower@latest validate <path>`
+- `npx getsuperpower@latest validate <source>`
 - `npx getsuperpower@latest skills install`
 - `npx getsuperpower@latest skills install mattpocock/skills`
 - `npx getsuperpower@latest skills install creating-bundle-skills`
