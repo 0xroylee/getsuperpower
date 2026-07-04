@@ -40,10 +40,10 @@ function fakeSkillInstallResult(input: {
   };
 }
 
-async function writeGitWorkflowFixture(checkoutDir: string): Promise<void> {
-  await mkdir(join(checkoutDir, "skills", "git-entry"), { recursive: true });
+async function writeGitWorkflowFixtureAt(workflowDir: string): Promise<void> {
+  await mkdir(join(workflowDir, "skills", "git-entry"), { recursive: true });
   await writeFile(
-    join(checkoutDir, "skills", "git-entry", "SKILL.md"),
+    join(workflowDir, "skills", "git-entry", "SKILL.md"),
     [
       "---",
       "name: git-entry",
@@ -54,7 +54,7 @@ async function writeGitWorkflowFixture(checkoutDir: string): Promise<void> {
     ].join("\n"),
   );
   await writeFile(
-    join(checkoutDir, "workflow.json"),
+    join(workflowDir, "workflow.json"),
     JSON.stringify(
       {
         schemaVersion: "0.1",
@@ -68,6 +68,10 @@ async function writeGitWorkflowFixture(checkoutDir: string): Promise<void> {
       2,
     ),
   );
+}
+
+async function writeGitWorkflowFixture(checkoutDir: string): Promise<void> {
+  await writeGitWorkflowFixtureAt(checkoutDir);
 }
 
 describe("getsuperpower command module", () => {
@@ -232,6 +236,88 @@ describe("getsuperpower command module", () => {
     await rm(homeDir, { recursive: true, force: true });
   });
 
+  test("install supports a workflow alias source", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "getsuperpower-alias-"));
+    const homeDir = await mkdtemp(join(tmpdir(), "getsuperpower-alias-home-"));
+    const source = "openspec-superpowers";
+    const canonicalUrl =
+      "https://github.com/0xroylee/getsuperpower.git#examples/workflows/openspec-superpowers";
+    const skillInstalls: string[] = [];
+    const printedSkills: string[] = [];
+    const commands: WorkflowGitCommand[] = [];
+    const logs: string[] = [];
+    const originalLog = console.log;
+    const program = new Command();
+    let checkoutDir = "";
+
+    console.log = (...values: unknown[]) => {
+      logs.push(values.join(" "));
+    };
+
+    try {
+      configureGetSuperpowerCommand(program, {
+        rootDir,
+        workflowGitCommandRunner: async (command) => {
+          commands.push(command);
+          if (command.args[0] === "clone") {
+            checkoutDir = command.args.at(-1) ?? "";
+            await writeGitWorkflowFixtureAt(
+              join(checkoutDir, "examples", "workflows", "openspec-superpowers"),
+            );
+            return { stdout: "", stderr: "", exitCode: 0 };
+          }
+          return { stdout: "abc123\n", stderr: "", exitCode: 0 };
+        },
+        installSkill: async (input) => {
+          skillInstalls.push(input.source);
+          return {
+            skillInstall: fakeSkillInstallResult({
+              source: input.source,
+              skillName: "git-entry",
+              destination: join(homeDir, ".agents", "skills", "git-entry"),
+            }),
+          };
+        },
+        printSkillInstallResult: (result) => {
+          printedSkills.push(result.skillName);
+        },
+      });
+
+      await program.parseAsync(
+        ["install", source, "--dir", rootDir, "--home", homeDir, "--agents", "codex"],
+        { from: "user" },
+      );
+
+      expect(commands[0]?.args).toEqual([
+        "clone",
+        "--depth",
+        "1",
+        "https://github.com/0xroylee/getsuperpower.git",
+        checkoutDir,
+      ]);
+      expect(skillInstalls).toEqual([
+        join(checkoutDir, "examples", "workflows", "openspec-superpowers", "skills", "git-entry"),
+      ]);
+      expect(printedSkills).toEqual(["git-entry"]);
+      expect(stripAnsiLines(logs)).toContain("GetSuperpower installed: git-workflow");
+      expect(stripAnsiLines(logs).join("\n")).not.toContain(canonicalUrl);
+      const installed = JSON.parse(
+        await readFile(join(rootDir, ".getsuperpower", "workflows", "git-workflow.json"), "utf8"),
+      );
+      expect(installed.source).toEqual({
+        kind: "git",
+        url: canonicalUrl,
+        commit: "abc123",
+        subdirectory: "examples/workflows/openspec-superpowers",
+      });
+      await expect(stat(checkoutDir)).rejects.toThrow();
+    } finally {
+      console.log = originalLog;
+      await rm(rootDir, { recursive: true, force: true });
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
   test("validate supports a public git workflow source", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "getsuperpower-git-validate-"));
     const source = "https://github.com/acme/git-workflow.git";
@@ -275,6 +361,50 @@ describe("getsuperpower command module", () => {
     }
   });
 
+  test("validate supports a workflow alias source", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "getsuperpower-alias-validate-"));
+    const logs: string[] = [];
+    const originalLog = console.log;
+    const program = new Command();
+    let checkoutDir = "";
+
+    console.log = (...values: unknown[]) => {
+      logs.push(values.join(" "));
+    };
+
+    try {
+      configureGetSuperpowerCommand(program, {
+        rootDir,
+        workflowGitCommandRunner: async (command) => {
+          if (command.args[0] === "clone") {
+            checkoutDir = command.args.at(-1) ?? "";
+            await writeGitWorkflowFixtureAt(
+              join(checkoutDir, "examples", "workflows", "openspec-superpowers"),
+            );
+            return { stdout: "", stderr: "", exitCode: 0 };
+          }
+          return { stdout: "abc123\n", stderr: "", exitCode: 0 };
+        },
+        installSkill: async () => {
+          throw new Error("install is not exercised by this validate test");
+        },
+        printSkillInstallResult: () => {},
+      });
+
+      await program.parseAsync(["validate", "openspec-superpowers"], { from: "user" });
+
+      expect(stripAnsiLines(logs)).toEqual([
+        "GetSuperpower valid: git-workflow@0.1.0",
+        "Steps: 1",
+        "Skills: 1",
+      ]);
+      await expect(stat(checkoutDir)).rejects.toThrow();
+    } finally {
+      console.log = originalLog;
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
   test("deps supports a public git workflow source", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "getsuperpower-git-deps-"));
     const source = "https://github.com/acme/git-workflow.git";
@@ -305,6 +435,49 @@ describe("getsuperpower command module", () => {
       });
 
       await program.parseAsync(["deps", source], { from: "user" });
+
+      expect(stripAnsiLines(logs)).toEqual([
+        "GetSuperpower dependencies: git-workflow",
+        "- ./skills/git-entry",
+      ]);
+      await expect(stat(checkoutDir)).rejects.toThrow();
+    } finally {
+      console.log = originalLog;
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  test("deps supports a workflow alias source", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "getsuperpower-alias-deps-"));
+    const logs: string[] = [];
+    const originalLog = console.log;
+    const program = new Command();
+    let checkoutDir = "";
+
+    console.log = (...values: unknown[]) => {
+      logs.push(values.join(" "));
+    };
+
+    try {
+      configureGetSuperpowerCommand(program, {
+        rootDir,
+        workflowGitCommandRunner: async (command) => {
+          if (command.args[0] === "clone") {
+            checkoutDir = command.args.at(-1) ?? "";
+            await writeGitWorkflowFixtureAt(
+              join(checkoutDir, "examples", "workflows", "openspec-superpowers"),
+            );
+            return { stdout: "", stderr: "", exitCode: 0 };
+          }
+          return { stdout: "abc123\n", stderr: "", exitCode: 0 };
+        },
+        installSkill: async () => {
+          throw new Error("install is not exercised by this deps test");
+        },
+        printSkillInstallResult: () => {},
+      });
+
+      await program.parseAsync(["deps", "openspec-superpowers"], { from: "user" });
 
       expect(stripAnsiLines(logs)).toEqual([
         "GetSuperpower dependencies: git-workflow",

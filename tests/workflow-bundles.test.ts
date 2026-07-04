@@ -13,9 +13,12 @@ import {
 } from "../src/runtimes/ponytrail/workflow-bundles";
 
 describe("workflow bundles", () => {
-  test("rejects bare workflow names now that bundled workflows are removed", async () => {
-    await expect(loadWorkflowBundle("product-dev")).rejects.toThrow(
-      "Unsupported GetSuperpower source: product-dev",
+  test("rejects bare sources that are not valid workflow aliases", async () => {
+    await expect(loadWorkflowBundle("ProductDev")).rejects.toThrow(
+      "Unsupported GetSuperpower source: ProductDev",
+    );
+    await expect(loadWorkflowBundle("product_dev")).rejects.toThrow(
+      "Unsupported GetSuperpower source: product_dev",
     );
   });
 
@@ -262,6 +265,94 @@ describe("workflow bundles", () => {
     await rm(tempDir, { recursive: true, force: true });
   });
 
+  test("loads a workflow alias from the canonical examples catalog", async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), "workflow-bundle-alias-"));
+    const source = "openspec-superpowers";
+    const canonicalUrl =
+      "https://github.com/0xroylee/getsuperpower.git#examples/workflows/openspec-superpowers";
+    const commands: WorkflowGitCommand[] = [];
+    let checkoutDir = "";
+
+    const bundle = await loadWorkflowBundle(source, {
+      tempDir,
+      runGitCommand: async (command) => {
+        commands.push(command);
+        if (command.args[0] === "clone") {
+          checkoutDir = command.args.at(-1) ?? "";
+          const workflowDir = join(checkoutDir, "examples", "workflows", "openspec-superpowers");
+          await mkdir(join(workflowDir, "skills", "openspec-delivery"), {
+            recursive: true,
+          });
+          await writeFile(
+            join(workflowDir, "skills", "openspec-delivery", "SKILL.md"),
+            [
+              "---",
+              "name: openspec-delivery",
+              'description: "Entry skill from the examples catalog."',
+              "---",
+              "",
+              "# openspec-delivery",
+            ].join("\n"),
+          );
+          await writeFile(
+            join(workflowDir, "workflow.json"),
+            JSON.stringify(
+              {
+                schemaVersion: "0.1",
+                name: "openspec-delivery",
+                version: "0.1.0",
+                description: "Installs from the examples catalog.",
+                skills: [{ source: "./skills/openspec-delivery" }],
+                steps: [
+                  {
+                    id: "entry",
+                    title: "Run OpenSpec delivery",
+                    skill: "./skills/openspec-delivery",
+                  },
+                ],
+              },
+              null,
+              2,
+            ),
+          );
+          return { stdout: "", stderr: "", exitCode: 0 };
+        }
+
+        return { stdout: "abc123\n", stderr: "", exitCode: 0 };
+      },
+    });
+
+    expect(commands.map((command) => command.args[0])).toEqual(["clone", "rev-parse"]);
+    expect(commands[0]?.args).toEqual([
+      "clone",
+      "--depth",
+      "1",
+      "https://github.com/0xroylee/getsuperpower.git",
+      checkoutDir,
+    ]);
+    expect(bundle.manifest.name).toBe("openspec-delivery");
+    expect(bundle.source).toEqual({
+      kind: "git",
+      url: canonicalUrl,
+      commit: "abc123",
+      subdirectory: "examples/workflows/openspec-superpowers",
+    });
+    expect(getWorkflowSkillInstallSources(bundle)).toEqual([
+      join(
+        checkoutDir,
+        "examples",
+        "workflows",
+        "openspec-superpowers",
+        "skills",
+        "openspec-delivery",
+      ),
+    ]);
+
+    await bundle.cleanup?.();
+    await expect(stat(checkoutDir)).rejects.toThrow();
+    await rm(tempDir, { recursive: true, force: true });
+  });
+
   test("loads a public git workflow from a URL fragment subdirectory", async () => {
     const tempDir = await mkdtemp(join(tmpdir(), "workflow-bundle-git-subdir-"));
     const source = "https://github.com/acme/workflows.git#examples/release-review";
@@ -419,6 +510,30 @@ describe("workflow bundles", () => {
         },
       }),
     ).rejects.toThrow("No GetSuperpower workflow manifest was found");
+
+    await expect(stat(checkoutDir)).rejects.toThrow();
+    await rm(tempDir, { recursive: true, force: true });
+  });
+
+  test("reports missing workflow aliases with the checked examples path", async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), "workflow-bundle-alias-missing-"));
+    let checkoutDir = "";
+
+    await expect(
+      loadWorkflowBundle("missing-workflow", {
+        tempDir,
+        runGitCommand: async (command) => {
+          if (command.args[0] === "clone") {
+            checkoutDir = command.args.at(-1) ?? "";
+            await mkdir(join(checkoutDir, "examples", "workflows"), { recursive: true });
+            return { stdout: "", stderr: "", exitCode: 0 };
+          }
+          return { stdout: "abc123\n", stderr: "", exitCode: 0 };
+        },
+      }),
+    ).rejects.toThrow(
+      "GetSuperpower workflow alias not found: missing-workflow\nChecked: https://github.com/0xroylee/getsuperpower.git#examples/workflows/missing-workflow",
+    );
 
     await expect(stat(checkoutDir)).rejects.toThrow();
     await rm(tempDir, { recursive: true, force: true });

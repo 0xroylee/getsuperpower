@@ -6,6 +6,9 @@ import { z } from "zod";
 
 const workflowFileName = "workflow.json";
 const workflowStoreDir = ".getsuperpower/workflows";
+const canonicalExamplesGitUrl = "https://github.com/0xroylee/getsuperpower.git";
+const canonicalExamplesWorkflowPath = "examples/workflows";
+const workflowAliasPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const WorkflowSkillSchema = z.object({
   source: z.string().min(1),
@@ -141,6 +144,11 @@ export async function loadWorkflowBundle(
     };
   } catch (error) {
     await resolvedSource.cleanup?.();
+    if (resolvedSource.alias && resolvedSource.source.kind === "git" && isMissingFileError(error)) {
+      throw new Error(
+        `GetSuperpower workflow alias not found: ${resolvedSource.alias}\nChecked: ${resolvedSource.source.url}`,
+      );
+    }
     if (resolvedSource.source.kind === "git" && isMissingFileError(error)) {
       throw new Error(
         `No GetSuperpower workflow manifest was found at ${manifestPath} from public git source: ${resolvedSource.source.url}`,
@@ -324,6 +332,7 @@ interface ResolvedWorkflowBundleSource {
   sourceDir: string;
   source: WorkflowBundleSource;
   cleanup?: () => Promise<void>;
+  alias?: string;
 }
 
 async function resolveWorkflowBundleSource(
@@ -334,6 +343,11 @@ async function resolveWorkflowBundleSource(
     tempDir?: string;
   },
 ): Promise<ResolvedWorkflowBundleSource> {
+  const aliasSource = parseWorkflowAliasSource(source);
+  if (aliasSource) {
+    return cloneGitWorkflowSource(aliasSource, options);
+  }
+
   const gitSource = parseGitWorkflowSource(source);
   if (gitSource) {
     return cloneGitWorkflowSource(gitSource, options);
@@ -345,8 +359,22 @@ async function resolveWorkflowBundleSource(
   }
 
   throw new Error(
-    `Unsupported GetSuperpower source: ${source}. Use a local path, workflow.json path, or public git URL.`,
+    `Unsupported GetSuperpower source: ${source}. Use a local path, workflow.json path, public git URL, or lowercase workflow alias.`,
   );
+}
+
+function parseWorkflowAliasSource(source: string): GitWorkflowSource | null {
+  if (!workflowAliasPattern.test(source)) {
+    return null;
+  }
+
+  const url = `${canonicalExamplesGitUrl}#${canonicalExamplesWorkflowPath}/${source}`;
+  const gitSource = parseGitWorkflowSource(url);
+  if (!gitSource) {
+    throw new Error(`Could not build canonical GetSuperpower workflow alias URL: ${source}`);
+  }
+
+  return { ...gitSource, alias: source };
 }
 
 function isLocalWorkflowSource(source: string): boolean {
@@ -365,6 +393,7 @@ interface GitWorkflowSource {
   cloneUrl: string;
   url: string;
   subdirectory?: string;
+  alias?: string;
 }
 
 function parseGitWorkflowSource(source: string): GitWorkflowSource | null {
@@ -465,6 +494,7 @@ async function cloneGitWorkflowSource(
         ...(source.subdirectory ? { subdirectory: source.subdirectory } : {}),
       },
       cleanup,
+      ...(source.alias ? { alias: source.alias } : {}),
     };
   } catch (error) {
     await cleanup();

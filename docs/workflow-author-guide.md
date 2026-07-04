@@ -256,6 +256,18 @@ GetSuperpower lives at:
 git@github.com:0xroylee/getsuperpower.git
 ```
 
+Checked-in examples under `examples/workflows` can be installed by folder alias:
+
+```bash
+npx getsuperpower@latest install support-triage
+```
+
+That alias resolves to:
+
+```bash
+npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/support-triage'
+```
+
 If you have write access:
 
 ```bash
