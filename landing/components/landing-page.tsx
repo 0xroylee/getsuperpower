@@ -34,7 +34,11 @@ const agentLogoStyles: Record<AgentBadgeContent["id"], string> = {
   "github-copilot": "border-violet-200/15 bg-violet-300/10 text-violet-200",
 };
 
-export function LandingPage() {
+interface LandingPageProps {
+  githubStarsLabel?: string;
+}
+
+export function LandingPage({ githubStarsLabel = "Stars" }: LandingPageProps) {
   const [activeCommand, setActiveCommand] = useState(0);
   const [query, setQuery] = useState("");
   const [selectedWorkflowSlug, setSelectedWorkflowSlug] = useState<string | null>(null);
@@ -92,10 +96,11 @@ export function LandingPage() {
           </a>
           <a
             href={githubUrl}
+            aria-label={`Open GitHub repository, ${githubStarsLabel}`}
             className="inline-flex items-center gap-1.5 transition hover:text-white/80"
           >
             <Github size={15} />
-            <span className="hidden sm:inline">GitHub</span>
+            <span className="hidden sm:inline">{githubStarsLabel}</span>
           </a>
         </div>
       </nav>

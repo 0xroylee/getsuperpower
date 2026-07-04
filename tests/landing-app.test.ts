@@ -95,6 +95,22 @@ describe("landing app source contract", () => {
     expect(page).toContain("setSelectedWorkflowSlug");
   });
 
+  test("renders GitHub stars in the landing header from cached server metadata", () => {
+    const page = readLandingFile("app/page.tsx");
+    const landingPage = readLandingFile("components/landing-page.tsx");
+
+    expect(page).toContain("https://api.github.com/repos/0xroylee/getsuperpower");
+    expect(page).toContain("stargazers_count");
+    expect(page).toContain("next: { revalidate:");
+    expect(page).toContain("formatGithubStarsLabel");
+    expect(page).toContain("githubStarsLabel");
+    expect(page).toContain("<LandingPage githubStarsLabel={githubStarsLabel} />");
+
+    expect(landingPage).toContain('githubStarsLabel = "Stars"');
+    expect(landingPage).toContain("{githubStarsLabel}");
+    expect(landingPage).toContain("aria-label={`Open GitHub repository,");
+  });
+
   test("renders an interactive simulated workflow run section", () => {
     const demo = readLandingFile("components/workflow-run-demo.tsx");
     const page = readLandingFile("components/landing-page.tsx");
