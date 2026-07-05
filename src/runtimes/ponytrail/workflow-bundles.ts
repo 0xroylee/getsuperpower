@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { z } from "zod";
 
 const workflowFileName = "workflow.json";
@@ -146,6 +146,21 @@ export interface WorkflowBundleScaffold {
 export interface WorkflowSkillInstallDependency {
   source: string;
   repo?: string;
+}
+
+export interface WorkflowLoopMetadata {
+  schemaVersion: "0.1";
+  workflow: string;
+  entrySkill: string;
+  loopScript: string;
+  state: "global";
+  execution: "action-only";
+  commands: ["start", "status", "log", "advance", "summary"];
+}
+
+export interface PreparedWorkflowSkillInstallDependencies {
+  dependencies: WorkflowSkillInstallDependency[];
+  cleanup?: () => Promise<void>;
 }
 
 export interface InstalledWorkflowBundle extends WorkflowBundleManifest {
@@ -294,6 +309,83 @@ export function getWorkflowSkillInstallDependencies(
       ...(skill.repo ? { repo: skill.repo } : {}),
     };
   });
+}
+
+export function createWorkflowLoopMetadata(bundle: WorkflowBundle): WorkflowLoopMetadata | null {
+  if (!bundle.manifest.loop) {
+    return null;
+  }
+
+  const entrySkill = getWorkflowEntrySkill(bundle.manifest);
+  if (!entrySkill) {
+    throw new Error("Looped workflow entry skill could not be resolved");
+  }
+
+  return {
+    schemaVersion: "0.1",
+    workflow: bundle.manifest.name,
+    entrySkill: entrySkill.source,
+    loopScript: bundle.manifest.loop.script,
+    state: bundle.manifest.loop.state,
+    execution: bundle.manifest.loop.execution,
+    commands: ["start", "status", "log", "advance", "summary"],
+  };
+}
+
+export async function getPreparedWorkflowSkillInstallDependencies(input: {
+  bundle: WorkflowBundle;
+  tempDir?: string;
+}): Promise<PreparedWorkflowSkillInstallDependencies> {
+  const dependencies = getWorkflowSkillInstallDependencies(input.bundle);
+  if (!input.bundle.manifest.loop) {
+    return { dependencies };
+  }
+
+  const entrySkill = getWorkflowEntrySkill(input.bundle.manifest);
+  if (!entrySkill) {
+    throw new Error("Looped workflow entry skill could not be resolved");
+  }
+
+  const entryIndex = input.bundle.manifest.skills.findIndex((skill) => skill.entry === true);
+  const sourceDependency = dependencies[entryIndex];
+  if (!sourceDependency) {
+    throw new Error("Looped workflow entry dependency could not be resolved");
+  }
+
+  const tempRoot = input.tempDir ?? tmpdir();
+  await mkdir(tempRoot, { recursive: true });
+  const preparedRoot = await mkdtemp(join(tempRoot, "looped-workflow-entry-"));
+  const preparedSkillDir = join(preparedRoot, basename(sourceDependency.source));
+  const loopScriptPath = resolveWorkflowLoopScriptPath({
+    sourceDir: input.bundle.sourceDir,
+    script: input.bundle.manifest.loop.script,
+    requireExists: true,
+  });
+  const metadata = createWorkflowLoopMetadata(input.bundle);
+  if (!metadata) {
+    throw new Error("Looped workflow metadata could not be generated");
+  }
+
+  await cp(sourceDependency.source, preparedSkillDir, { recursive: true });
+  await cp(input.bundle.manifestPath, join(preparedSkillDir, workflowFileName));
+  await cp(loopScriptPath, join(preparedSkillDir, "loop.mjs"));
+  await writeFile(
+    join(preparedSkillDir, "loop.metadata.json"),
+    `${JSON.stringify(metadata, null, 2)}\n`,
+  );
+
+  const preparedDependencies = dependencies.map((dependency, index) =>
+    index === entryIndex ? { ...dependency, source: preparedSkillDir } : dependency,
+  );
+
+  return {
+    dependencies: preparedDependencies,
+    cleanup: () => rm(preparedRoot, { recursive: true, force: true }),
+  };
+}
+
+function getWorkflowEntrySkill(manifest: WorkflowBundleManifest) {
+  return manifest.skills.find((skill) => skill.entry === true) ?? null;
 }
 
 function createInstalledWorkflowBundle(bundle: WorkflowBundle): InstalledWorkflowBundle {
