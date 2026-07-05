@@ -14,6 +14,7 @@ const WorkflowSkillSchema = z.object({
   source: z.string().min(1),
   repo: z.string().min(1).optional(),
   optional: z.boolean().optional(),
+  entry: z.boolean().optional(),
 });
 
 const WorkflowStepSchema = z.object({
@@ -21,6 +22,13 @@ const WorkflowStepSchema = z.object({
   title: z.string().min(1),
   skill: z.string().min(1),
   gate: z.enum(["human_approval"]).optional(),
+  instruction: z.string().min(1).optional(),
+});
+
+const WorkflowLoopSchema = z.object({
+  script: z.string().min(1),
+  state: z.literal("global"),
+  execution: z.literal("action-only"),
 });
 
 export const WorkflowBundleManifestSchema = z
@@ -29,6 +37,7 @@ export const WorkflowBundleManifestSchema = z
     name: z.string().min(1),
     version: z.string().min(1),
     description: z.string().min(1),
+    loop: WorkflowLoopSchema.optional(),
     skills: z.array(WorkflowSkillSchema).min(1),
     steps: z.array(WorkflowStepSchema).min(1),
   })
@@ -52,6 +61,37 @@ export const WorkflowBundleManifestSchema = z
           code: z.ZodIssueCode.custom,
           message: `Workflow step ${step.id} references unknown skill: ${step.skill}`,
           path: ["steps", index, "skill"],
+        });
+      }
+    }
+
+    const entrySkillIndexes = manifest.skills
+      .map((skill, index) => (skill.entry === true ? index : -1))
+      .filter((index) => index >= 0);
+
+    if (entrySkillIndexes.length > 1) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Only one workflow skill can be marked as entry",
+        path: ["skills"],
+      });
+    }
+
+    if (manifest.loop && entrySkillIndexes.length !== 1) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Looped workflows must declare exactly one entry skill",
+        path: ["skills"],
+      });
+    }
+
+    if (manifest.loop && entrySkillIndexes.length === 1) {
+      const entrySkill = manifest.skills[entrySkillIndexes[0] ?? 0];
+      if (entrySkill && !isLocalWorkflowSkillSource(entrySkill.source)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Looped workflow entry skill must be a local skill path",
+          path: ["skills", entrySkillIndexes[0], "source"],
         });
       }
     }
@@ -245,10 +285,9 @@ export function getWorkflowSkillInstallDependencies(
   bundle: WorkflowBundle,
 ): WorkflowSkillInstallDependency[] {
   return bundle.manifest.skills.map((skill) => {
-    const source =
-      skill.source.startsWith("./") || skill.source.startsWith("../")
-        ? resolve(bundle.sourceDir, skill.source)
-        : skill.source;
+    const source = isLocalWorkflowSkillSource(skill.source)
+      ? resolve(bundle.sourceDir, skill.source)
+      : skill.source;
     return {
       source,
       ...(skill.repo ? { repo: skill.repo } : {}),
@@ -342,6 +381,10 @@ function formatEntrySkillSource(source: string): string {
   }
 
   return source;
+}
+
+function isLocalWorkflowSkillSource(source: string): boolean {
+  return source.startsWith("./") || source.startsWith("../");
 }
 
 interface ResolvedWorkflowBundleSource {

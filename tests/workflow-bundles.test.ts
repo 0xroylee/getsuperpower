@@ -49,6 +49,154 @@ describe("workflow bundles", () => {
     await expect(loadWorkflowBundle(bundleDir)).rejects.toThrow("Duplicate workflow step id: same");
   });
 
+  test("loads a looped workflow manifest with entry skill and step instructions", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "workflow-bundle-loop-"));
+    const bundleDir = join(rootDir, "looped-workflow");
+    await mkdir(join(bundleDir, "skills", "looped-workflow"), { recursive: true });
+    await writeFile(
+      join(bundleDir, "skills", "looped-workflow", "SKILL.md"),
+      [
+        "---",
+        "name: looped-workflow",
+        'description: "Loop-enabled entry skill."',
+        "---",
+        "",
+        "# looped-workflow",
+      ].join("\n"),
+    );
+    await writeFile(join(bundleDir, "loop.mjs"), "export {};\n");
+    await writeFile(
+      join(bundleDir, "workflow.json"),
+      JSON.stringify(
+        {
+          schemaVersion: "0.1",
+          name: "looped-workflow",
+          version: "0.1.0",
+          description: "Uses a loop runtime.",
+          loop: {
+            script: "./loop.mjs",
+            state: "global",
+            execution: "action-only",
+          },
+          skills: [{ source: "./skills/looped-workflow", entry: true }],
+          steps: [
+            {
+              id: "entry",
+              title: "Run the entry skill",
+              skill: "./skills/looped-workflow",
+              instruction: "Check loop status before doing the next phase.",
+            },
+          ],
+        },
+        null,
+        2,
+      ),
+    );
+
+    try {
+      const bundle = await loadWorkflowBundle(bundleDir);
+
+      expect(bundle.manifest.loop).toEqual({
+        script: "./loop.mjs",
+        state: "global",
+        execution: "action-only",
+      });
+      expect(bundle.manifest.skills).toEqual([
+        { source: "./skills/looped-workflow", entry: true },
+      ]);
+      expect(bundle.manifest.steps[0]?.instruction).toBe(
+        "Check loop status before doing the next phase.",
+      );
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  test("rejects looped workflows without exactly one entry skill", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "workflow-bundle-loop-entry-"));
+    const bundleDir = join(rootDir, "bad-loop");
+    await mkdir(bundleDir, { recursive: true });
+    await writeFile(join(bundleDir, "loop.mjs"), "export {};\n");
+
+    try {
+      await writeFile(
+        join(bundleDir, "workflow.json"),
+        JSON.stringify(
+          {
+            schemaVersion: "0.1",
+            name: "bad-loop",
+            version: "0.1.0",
+            description: "Missing entry skill.",
+            loop: { script: "./loop.mjs", state: "global", execution: "action-only" },
+            skills: [{ source: "./skills/bad-loop" }],
+            steps: [{ id: "entry", title: "Entry", skill: "./skills/bad-loop" }],
+          },
+          null,
+          2,
+        ),
+      );
+      await expect(loadWorkflowBundle(bundleDir)).rejects.toThrow(
+        "Looped workflows must declare exactly one entry skill",
+      );
+
+      await writeFile(
+        join(bundleDir, "workflow.json"),
+        JSON.stringify(
+          {
+            schemaVersion: "0.1",
+            name: "bad-loop",
+            version: "0.1.0",
+            description: "Multiple entry skills.",
+            loop: { script: "./loop.mjs", state: "global", execution: "action-only" },
+            skills: [
+              { source: "./skills/one", entry: true },
+              { source: "./skills/two", entry: true },
+            ],
+            steps: [{ id: "entry", title: "Entry", skill: "./skills/one" }],
+          },
+          null,
+          2,
+        ),
+      );
+      await expect(loadWorkflowBundle(bundleDir)).rejects.toThrow(
+        "Only one workflow skill can be marked as entry",
+      );
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  test("rejects non-local entry skills in looped workflows", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "workflow-bundle-loop-nonlocal-"));
+    const bundleDir = join(rootDir, "bad-loop");
+    await mkdir(bundleDir, { recursive: true });
+    await writeFile(join(bundleDir, "loop.mjs"), "export {};\n");
+    await writeFile(
+      join(bundleDir, "workflow.json"),
+      JSON.stringify(
+        {
+          schemaVersion: "0.1",
+          name: "bad-loop",
+          version: "0.1.0",
+          description: "Entry skill is not local.",
+          loop: { script: "./loop.mjs", state: "global", execution: "action-only" },
+          skills: [{ source: "superpowers:brainstorming", entry: true }],
+          steps: [{ id: "entry", title: "Entry", skill: "superpowers:brainstorming" }],
+        },
+        null,
+        2,
+      ),
+    );
+
+    try {
+      await expect(loadWorkflowBundle(bundleDir)).rejects.toThrow(
+        "Looped workflow entry skill must be a local skill path",
+      );
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
   test("loads workflow skill repository metadata for external skill installs", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "workflow-bundle-repo-"));
     const bundleDir = join(rootDir, "repo-skills");
