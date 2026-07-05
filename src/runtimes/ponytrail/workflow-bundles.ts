@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, isAbsolute, join, resolve } from "node:path";
+import { dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { z } from "zod";
 
 const workflowFileName = "workflow.json";
@@ -180,6 +180,7 @@ export async function loadWorkflowBundle(
   try {
     const rawManifest = await readFile(manifestPath, "utf8");
     const manifest = WorkflowBundleManifestSchema.parse(JSON.parse(rawManifest));
+    validateWorkflowBundleFiles({ manifest, sourceDir: manifestDir });
 
     return {
       manifest,
@@ -300,6 +301,45 @@ function createInstalledWorkflowBundle(bundle: WorkflowBundle): InstalledWorkflo
     ...bundle.manifest,
     source: bundle.source,
   };
+}
+
+function validateWorkflowBundleFiles(input: {
+  manifest: WorkflowBundleManifest;
+  sourceDir: string;
+}): void {
+  if (!input.manifest.loop) {
+    return;
+  }
+
+  resolveWorkflowLoopScriptPath({
+    sourceDir: input.sourceDir,
+    script: input.manifest.loop.script,
+    requireExists: true,
+  });
+}
+
+function resolveWorkflowLoopScriptPath(input: {
+  sourceDir: string;
+  script: string;
+  requireExists: boolean;
+}): string {
+  if (isAbsolute(input.script)) {
+    throw new Error("Workflow loop script must be a relative path");
+  }
+  if (extname(input.script) !== ".mjs") {
+    throw new Error("Workflow loop script must use a .mjs extension");
+  }
+
+  const scriptPath = resolve(input.sourceDir, input.script);
+  const relativePath = relative(input.sourceDir, scriptPath);
+  if (relativePath === ".." || relativePath.startsWith(`..${sep}`) || isAbsolute(relativePath)) {
+    throw new Error("Workflow loop script must stay inside the workflow bundle");
+  }
+  if (input.requireExists && !existsSync(scriptPath)) {
+    throw new Error(`Workflow loop script was not found: ${scriptPath}`);
+  }
+
+  return scriptPath;
 }
 
 function createScaffoldManifest(name: string): WorkflowBundleManifest {

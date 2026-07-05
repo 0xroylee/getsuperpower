@@ -197,6 +197,66 @@ describe("workflow bundles", () => {
     }
   });
 
+  test("rejects invalid loop script paths", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "workflow-bundle-loop-path-"));
+    const bundleDir = join(rootDir, "bad-loop-path");
+    await mkdir(join(bundleDir, "skills", "bad-loop-path"), { recursive: true });
+    await writeFile(
+      join(bundleDir, "skills", "bad-loop-path", "SKILL.md"),
+      [
+        "---",
+        "name: bad-loop-path",
+        'description: "Entry skill."',
+        "---",
+        "",
+        "# bad-loop-path",
+      ].join("\n"),
+    );
+
+    async function writeManifest(script: string): Promise<void> {
+      await writeFile(
+        join(bundleDir, "workflow.json"),
+        JSON.stringify(
+          {
+            schemaVersion: "0.1",
+            name: "bad-loop-path",
+            version: "0.1.0",
+            description: "Invalid loop script path.",
+            loop: { script, state: "global", execution: "action-only" },
+            skills: [{ source: "./skills/bad-loop-path", entry: true }],
+            steps: [{ id: "entry", title: "Entry", skill: "./skills/bad-loop-path" }],
+          },
+          null,
+          2,
+        ),
+      );
+    }
+
+    try {
+      await writeManifest("/tmp/loop.mjs");
+      await expect(loadWorkflowBundle(bundleDir)).rejects.toThrow(
+        "Workflow loop script must be a relative path",
+      );
+
+      await writeManifest("../loop.mjs");
+      await expect(loadWorkflowBundle(bundleDir)).rejects.toThrow(
+        "Workflow loop script must stay inside the workflow bundle",
+      );
+
+      await writeManifest("./loop.js");
+      await expect(loadWorkflowBundle(bundleDir)).rejects.toThrow(
+        "Workflow loop script must use a .mjs extension",
+      );
+
+      await writeManifest("./missing.mjs");
+      await expect(loadWorkflowBundle(bundleDir)).rejects.toThrow(
+        "Workflow loop script was not found",
+      );
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
   test("loads workflow skill repository metadata for external skill installs", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "workflow-bundle-repo-"));
     const bundleDir = join(rootDir, "repo-skills");
