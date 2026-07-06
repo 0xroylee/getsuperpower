@@ -11,10 +11,11 @@ src/
   plugins/
     skill-installer.ts
   runtimes/
-    ponytrail/
+    getsuperpower/
       instruction-context.ts
       snapshots.ts
       workflow-bundles.ts
+      workflow-loop-runtime.mjs
 ```
 
 ## CLI
@@ -42,7 +43,7 @@ Compatibility aliases:
 
 ## GetSuperpower Runtime
 
-`src/runtimes/ponytrail/workflow-bundles.ts` owns the bundle contract:
+`src/runtimes/getsuperpower/workflow-bundles.ts` owns the bundle contract:
 
 - parse and validate `workflow.json`
 - validate optional loop metadata: `loop`, one `skills[].entry`, and
@@ -52,12 +53,13 @@ Compatibility aliases:
 - resolve local and public git bundle sources
 - list skill dependency sources plus optional Skills CLI repository metadata
 - prepare looped workflow entry skill installs with copied `workflow.json`,
-  `loop.mjs`, and generated `loop.metadata.json`
+  `loop.mjs`, generated `loop.metadata.json`, and copied `loop-runtime.mjs`
 - install normalized global records under `~/.getsuperpower/workflows/`
 - list installed GetSuperpowers
 
-The internal folder name remains `ponytrail` for compatibility with existing
-imports. The product behavior is GetSuperpower-only.
+The runtime folder uses the GetSuperpower name. Older Pony Trail history,
+revert, and prehook behavior remains paused and is not exposed by the public
+CLI.
 
 ## Skill Installer
 
@@ -84,8 +86,8 @@ Skills CLI package in `skills[].repo`.
 
 ## Paused Pony Trail Runtime
 
-`src/runtimes/ponytrail/snapshots.ts` and
-`src/runtimes/ponytrail/instruction-context.ts` remain in the source tree for
+`src/runtimes/getsuperpower/snapshots.ts` and
+`src/runtimes/getsuperpower/instruction-context.ts` remain in the source tree for
 future or legacy use, but the public GetSuperpower CLI does not expose history,
 revert, or prehook commands while Pony Trail is paused.
 
@@ -114,7 +116,8 @@ should stay aligned with `workflow.json`.
 
 Loop-enabled workflows declare `loop` in `workflow.json`, mark exactly one local
 skill with `entry: true`, and keep phase instructions in `steps[].instruction`.
-Install copies the loop files only into that entry skill destination.
+Install copies `workflow.json`, `loop.mjs`, `loop.metadata.json`, and
+`loop-runtime.mjs` only into that entry skill destination.
 
 ## Boundaries
 

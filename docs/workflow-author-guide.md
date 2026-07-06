@@ -165,8 +165,26 @@ beside `workflow.json`:
 
 Looped workflows must mark exactly one local skill as `entry: true`. Put the
 exact phase prompt in `steps[].instruction`; `node loop.mjs status --json`
-returns that instruction. During install, GetSuperpower copies `workflow.json`,
-`loop.mjs`, and generated `loop.metadata.json` into the installed entry skill
+returns that instruction.
+
+Looped workflow `loop.mjs` files should be thin wrappers around the shared
+runtime:
+
+```js
+#!/usr/bin/env node
+
+import { runWorkflowLoopCli } from "./loop-runtime.mjs";
+
+process.exitCode = await runWorkflowLoopCli({
+  argv: process.argv.slice(2),
+  workflowJson: new URL("./workflow.json", import.meta.url),
+});
+```
+
+GetSuperpower copies the shared `loop-runtime.mjs` asset into the installed
+entry skill automatically when `workflow.json` declares `loop`. During install,
+GetSuperpower copies `workflow.json`, `loop.mjs`, generated
+`loop.metadata.json`, and `loop-runtime.mjs` into the installed entry skill
 folder only.
 
 ## 4. Edit The Entry Skill

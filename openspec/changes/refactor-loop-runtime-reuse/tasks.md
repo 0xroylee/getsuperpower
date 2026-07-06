@@ -28,19 +28,19 @@
 
 ## 4. Implement With TDD
 
-- [ ] Confirm the public seams under test before writing tests.
-- [ ] Add a failing runtime-level test for command execution through the shared
+- [x] Confirm the public seams under test before writing tests.
+- [x] Add a failing runtime-level test for command execution through the shared
       entrypoint.
-- [ ] Extract the generic runtime behavior behind the shared entrypoint.
-- [ ] Move active runtime modules from `src/runtimes/ponytrail/` to
+- [x] Extract the generic runtime behavior behind the shared entrypoint.
+- [x] Move active runtime modules from `src/runtimes/ponytrail/` to
       `src/runtimes/getsuperpower/` and update imports.
-- [ ] Add a failing Node wrapper smoke test for the thin example `loop.mjs`.
-- [ ] Reduce the example `loop.mjs` to the thin wrapper.
-- [ ] Add a failing install-preparation test for copied shared runtime assets.
-- [ ] Update install preparation to copy the shared runtime asset for looped
+- [x] Add a failing Node wrapper smoke test for the thin example `loop.mjs`.
+- [x] Reduce the example `loop.mjs` to the thin wrapper.
+- [x] Add a failing install-preparation test for copied shared runtime assets.
+- [x] Update install preparation to copy the shared runtime asset for looped
       workflows.
-- [ ] Add compatibility coverage for non-loop workflows.
-- [ ] Update author documentation.
+- [x] Add compatibility coverage for non-loop workflows.
+- [x] Update author documentation.
 
 ## 5. Verify And Archive
 
