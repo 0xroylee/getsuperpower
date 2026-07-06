@@ -58,7 +58,7 @@ describe("package metadata", () => {
       "utf8",
     );
     const workflowBundleSource = await readFile(
-      join(import.meta.dir, "..", "src", "runtimes", "ponytrail", "workflow-bundles.ts"),
+      join(import.meta.dir, "..", "src", "runtimes", "getsuperpower", "workflow-bundles.ts"),
       "utf8",
     );
 
