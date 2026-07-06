@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 
 import { homedir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
