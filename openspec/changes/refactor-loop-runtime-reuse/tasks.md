@@ -44,9 +44,21 @@
 
 ## 5. Verify And Archive
 
-- [ ] Run focused Bun tests for loop runtime and workflow-bundle installation.
-- [ ] Run Node smoke checks against the example workflow loop.
-- [ ] Run CLI validate/deps smoke checks for the example workflow.
-- [ ] Run `rtk bun run check`.
-- [ ] Record Pony Trail post-change evidence.
+- [x] Run focused Bun tests for loop runtime and workflow-bundle installation.
+      Evidence: `rtk bun test tests/workflow-bundles.test.ts
+      tests/loop-runtime.test.ts tests/cli.test.ts`.
+- [x] Run Node smoke checks against the example workflow loop.
+      Evidence: `rtk env HOME=/private/tmp/getsuperpower-loop-smoke-20260706-1409
+      node examples/workflows/grilled-product-dev/loop.mjs start --run
+      plan-smoke --json` and matching `status --run plan-smoke --json`.
+- [x] Run CLI validate/deps smoke checks for the example workflow.
+      Evidence: `rtk bun run dev -- validate
+      examples/workflows/grilled-product-dev` and `rtk bun run dev -- deps
+      examples/workflows/grilled-product-dev`.
+- [x] Run `rtk bun run check`.
+      Evidence: 137 tests passed, coverage passed at 91.88% lines
+      (3305/3597).
+- [x] Record Pony Trail post-change evidence.
+      Evidence: snapshots `20260706T141040Z-197c6700`,
+      `20260706T141310Z-815d9c02`, and `20260706T141452Z-68acc8ad`.
 - [ ] Run `/opsx:archive` after human approval.
