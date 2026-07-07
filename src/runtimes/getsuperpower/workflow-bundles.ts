@@ -150,6 +150,14 @@ export interface WorkflowSkillInstallDependency {
   repo?: string;
 }
 
+export interface WorkflowInstallSkillArtifact {
+  source: string;
+  skillName: string;
+  agent: string;
+  status: string;
+  paths: string[];
+}
+
 export interface WorkflowLoopMetadata {
   schemaVersion: "0.1";
   workflow: string;
@@ -167,6 +175,7 @@ export interface PreparedWorkflowSkillInstallDependencies {
 
 export interface InstalledWorkflowBundle extends WorkflowBundleManifest {
   source: WorkflowBundleSource;
+  installArtifacts?: WorkflowInstallSkillArtifact[];
 }
 
 export interface WorkflowInstallResult {
@@ -263,8 +272,9 @@ export async function createWorkflowBundleScaffold(input: {
 export async function installWorkflowBundle(input: {
   rootDir: string;
   bundle: WorkflowBundle;
+  installArtifacts?: WorkflowInstallSkillArtifact[];
 }): Promise<WorkflowInstallResult> {
-  const workflow = createInstalledWorkflowBundle(input.bundle);
+  const workflow = createInstalledWorkflowBundle(input.bundle, input.installArtifacts ?? []);
   const workflowDir = join(input.rootDir, workflowStoreDir);
   const path = join(workflowDir, `${workflow.name}.json`);
 
@@ -431,10 +441,14 @@ function getWorkflowEntrySkill(manifest: WorkflowBundleManifest) {
   return manifest.skills.find((skill) => skill.entry === true) ?? null;
 }
 
-function createInstalledWorkflowBundle(bundle: WorkflowBundle): InstalledWorkflowBundle {
+function createInstalledWorkflowBundle(
+  bundle: WorkflowBundle,
+  installArtifacts: WorkflowInstallSkillArtifact[],
+): InstalledWorkflowBundle {
   return {
     ...bundle.manifest,
     source: bundle.source,
+    ...(installArtifacts.length > 0 ? { installArtifacts } : {}),
   };
 }
 

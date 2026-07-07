@@ -26,6 +26,7 @@ import {
   listInstalledWorkflowBundles,
   loadWorkflowBundle,
   type WorkflowGitCommandRunner,
+  type WorkflowInstallSkillArtifact,
 } from "./runtimes/getsuperpower";
 
 export interface GetSuperpowerInstallSkillInput {
@@ -318,6 +319,7 @@ async function runGetSuperpowerInstall(
 
     preparedDependencies = await getPreparedWorkflowSkillInstallDependencies({ bundle });
     const skillDependencies = preparedDependencies.dependencies;
+    const installArtifacts: WorkflowInstallSkillArtifact[] = [];
     for (const [index, skillDependency] of skillDependencies.entries()) {
       const displaySkill = skillPlans[index]?.source ?? skillDependency.source;
       console.log(`Processing ${index + 1}/${skillDependencies.length}: ${displaySkill}`);
@@ -333,13 +335,24 @@ async function runGetSuperpowerInstall(
         installedExternalPackages,
       });
 
+      const manifestSource = skillPlans[index]?.source ?? skillDependency.source;
+      for (const target of skillResult.skillInstall.targets) {
+        installArtifacts.push({
+          source: manifestSource,
+          skillName: skillResult.skillInstall.skillName,
+          agent: target.agent,
+          status: target.status,
+          paths: target.artifactPaths,
+        });
+      }
+
       options.printSkillInstallResult(skillResult.skillInstall, "install", {
         showPostSkillChangeWelcome: false,
       });
       console.log(success(`Installed skill: ${skillResult.skillInstall.skillName}`));
     }
 
-    const install = await installWorkflowBundle({ rootDir: targetDir, bundle });
+    const install = await installWorkflowBundle({ rootDir: targetDir, bundle, installArtifacts });
 
     console.log(success(`GetSuperpower installed: ${install.workflow.name}`));
     console.log(keyValue("GetSuperpower file", install.path));

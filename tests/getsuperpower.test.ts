@@ -263,6 +263,53 @@ describe("getsuperpower command module", () => {
     await rm(homeDir, { recursive: true, force: true });
   });
 
+  test("install persists exact skill artifact paths in the workflow record", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "getsuperpower-artifacts-root-"));
+    const homeDir = await mkdtemp(join(tmpdir(), "getsuperpower-artifacts-home-"));
+    const bundleDir = join(rootDir, "git-workflow");
+    const program = new Command();
+    const primary = join(homeDir, ".agents", "skills", "git-entry");
+    const mirror = join(homeDir, ".codex", "skills", "git-entry");
+
+    try {
+      await writeGitWorkflowFixtureAt(bundleDir);
+
+      configureGetSuperpowerCommand(program, {
+        rootDir,
+        installSkill: async (input) => ({
+          skillInstall: fakeSkillInstallResult({
+            source: input.source,
+            skillName: "git-entry",
+            destination: primary,
+            artifactPaths: [primary, mirror],
+          }),
+        }),
+        printSkillInstallResult: () => {},
+      });
+
+      await program.parseAsync(["install", bundleDir, "--home", homeDir, "--agents", "codex"], {
+        from: "user",
+      });
+
+      const installed = JSON.parse(
+        await readFile(join(homeDir, ".getsuperpower", "workflows", "git-workflow.json"), "utf8"),
+      );
+
+      expect(installed.installArtifacts).toEqual([
+        {
+          source: "./skills/git-entry",
+          skillName: "git-entry",
+          agent: "codex",
+          status: "installed",
+          paths: [primary, mirror],
+        },
+      ]);
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
   test("list reads workflow records from the global home by default", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "getsuperpower-list-root-"));
     const homeDir = await mkdtemp(join(tmpdir(), "getsuperpower-list-home-"));

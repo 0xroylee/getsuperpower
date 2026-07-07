@@ -13,6 +13,7 @@ import {
   listInstalledWorkflowBundles,
   loadWorkflowBundle,
   type WorkflowGitCommand,
+  type WorkflowInstallSkillArtifact,
 } from "../src/runtimes/getsuperpower/workflow-bundles";
 
 describe("workflow bundles", () => {
@@ -383,6 +384,32 @@ describe("workflow bundles", () => {
     await expect(
       readFile(join(scaffold.bundleDir, "skills", "custom-review", "SKILL.md"), "utf8"),
     ).resolves.toContain("Review this GetSuperpower from the author perspective.");
+  });
+
+  test("stores workflow install artifact metadata in installed records", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "workflow-bundle-install-artifacts-"));
+    const bundle = await loadWorkflowBundle("examples/workflows/release-review");
+    const installArtifacts: WorkflowInstallSkillArtifact[] = [
+      {
+        source: "./skills/release-risk-review",
+        skillName: "release-risk-review",
+        agent: "codex",
+        status: "installed",
+        paths: [
+          join(rootDir, ".agents", "skills", "release-risk-review"),
+          join(rootDir, ".codex", "skills", "release-risk-review"),
+        ],
+      },
+    ];
+
+    try {
+      const install = await installWorkflowBundle({ rootDir, bundle, installArtifacts });
+      const installed = JSON.parse(await readFile(install.path, "utf8"));
+
+      expect(installed.installArtifacts).toEqual(installArtifacts);
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
   });
 
   test("loads the release-review example workflow with its local skill", async () => {
