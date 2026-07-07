@@ -73,7 +73,6 @@ describe("workflow bundles", () => {
         "# looped-workflow",
       ].join("\n"),
     );
-    await writeFile(join(bundleDir, "loop.mjs"), "export {};\n");
     await writeFile(
       join(bundleDir, "workflow.json"),
       JSON.stringify(
