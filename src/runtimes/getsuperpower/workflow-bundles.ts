@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, isAbsolute, join, resolve } from "node:path";
+import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { z } from "zod";
 import { runSubprocess } from "../../process";
 
@@ -15,6 +15,7 @@ const WorkflowSkillSchema = z.object({
   source: z.string().min(1),
   repo: z.string().min(1).optional(),
   optional: z.boolean().optional(),
+  entry: z.boolean().optional(),
 });
 
 const WorkflowStepSchema = z.object({
@@ -22,6 +23,13 @@ const WorkflowStepSchema = z.object({
   title: z.string().min(1),
   skill: z.string().min(1),
   gate: z.enum(["human_approval"]).optional(),
+  instruction: z.string().min(1).optional(),
+});
+
+const WorkflowLoopSchema = z.object({
+  script: z.string().min(1),
+  state: z.literal("global"),
+  execution: z.literal("action-only"),
 });
 
 export const WorkflowBundleManifestSchema = z
@@ -30,6 +38,7 @@ export const WorkflowBundleManifestSchema = z
     name: z.string().min(1),
     version: z.string().min(1),
     description: z.string().min(1),
+    loop: WorkflowLoopSchema.optional(),
     skills: z.array(WorkflowSkillSchema).min(1),
     steps: z.array(WorkflowStepSchema).min(1),
   })
@@ -53,6 +62,38 @@ export const WorkflowBundleManifestSchema = z
           code: z.ZodIssueCode.custom,
           message: `Workflow step ${step.id} references unknown skill: ${step.skill}`,
           path: ["steps", index, "skill"],
+        });
+      }
+    }
+
+    const entrySkillIndexes = manifest.skills
+      .map((skill, index) => (skill.entry === true ? index : -1))
+      .filter((index) => index >= 0);
+
+    if (entrySkillIndexes.length > 1) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Only one workflow skill can be marked as entry",
+        path: ["skills"],
+      });
+    }
+
+    if (manifest.loop && entrySkillIndexes.length !== 1) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Looped workflows must declare exactly one entry skill",
+        path: ["skills"],
+      });
+    }
+
+    if (manifest.loop && entrySkillIndexes.length === 1) {
+      const entrySkillIndex = entrySkillIndexes[0] ?? 0;
+      const entrySkill = manifest.skills[entrySkillIndex];
+      if (entrySkill && !isLocalWorkflowSkillSource(entrySkill.source)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Looped workflow entry skill must be a local skill path",
+          path: ["skills", entrySkillIndex, "source"],
         });
       }
     }
@@ -109,6 +150,21 @@ export interface WorkflowSkillInstallDependency {
   repo?: string;
 }
 
+export interface WorkflowLoopMetadata {
+  schemaVersion: "0.1";
+  workflow: string;
+  entrySkill: string;
+  loopScript: string;
+  state: "global";
+  execution: "action-only";
+  commands: ["start", "status", "log", "advance", "summary"];
+}
+
+export interface PreparedWorkflowSkillInstallDependencies {
+  dependencies: WorkflowSkillInstallDependency[];
+  cleanup?: () => Promise<void>;
+}
+
 export interface InstalledWorkflowBundle extends WorkflowBundleManifest {
   source: WorkflowBundleSource;
 }
@@ -141,6 +197,7 @@ export async function loadWorkflowBundle(
   try {
     const rawManifest = await readFile(manifestPath, "utf8");
     const manifest = WorkflowBundleManifestSchema.parse(JSON.parse(rawManifest));
+    validateWorkflowBundleFiles({ manifest, sourceDir: manifestDir });
 
     return {
       manifest,
@@ -246,10 +303,9 @@ export function getWorkflowSkillInstallDependencies(
   bundle: WorkflowBundle,
 ): WorkflowSkillInstallDependency[] {
   return bundle.manifest.skills.map((skill) => {
-    const source =
-      skill.source.startsWith("./") || skill.source.startsWith("../")
-        ? resolve(bundle.sourceDir, skill.source)
-        : skill.source;
+    const source = isLocalWorkflowSkillSource(skill.source)
+      ? resolve(bundle.sourceDir, skill.source)
+      : skill.source;
     return {
       source,
       ...(skill.repo ? { repo: skill.repo } : {}),
@@ -257,11 +313,168 @@ export function getWorkflowSkillInstallDependencies(
   });
 }
 
+export function createWorkflowLoopMetadata(bundle: WorkflowBundle): WorkflowLoopMetadata | null {
+  if (!bundle.manifest.loop) {
+    return null;
+  }
+
+  const entrySkill = getWorkflowEntrySkill(bundle.manifest);
+  if (!entrySkill) {
+    throw new Error("Looped workflow entry skill could not be resolved");
+  }
+
+  return {
+    schemaVersion: "0.1",
+    workflow: bundle.manifest.name,
+    entrySkill: entrySkill.source,
+    loopScript: bundle.manifest.loop.script,
+    state: bundle.manifest.loop.state,
+    execution: bundle.manifest.loop.execution,
+    commands: ["start", "status", "log", "advance", "summary"],
+  };
+}
+
+export async function getPreparedWorkflowSkillInstallDependencies(input: {
+  bundle: WorkflowBundle;
+  tempDir?: string;
+}): Promise<PreparedWorkflowSkillInstallDependencies> {
+  const dependencies = getWorkflowSkillInstallDependencies(input.bundle);
+  if (!input.bundle.manifest.loop) {
+    return { dependencies };
+  }
+
+  const entrySkill = getWorkflowEntrySkill(input.bundle.manifest);
+  if (!entrySkill) {
+    throw new Error("Looped workflow entry skill could not be resolved");
+  }
+
+  const entryIndex = input.bundle.manifest.skills.findIndex((skill) => skill.entry === true);
+  const sourceDependency = dependencies[entryIndex];
+  if (!sourceDependency) {
+    throw new Error("Looped workflow entry dependency could not be resolved");
+  }
+
+  const tempRoot = input.tempDir ?? tmpdir();
+  await mkdir(tempRoot, { recursive: true });
+  const preparedRoot = await mkdtemp(join(tempRoot, "looped-workflow-entry-"));
+  const preparedSkillDir = join(preparedRoot, basename(sourceDependency.source));
+  const preparedLoopScriptPath = resolveWorkflowLoopScriptPath({
+    sourceDir: preparedSkillDir,
+    script: input.bundle.manifest.loop.script,
+    requireExists: false,
+  });
+  const metadata = createWorkflowLoopMetadata(input.bundle);
+  if (!metadata) {
+    throw new Error("Looped workflow metadata could not be generated");
+  }
+
+  await cp(sourceDependency.source, preparedSkillDir, { recursive: true });
+  await cp(input.bundle.manifestPath, join(preparedSkillDir, workflowFileName));
+  await mkdir(dirname(preparedLoopScriptPath), { recursive: true });
+  await writeFile(preparedLoopScriptPath, renderGeneratedWorkflowLoopRunner());
+  await writeFile(
+    join(preparedSkillDir, "loop.metadata.json"),
+    `${JSON.stringify(metadata, null, 2)}\n`,
+  );
+
+  const preparedDependencies = dependencies.map((dependency, index) =>
+    index === entryIndex ? { ...dependency, source: preparedSkillDir } : dependency,
+  );
+
+  return {
+    dependencies: preparedDependencies,
+    cleanup: () => rm(preparedRoot, { recursive: true, force: true }),
+  };
+}
+
+function renderGeneratedWorkflowLoopRunner(): string {
+  return [
+    "#!/usr/bin/env node",
+    "",
+    'import { spawnSync } from "node:child_process";',
+    'import { fileURLToPath } from "node:url";',
+    "",
+    'const workflowJson = fileURLToPath(new URL("./workflow.json", import.meta.url));',
+    'const cliCommand = process.env.GETSUPERPOWER_BIN ?? "getsuperpower";',
+    "const [command, ...args] = process.argv.slice(2);",
+    "",
+    "if (!command) {",
+    '  console.error("Usage: node loop.mjs <start|status|log|advance|summary> [options]");',
+    "  process.exitCode = 1;",
+    "} else {",
+    '  const result = spawnSync(cliCommand, ["loop", command, workflowJson, ...args], {',
+    '    stdio: "inherit",',
+    "  });",
+    "",
+    "  if (result.error) {",
+    '    if (result.error.code === "ENOENT") {',
+    '      console.error("GetSuperpower CLI is required to run loop.mjs. Install or expose getsuperpower on PATH.");',
+    "      process.exitCode = 1;",
+    "    } else {",
+    "      console.error(result.error.message);",
+    "      process.exitCode = 1;",
+    "    }",
+    '  } else if (typeof result.status === "number") {',
+    "    process.exitCode = result.status;",
+    "  } else {",
+    "    if (result.signal) {",
+    '      console.error("getsuperpower terminated by signal " + result.signal);',
+    "    }",
+    "    process.exitCode = 1;",
+    "  }",
+    "}",
+    "",
+  ].join("\n");
+}
+
+function getWorkflowEntrySkill(manifest: WorkflowBundleManifest) {
+  return manifest.skills.find((skill) => skill.entry === true) ?? null;
+}
+
 function createInstalledWorkflowBundle(bundle: WorkflowBundle): InstalledWorkflowBundle {
   return {
     ...bundle.manifest,
     source: bundle.source,
   };
+}
+
+function validateWorkflowBundleFiles(input: {
+  manifest: WorkflowBundleManifest;
+  sourceDir: string;
+}): void {
+  if (!input.manifest.loop) {
+    return;
+  }
+
+  resolveWorkflowLoopScriptPath({
+    sourceDir: input.sourceDir,
+    script: input.manifest.loop.script,
+    requireExists: false,
+  });
+}
+
+function resolveWorkflowLoopScriptPath(input: {
+  sourceDir: string;
+  script: string;
+  requireExists: boolean;
+}): string {
+  if (isAbsolute(input.script)) {
+    throw new Error("Workflow loop script must be a relative path");
+  }
+  if (extname(input.script) !== ".mjs") {
+    throw new Error("Workflow loop script must use a .mjs extension");
+  }
+
+  const scriptPath = resolve(input.sourceDir, input.script);
+  const relativePath = relative(input.sourceDir, scriptPath);
+  if (relativePath === ".." || relativePath.startsWith(`..${sep}`) || isAbsolute(relativePath)) {
+    throw new Error("Workflow loop script must stay inside the workflow bundle");
+  }
+  if (input.requireExists && !existsSync(scriptPath)) {
+    throw new Error(`Workflow loop script was not found: ${scriptPath}`);
+  }
+
+  return scriptPath;
 }
 
 function createScaffoldManifest(name: string): WorkflowBundleManifest {
@@ -343,6 +556,10 @@ function formatEntrySkillSource(source: string): string {
   }
 
   return source;
+}
+
+function isLocalWorkflowSkillSource(source: string): boolean {
+  return source.startsWith("./") || source.startsWith("../");
 }
 
 interface ResolvedWorkflowBundleSource {

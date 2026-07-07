@@ -139,6 +139,54 @@ name used by workflow steps, and set `repo` to the package passed to
 The entry skill itself belongs in `skills[]`, but it does not need its own step.
 It is the callable wrapper that instructs the agent to run the declared steps.
 
+### Optional Loop Runtime
+
+A workflow can opt into resumable, action-only loop state by declaring a
+generated loop runner path in `workflow.json`:
+
+```json
+{
+  "loop": {
+    "script": "./loop.mjs",
+    "state": "global",
+    "execution": "action-only"
+  },
+  "skills": [{ "source": "./skills/support-triage", "entry": true }],
+  "steps": [
+    {
+      "id": "shape",
+      "title": "Clarify the support issue",
+      "skill": "superpowers:brainstorming",
+      "instruction": "Clarify the issue and wait for explicit approval."
+    }
+  ]
+}
+```
+
+Looped workflows must mark exactly one local skill as `entry: true`. Put the
+exact phase prompt in `steps[].instruction`; `getsuperpower loop status
+<source> --json` returns that instruction.
+
+`loop.script` is an install output path, not a required source file. During
+install, GetSuperpower copies `workflow.json`, writes generated
+`loop.metadata.json`, and writes a generated `loop.mjs` bridge into the
+installed entry skill folder only. The bridge delegates back to the
+GetSuperpower CLI, where the generic loop runtime lives.
+
+Agents should operate looped workflows with:
+
+```bash
+getsuperpower loop start <source> --json
+getsuperpower loop status <source> --latest --json
+getsuperpower loop log <source> --run <id> --type phase_result --message "..."
+getsuperpower loop advance <source> --run <id> --json
+getsuperpower loop summary <source> --run <id> --json
+```
+
+The generated `loop.mjs` wrapper remains a Node compatibility fallback after
+install. It requires the `getsuperpower` CLI on `PATH` or a `GETSUPERPOWER_BIN`
+environment override.
+
 ## 4. Edit The Entry Skill
 
 Open:

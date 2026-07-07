@@ -5,15 +5,24 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   createWorkflowBundleScaffold,
+  createWorkflowLoopMetadata,
+  getPreparedWorkflowSkillInstallDependencies,
   getWorkflowSkillInstallDependencies,
   getWorkflowSkillInstallSources,
   installWorkflowBundle,
   listInstalledWorkflowBundles,
   loadWorkflowBundle,
   type WorkflowGitCommand,
-} from "../src/runtimes/ponytrail/workflow-bundles";
+} from "../src/runtimes/getsuperpower/workflow-bundles";
 
 describe("workflow bundles", () => {
+  test("exports workflow bundle helpers from the GetSuperpower runtime namespace", async () => {
+    const runtime = await import("../src/runtimes/getsuperpower/workflow-bundles");
+
+    expect(typeof runtime.loadWorkflowBundle).toBe("function");
+    expect(typeof runtime.getPreparedWorkflowSkillInstallDependencies).toBe("function");
+  });
+
   test("rejects bare sources that are not valid workflow aliases", async () => {
     await expect(loadWorkflowBundle("ProductDev")).rejects.toThrow(
       "Unsupported GetSuperpower source: ProductDev",
@@ -47,6 +56,241 @@ describe("workflow bundles", () => {
     );
 
     await expect(loadWorkflowBundle(bundleDir)).rejects.toThrow("Duplicate workflow step id: same");
+  });
+
+  test("loads a looped workflow manifest with entry skill and step instructions", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "workflow-bundle-loop-"));
+    const bundleDir = join(rootDir, "looped-workflow");
+    await mkdir(join(bundleDir, "skills", "looped-workflow"), { recursive: true });
+    await writeFile(
+      join(bundleDir, "skills", "looped-workflow", "SKILL.md"),
+      [
+        "---",
+        "name: looped-workflow",
+        'description: "Loop-enabled entry skill."',
+        "---",
+        "",
+        "# looped-workflow",
+      ].join("\n"),
+    );
+    await writeFile(
+      join(bundleDir, "workflow.json"),
+      JSON.stringify(
+        {
+          schemaVersion: "0.1",
+          name: "looped-workflow",
+          version: "0.1.0",
+          description: "Uses a loop runtime.",
+          loop: {
+            script: "./loop.mjs",
+            state: "global",
+            execution: "action-only",
+          },
+          skills: [{ source: "./skills/looped-workflow", entry: true }],
+          steps: [
+            {
+              id: "entry",
+              title: "Run the entry skill",
+              skill: "./skills/looped-workflow",
+              instruction: "Check loop status before doing the next phase.",
+            },
+          ],
+        },
+        null,
+        2,
+      ),
+    );
+
+    try {
+      const bundle = await loadWorkflowBundle(bundleDir);
+
+      expect(bundle.manifest.loop).toEqual({
+        script: "./loop.mjs",
+        state: "global",
+        execution: "action-only",
+      });
+      expect(bundle.manifest.skills).toEqual([{ source: "./skills/looped-workflow", entry: true }]);
+      expect(bundle.manifest.steps[0]?.instruction).toBe(
+        "Check loop status before doing the next phase.",
+      );
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  test("loads grilled-product-dev as a looped workflow example", async () => {
+    const bundle = await loadWorkflowBundle(
+      join(import.meta.dir, "..", "examples", "workflows", "grilled-product-dev"),
+    );
+
+    expect(bundle.manifest.loop).toEqual({
+      script: "./loop.mjs",
+      state: "global",
+      execution: "action-only",
+    });
+    expect(bundle.manifest.skills[0]).toEqual({
+      source: "./skills/grilled-product-dev",
+      entry: true,
+    });
+    expect(bundle.manifest.steps.map((step) => step.id)).toEqual(["grill", "shape", "plan"]);
+    expect(bundle.manifest.steps.map((step) => step.instruction)).toEqual([
+      "Ask one grilling question, include your recommended answer, and wait for explicit human approval before advancing.",
+      "Turn the approved direction into a Superpowers design spec, then wait for explicit human approval before advancing.",
+      "Write the approved implementation plan as small executable tasks, then log the plan result.",
+    ]);
+    expect(createWorkflowLoopMetadata(bundle)).toEqual({
+      schemaVersion: "0.1",
+      workflow: "grilled-product-dev",
+      entrySkill: "./skills/grilled-product-dev",
+      loopScript: "./loop.mjs",
+      state: "global",
+      execution: "action-only",
+      commands: ["start", "status", "log", "advance", "summary"],
+    });
+  });
+
+  test("rejects looped workflows without exactly one entry skill", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "workflow-bundle-loop-entry-"));
+    const bundleDir = join(rootDir, "bad-loop");
+    await mkdir(bundleDir, { recursive: true });
+    await writeFile(join(bundleDir, "loop.mjs"), "export {};\n");
+
+    try {
+      await writeFile(
+        join(bundleDir, "workflow.json"),
+        JSON.stringify(
+          {
+            schemaVersion: "0.1",
+            name: "bad-loop",
+            version: "0.1.0",
+            description: "Missing entry skill.",
+            loop: { script: "./loop.mjs", state: "global", execution: "action-only" },
+            skills: [{ source: "./skills/bad-loop" }],
+            steps: [{ id: "entry", title: "Entry", skill: "./skills/bad-loop" }],
+          },
+          null,
+          2,
+        ),
+      );
+      await expect(loadWorkflowBundle(bundleDir)).rejects.toThrow(
+        "Looped workflows must declare exactly one entry skill",
+      );
+
+      await writeFile(
+        join(bundleDir, "workflow.json"),
+        JSON.stringify(
+          {
+            schemaVersion: "0.1",
+            name: "bad-loop",
+            version: "0.1.0",
+            description: "Multiple entry skills.",
+            loop: { script: "./loop.mjs", state: "global", execution: "action-only" },
+            skills: [
+              { source: "./skills/one", entry: true },
+              { source: "./skills/two", entry: true },
+            ],
+            steps: [{ id: "entry", title: "Entry", skill: "./skills/one" }],
+          },
+          null,
+          2,
+        ),
+      );
+      await expect(loadWorkflowBundle(bundleDir)).rejects.toThrow(
+        "Only one workflow skill can be marked as entry",
+      );
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  test("rejects non-local entry skills in looped workflows", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "workflow-bundle-loop-nonlocal-"));
+    const bundleDir = join(rootDir, "bad-loop");
+    await mkdir(bundleDir, { recursive: true });
+    await writeFile(join(bundleDir, "loop.mjs"), "export {};\n");
+    await writeFile(
+      join(bundleDir, "workflow.json"),
+      JSON.stringify(
+        {
+          schemaVersion: "0.1",
+          name: "bad-loop",
+          version: "0.1.0",
+          description: "Entry skill is not local.",
+          loop: { script: "./loop.mjs", state: "global", execution: "action-only" },
+          skills: [{ source: "superpowers:brainstorming", entry: true }],
+          steps: [{ id: "entry", title: "Entry", skill: "superpowers:brainstorming" }],
+        },
+        null,
+        2,
+      ),
+    );
+
+    try {
+      await expect(loadWorkflowBundle(bundleDir)).rejects.toThrow(
+        "Looped workflow entry skill must be a local skill path",
+      );
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  test("rejects invalid generated loop script paths", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "workflow-bundle-loop-path-"));
+    const bundleDir = join(rootDir, "bad-loop-path");
+    await mkdir(join(bundleDir, "skills", "bad-loop-path"), { recursive: true });
+    await writeFile(
+      join(bundleDir, "skills", "bad-loop-path", "SKILL.md"),
+      [
+        "---",
+        "name: bad-loop-path",
+        'description: "Entry skill."',
+        "---",
+        "",
+        "# bad-loop-path",
+      ].join("\n"),
+    );
+
+    async function writeManifest(script: string): Promise<void> {
+      await writeFile(
+        join(bundleDir, "workflow.json"),
+        JSON.stringify(
+          {
+            schemaVersion: "0.1",
+            name: "bad-loop-path",
+            version: "0.1.0",
+            description: "Invalid loop script path.",
+            loop: { script, state: "global", execution: "action-only" },
+            skills: [{ source: "./skills/bad-loop-path", entry: true }],
+            steps: [{ id: "entry", title: "Entry", skill: "./skills/bad-loop-path" }],
+          },
+          null,
+          2,
+        ),
+      );
+    }
+
+    try {
+      await writeManifest("/tmp/loop.mjs");
+      await expect(loadWorkflowBundle(bundleDir)).rejects.toThrow(
+        "Workflow loop script must be a relative path",
+      );
+
+      await writeManifest("../loop.mjs");
+      await expect(loadWorkflowBundle(bundleDir)).rejects.toThrow(
+        "Workflow loop script must stay inside the workflow bundle",
+      );
+
+      await writeManifest("./loop.js");
+      await expect(loadWorkflowBundle(bundleDir)).rejects.toThrow(
+        "Workflow loop script must use a .mjs extension",
+      );
+
+      await writeManifest("./generated-loop.mjs");
+      const bundle = await loadWorkflowBundle(bundleDir);
+      expect(bundle.manifest.loop?.script).toBe("./generated-loop.mjs");
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
   });
 
   test("loads workflow skill repository metadata for external skill installs", async () => {
@@ -606,6 +850,102 @@ describe("workflow bundles", () => {
 
     await expect(stat(checkoutDir)).rejects.toThrow();
     await rm(tempDir, { recursive: true, force: true });
+  });
+
+  test("prepares a looped workflow entry skill with generated runner files", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "workflow-bundle-loop-prepare-"));
+    const bundleDir = join(rootDir, "looped-workflow");
+    const tempDir = join(rootDir, "prepared");
+    await mkdir(join(bundleDir, "skills", "looped-workflow"), { recursive: true });
+    await writeFile(
+      join(bundleDir, "skills", "looped-workflow", "SKILL.md"),
+      [
+        "---",
+        "name: looped-workflow",
+        'description: "Loop-enabled entry skill."',
+        "---",
+        "",
+        "# looped-workflow",
+      ].join("\n"),
+    );
+    await writeFile(
+      join(bundleDir, "workflow.json"),
+      JSON.stringify(
+        {
+          schemaVersion: "0.1",
+          name: "looped-workflow",
+          version: "0.1.0",
+          description: "Uses a loop runtime.",
+          loop: { script: "./loop.mjs", state: "global", execution: "action-only" },
+          skills: [{ source: "./skills/looped-workflow", entry: true }, { source: "pony-trail" }],
+          steps: [
+            { id: "entry", title: "Entry", skill: "./skills/looped-workflow" },
+            { id: "evidence", title: "Evidence", skill: "pony-trail" },
+          ],
+        },
+        null,
+        2,
+      ),
+    );
+
+    try {
+      const bundle = await loadWorkflowBundle(bundleDir);
+      const metadata = createWorkflowLoopMetadata(bundle);
+
+      expect(metadata).toEqual({
+        schemaVersion: "0.1",
+        workflow: "looped-workflow",
+        entrySkill: "./skills/looped-workflow",
+        loopScript: "./loop.mjs",
+        state: "global",
+        execution: "action-only",
+        commands: ["start", "status", "log", "advance", "summary"],
+      });
+
+      const prepared = await getPreparedWorkflowSkillInstallDependencies({
+        bundle,
+        tempDir,
+      });
+
+      expect(prepared.dependencies).toHaveLength(2);
+      expect(prepared.dependencies[0]?.source).toContain("looped-workflow-entry-");
+      expect(prepared.dependencies[1]).toEqual({ source: "pony-trail" });
+      const preparedEntry = prepared.dependencies[0];
+      expect(preparedEntry).toBeDefined();
+      await expect(
+        readFile(join(preparedEntry?.source ?? "", "SKILL.md"), "utf8"),
+      ).resolves.toContain("Loop-enabled entry skill.");
+      await expect(
+        readFile(join(preparedEntry?.source ?? "", "workflow.json"), "utf8"),
+      ).resolves.toContain('"name": "looped-workflow"');
+      const generatedRunner = await readFile(join(preparedEntry?.source ?? "", "loop.mjs"), "utf8");
+      expect(generatedRunner).toContain("GETSUPERPOWER_BIN");
+      expect(generatedRunner).toContain("getsuperpower");
+      expect(generatedRunner).toContain("workflow.json");
+      await expect(
+        readFile(join(preparedEntry?.source ?? "", "loop.metadata.json"), "utf8"),
+      ).resolves.toContain('"workflow": "looped-workflow"');
+      await expect(stat(join(preparedEntry?.source ?? "", "loop-runtime.mjs"))).rejects.toThrow();
+
+      await prepared.cleanup?.();
+      await expect(stat(preparedEntry?.source ?? "")).rejects.toThrow();
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  test("does not prepare loop runtime files for non-loop workflows", async () => {
+    const bundle = await loadWorkflowBundle("examples/workflows/release-review");
+    const prepared = await getPreparedWorkflowSkillInstallDependencies({ bundle });
+
+    try {
+      expect(prepared.dependencies.map((dependency) => dependency.source)).toEqual(
+        getWorkflowSkillInstallSources(bundle),
+      );
+      expect(prepared.cleanup).toBeUndefined();
+    } finally {
+      await prepared.cleanup?.();
+    }
   });
 
   test("installs and lists workflow bundles under .getsuperpower", async () => {

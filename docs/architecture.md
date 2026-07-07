@@ -11,10 +11,11 @@ src/
   plugins/
     skill-installer.ts
   runtimes/
-    ponytrail/
+    getsuperpower/
       instruction-context.ts
       snapshots.ts
       workflow-bundles.ts
+      workflow-loop-runtime.mjs
 ```
 
 ## CLI
@@ -30,6 +31,7 @@ Primary commands:
 - `getsuperpower deps <source>`
 - `getsuperpower install <source>`
 - `getsuperpower list`
+- `getsuperpower loop <start|status|log|advance|summary> <source>`
 - `skills install [source]`
 - `skills update [source]`
 
@@ -42,18 +44,23 @@ Compatibility aliases:
 
 ## GetSuperpower Runtime
 
-`src/runtimes/ponytrail/workflow-bundles.ts` owns the bundle contract:
+`src/runtimes/getsuperpower/workflow-bundles.ts` owns the bundle contract:
 
 - parse and validate `workflow.json`
+- validate optional loop metadata: `loop`, one `skills[].entry`, and
+  `steps[].instruction`
 - reject duplicate step ids
 - scaffold a local bundle with an entry skill
 - resolve local and public git bundle sources
 - list skill dependency sources plus optional Skills CLI repository metadata
+- prepare looped workflow entry skill installs with copied `workflow.json`,
+  generated `loop.mjs`, and generated `loop.metadata.json`
 - install normalized global records under `~/.getsuperpower/workflows/`
 - list installed GetSuperpowers
 
-The internal folder name remains `ponytrail` for compatibility with existing
-imports. The product behavior is GetSuperpower-only.
+The runtime folder uses the GetSuperpower name. Older Pony Trail history,
+revert, and prehook behavior remains paused and is not exposed by the public
+CLI.
 
 ## Skill Installer
 
@@ -80,15 +87,17 @@ Skills CLI package in `skills[].repo`.
 
 ## Paused Pony Trail Runtime
 
-`src/runtimes/ponytrail/snapshots.ts` and
-`src/runtimes/ponytrail/instruction-context.ts` remain in the source tree for
+`src/runtimes/getsuperpower/snapshots.ts` and
+`src/runtimes/getsuperpower/instruction-context.ts` remain in the source tree for
 future or legacy use, but the public GetSuperpower CLI does not expose history,
 revert, or prehook commands while Pony Trail is paused.
 
 Skill install and workflow install commands do not write snapshot history during
-this pause. Active global state is limited to installed workflow records under
+this pause. Installed workflow records live under
 `~/.getsuperpower/workflows/`; project-local records are only written when a
-caller passes `--dir`.
+caller passes `--dir`. Optional looped workflows may write per-run state under
+`~/.getsuperpower/runs/<workflow>/<run-id>/` through `getsuperpower loop` or the
+compatibility `loop.mjs` wrapper.
 
 ## Bundle Layout
 
@@ -105,6 +114,13 @@ my-getsuperpower/
 
 `skills/<name>/SKILL.md` is the callable entry skill. Its required sub-skills
 should stay aligned with `workflow.json`.
+
+Loop-enabled workflows declare `loop` in `workflow.json`, mark exactly one local
+skill with `entry: true`, and keep phase instructions in `steps[].instruction`.
+`loop.script` names the generated compatibility runner output path, usually
+`./loop.mjs`; workflow authors do not need to check in that file. Install copies
+`workflow.json` and generated `loop.metadata.json` plus generated `loop.mjs`
+only into the entry skill destination.
 
 ## Boundaries
 
