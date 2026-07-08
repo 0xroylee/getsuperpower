@@ -1,0 +1,41 @@
+import { describe, expect, test } from "bun:test";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+
+const workflowRoot = join(import.meta.dir, "..", ".github", "workflows");
+
+async function readWorkflow(fileName: string): Promise<string> {
+  return readFile(join(workflowRoot, fileName), "utf8");
+}
+
+function expectFullQualityGate(workflow: string): void {
+  expect(workflow).toContain("- name: Run root checks\n        run: bun run check");
+  expect(workflow).toContain("- name: Build CLI\n        run: bun run build");
+  expect(workflow).toContain("- name: Smoke built CLI\n        run: node dist/cli.js --help");
+  expect(workflow).toContain(
+    "- name: Install landing dependencies\n        working-directory: landing\n        run: bun install --frozen-lockfile",
+  );
+  expect(workflow).toContain(
+    "- name: Run landing checks\n        working-directory: landing\n        run: bun run check",
+  );
+}
+
+describe("GitHub Actions quality gates", () => {
+  test("checks the full build and test surface for PRs and main pushes", async () => {
+    const workflow = await readWorkflow("pr-check.yml");
+
+    expect(workflow).toContain("pull_request:");
+    expect(workflow).toContain("push:\n    branches:\n      - main");
+    expectFullQualityGate(workflow);
+  });
+
+  test("checks the full build and test surface before release packaging", async () => {
+    const workflow = await readWorkflow("release.yml");
+    const qualityGateIndex = workflow.indexOf("- name: Run root checks");
+    const packIndex = workflow.indexOf("- name: Pack release assets");
+
+    expect(qualityGateIndex).toBeGreaterThan(-1);
+    expect(packIndex).toBeGreaterThan(qualityGateIndex);
+    expectFullQualityGate(workflow);
+  });
+});
