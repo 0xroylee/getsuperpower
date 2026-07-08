@@ -127,8 +127,10 @@ describe("cli", () => {
     expect(program.commands.map((command) => command.name())).toEqual([
       "init",
       "validate",
+      "lock",
       "install",
       "list",
+      "remove",
       "deps",
       "onboard",
       "loop",
@@ -156,8 +158,16 @@ describe("cli", () => {
     const loopCommand = program.commands.find((command) => command.name() === "loop");
 
     expect(rootDepsCommand?.aliases()).toEqual(["dependencies", "dependence"]);
-    expect(bundleCommand?.commands.map((command) => command.name())).toEqual(["init", "validate"]);
-    expect(workflowCommand?.commands.map((command) => command.name())).toEqual(["install", "list"]);
+    expect(bundleCommand?.commands.map((command) => command.name())).toEqual([
+      "init",
+      "validate",
+      "lock",
+    ]);
+    expect(workflowCommand?.commands.map((command) => command.name())).toEqual([
+      "install",
+      "list",
+      "remove",
+    ]);
     expect(loopCommand?.commands.map((command) => command.name())).toEqual([
       "start",
       "status",
@@ -184,6 +194,7 @@ describe("cli", () => {
     program.outputHelp();
 
     const help = stripAnsi(output.join(""));
+    const normalizedHelp = help.replace(/\s+/g, " ");
 
     expect(help).toContain("GETSUPERPOWER");
     expect(help).toContain("Welcome to GetSuperpower.");
@@ -193,7 +204,7 @@ describe("cli", () => {
     expect(help).toContain("getsuperpower install ./release-review");
     expect(help).toContain("getsuperpower deps ./release-review");
     expect(help).toContain("bundle");
-    expect(help).toContain("Compatibility alias for GetSuperpower authoring.");
+    expect(normalizedHelp).toContain("Compatibility alias for GetSuperpower authoring.");
     expect(help).not.toContain("ponyrace");
     expect(help).not.toContain("getsuperpower clone");
     expect(help).not.toContain("history");
@@ -260,6 +271,12 @@ describe("cli", () => {
         ["bundle", "validate", "bundles/release-review"],
         { from: "user" },
       );
+      await buildProgram({ cwd: rootDir }).parseAsync(
+        ["bundle", "lock", "bundles/release-review"],
+        {
+          from: "user",
+        },
+      );
 
       await expect(
         stat(join(rootDir, "bundles", "release-review", "workflow.json")),
@@ -270,10 +287,14 @@ describe("cli", () => {
       await expect(
         stat(join(rootDir, "bundles", "release-review", "skills", "custom-review", "SKILL.md")),
       ).resolves.toBeTruthy();
+      await expect(
+        stat(join(rootDir, "bundles", "release-review", "workflow.lock.json")),
+      ).resolves.toBeTruthy();
       expect(stripAnsiLines(logs)).toContain(
         `GetSuperpower created: ${join(rootDir, "bundles", "release-review")}`,
       );
       expect(stripAnsiLines(logs)).toContain("GetSuperpower valid: release-review@0.1.0");
+      expect(stripAnsiLines(logs)).toContain("GetSuperpower lock written: release-review");
     } finally {
       console.log = originalLog;
       await rm(rootDir, { recursive: true, force: true });
@@ -388,15 +409,40 @@ describe("cli", () => {
       );
       expect(start.stderr).toBe("");
       const startPayload = JSON.parse(start.stdout) as {
+        goal: { type: string; goal: string };
         runId: string;
-        step: { id: string };
-        actions: Array<{ type: string; command?: string }>;
+        step: { id: string; verify: { type: string } };
+        actions: Array<{
+          type: string;
+          step?: string;
+          command?: string;
+          description?: string;
+          verify?: { type: string; event?: string; message_includes?: string };
+        }>;
       };
       expect(startPayload.runId).toBe("cli-smoke");
+      expect(startPayload.goal).toMatchObject({
+        type: "goal_based",
+        goal: "Produce an approved implementation plan for a product-development request.",
+      });
       expect(startPayload.step.id).toBe("grill");
+      expect(startPayload.step.verify.type).toBe("human_approval");
+      expect(startPayload.actions).toContainEqual({
+        type: "verify",
+        step: "grill",
+        verify: {
+          type: "human_approval",
+          event: "approval",
+          message_includes: "direction ready",
+        },
+        description: "Check the phase verification rule before advancing.",
+      });
       const startCommands = startPayload.actions.map((action) => action.command).filter(Boolean);
       expect(startCommands).toContain(
-        `getsuperpower loop log ${workflowSource} --run cli-smoke --type phase_result --message "..."`,
+        `getsuperpower loop log ${workflowSource} --home ${homeDir} --run cli-smoke --type phase_result --message "..."`,
+      );
+      expect(startCommands).toContain(
+        `getsuperpower loop advance ${workflowSource} --home ${homeDir} --run cli-smoke`,
       );
       expect(startCommands.join("\n")).not.toContain("node loop.mjs");
 

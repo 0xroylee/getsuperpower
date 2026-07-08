@@ -5,14 +5,21 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   createWorkflowBundleScaffold,
+  createWorkflowLockFile,
   createWorkflowLoopMetadata,
+  createWorkflowRemovalPlan,
+  executeWorkflowRemovalPlan,
   getPreparedWorkflowSkillInstallDependencies,
   getWorkflowSkillInstallDependencies,
   getWorkflowSkillInstallSources,
   installWorkflowBundle,
   listInstalledWorkflowBundles,
   loadWorkflowBundle,
+  loadWorkflowLockFile,
   type WorkflowGitCommand,
+  type WorkflowInstallSkillArtifact,
+  workflowLockFileName,
+  writeWorkflowLockFile,
 } from "../src/runtimes/getsuperpower/workflow-bundles";
 
 describe("workflow bundles", () => {
@@ -85,6 +92,10 @@ describe("workflow bundles", () => {
             script: "./loop.mjs",
             state: "global",
             execution: "action-only",
+            type: "goal_based",
+            goal: "Finish the entry workflow.",
+            done_when: ["entry_result_logged"],
+            stop_when: ["workflow_complete"],
           },
           skills: [{ source: "./skills/looped-workflow", entry: true }],
           steps: [
@@ -93,6 +104,11 @@ describe("workflow bundles", () => {
               title: "Run the entry skill",
               skill: "./skills/looped-workflow",
               instruction: "Check loop status before doing the next phase.",
+              verify: {
+                type: "event",
+                event: "phase_result",
+                message_includes: "entry result",
+              },
             },
           ],
         },
@@ -108,11 +124,20 @@ describe("workflow bundles", () => {
         script: "./loop.mjs",
         state: "global",
         execution: "action-only",
+        type: "goal_based",
+        goal: "Finish the entry workflow.",
+        done_when: ["entry_result_logged"],
+        stop_when: ["workflow_complete"],
       });
       expect(bundle.manifest.skills).toEqual([{ source: "./skills/looped-workflow", entry: true }]);
       expect(bundle.manifest.steps[0]?.instruction).toBe(
         "Check loop status before doing the next phase.",
       );
+      expect(bundle.manifest.steps[0]?.verify).toEqual({
+        type: "event",
+        event: "phase_result",
+        message_includes: "entry result",
+      });
     } finally {
       await rm(rootDir, { recursive: true, force: true });
     }
@@ -127,12 +152,37 @@ describe("workflow bundles", () => {
       script: "./loop.mjs",
       state: "global",
       execution: "action-only",
+      type: "goal_based",
+      goal: "Produce an approved implementation plan for a product-development request.",
+      done_when: [
+        "grilled_direction_approved",
+        "design_spec_approved",
+        "implementation_plan_written",
+      ],
+      stop_when: ["human_blocks", "verification_fails", "workflow_complete"],
     });
     expect(bundle.manifest.skills[0]).toEqual({
       source: "./skills/grilled-product-dev",
       entry: true,
     });
     expect(bundle.manifest.steps.map((step) => step.id)).toEqual(["grill", "shape", "plan"]);
+    expect(bundle.manifest.steps.map((step) => step.verify)).toEqual([
+      {
+        type: "human_approval",
+        event: "approval",
+        message_includes: "direction ready",
+      },
+      {
+        type: "human_approval",
+        event: "approval",
+        message_includes: "design approved",
+      },
+      {
+        type: "event",
+        event: "phase_result",
+        message_includes: "implementation plan written",
+      },
+    ]);
     expect(bundle.manifest.steps.map((step) => step.instruction)).toEqual([
       "Ask one grilling question, include your recommended answer, and wait for explicit human approval before advancing.",
       "Turn the approved direction into a Superpowers design spec, then wait for explicit human approval before advancing.",
@@ -145,8 +195,108 @@ describe("workflow bundles", () => {
       loopScript: "./loop.mjs",
       state: "global",
       execution: "action-only",
+      type: "goal_based",
+      goal: "Produce an approved implementation plan for a product-development request.",
+      done_when: [
+        "grilled_direction_approved",
+        "design_spec_approved",
+        "implementation_plan_written",
+      ],
+      stop_when: ["human_blocks", "verification_fails", "workflow_complete"],
       commands: ["start", "status", "log", "advance", "summary"],
     });
+  });
+
+  test("loads curated workflow examples with checked skill locks and no pony-trail dependency", async () => {
+    const curatedWorkflowNames = [
+      "ceo",
+      "cto",
+      "product-manager",
+      "engineering-manager",
+      "founding-engineer",
+      "qa-lead",
+      "startup-goal",
+      "haaland",
+    ];
+
+    for (const workflowName of curatedWorkflowNames) {
+      const bundle = await loadWorkflowBundle(
+        join(import.meta.dir, "..", "examples", "workflows", workflowName),
+      );
+
+      expect(bundle.manifest.name).toBe(workflowName);
+      expect(bundle.lock?.workflow).toBe(workflowName);
+      expect(bundle.lock?.skills.map((skill) => skill.source)).toEqual(
+        bundle.manifest.skills.map((skill) => skill.source),
+      );
+      expect(bundle.manifest.skills.map((skill) => skill.source)).not.toContain("pony-trail");
+    }
+  });
+
+  test("startup goal entry skill dispatches role subagents and combines results", async () => {
+    const skill = await readFile(
+      join(
+        import.meta.dir,
+        "..",
+        "examples",
+        "workflows",
+        "startup-goal",
+        "skills",
+        "startup-goal",
+        "SKILL.md",
+      ),
+      "utf8",
+    );
+
+    expect(skill).toContain("name: startup-goal");
+    expect(skill).toContain("Dispatch a separate role-scoped subagent");
+    expect(skill).toContain("Wait for all dispatched role subagents to finish");
+    expect(skill).toContain("Combine the role outputs into one owner-facing decision log");
+    expect(skill).toContain("Recommend the next action from the combined result");
+  });
+
+  test("haaland workflow stays one-step and unconditional", async () => {
+    const bundle = await loadWorkflowBundle(
+      join(import.meta.dir, "..", "examples", "workflows", "haaland"),
+    );
+    const skill = await readFile(
+      join(
+        import.meta.dir,
+        "..",
+        "examples",
+        "workflows",
+        "haaland",
+        "skills",
+        "haaland",
+        "SKILL.md",
+      ),
+      "utf8",
+    );
+    const profileIconPath = join(
+      import.meta.dir,
+      "..",
+      "examples",
+      "workflows",
+      "haaland",
+      "skills",
+      "haaland",
+      "assets",
+      "haaland-profile-icon.svg",
+    );
+    const profileIcon = await readFile(profileIconPath, "utf8");
+
+    expect(bundle.manifest.skills).toEqual([{ source: "./skills/haaland", entry: true }]);
+    expect(bundle.manifest.steps).toEqual([
+      { id: "finish", title: "Create one Haaland meme", skill: "./skills/haaland" },
+    ]);
+    expect(skill).toContain("Create exactly one finished meme concept");
+    expect(skill).toContain("assets/haaland-profile-icon.svg");
+    expect(skill).not.toContain("Required Companion Skills");
+    expect(skill).not.toContain("If a companion skill is unavailable");
+    expect(profileIcon).toContain("Haaland profile icon");
+    await expect(
+      readFile(join(profileIconPath, "..", "haaland-meme-logo.svg"), "utf8"),
+    ).rejects.toThrow();
   });
 
   test("rejects looped workflows without exactly one entry skill", async () => {
@@ -352,6 +502,149 @@ describe("workflow bundles", () => {
     }
   });
 
+  test("creates deterministic workflow lock files for local and external skills", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "workflow-lock-"));
+    const bundleDir = join(rootDir, "locked-workflow");
+    await mkdir(join(bundleDir, "skills", "locked-workflow", "nested"), { recursive: true });
+    await writeFile(
+      join(bundleDir, "skills", "locked-workflow", "SKILL.md"),
+      [
+        "---",
+        "name: locked-workflow",
+        'description: "Locked workflow entry skill."',
+        "---",
+        "",
+        "# locked-workflow",
+      ].join("\n"),
+    );
+    await writeFile(join(bundleDir, "skills", "locked-workflow", "nested", "notes.md"), "notes\n");
+    await writeFile(
+      join(bundleDir, "workflow.json"),
+      JSON.stringify(
+        {
+          schemaVersion: "0.1",
+          name: "locked-workflow",
+          version: "0.1.0",
+          description: "Uses locked skill fingerprints.",
+          skills: [
+            { source: "./skills/locked-workflow", entry: true },
+            { source: "superpowers:writing-plans", repo: "obra/superpowers" },
+          ],
+          steps: [
+            { id: "entry", title: "Entry", skill: "./skills/locked-workflow" },
+            { id: "plan", title: "Plan", skill: "superpowers:writing-plans" },
+          ],
+        },
+        null,
+        2,
+      ),
+    );
+
+    try {
+      const bundle = await loadWorkflowBundle(bundleDir);
+      expect(bundle.lock).toBeUndefined();
+
+      const lock = await createWorkflowLockFile(bundle, {
+        generatedAt: "2026-07-07T00:00:00.000Z",
+      });
+      const secondLock = await createWorkflowLockFile(bundle, {
+        generatedAt: "2026-07-07T00:00:00.000Z",
+      });
+
+      expect(secondLock).toEqual(lock);
+      expect(lock.workflow).toBe("locked-workflow");
+      expect(lock.skills).toMatchObject([
+        {
+          source: "./skills/locked-workflow",
+          resolvedName: "locked-workflow",
+          kind: "local",
+        },
+        {
+          source: "superpowers:writing-plans",
+          resolvedName: "superpowers-writing-plans",
+          kind: "external",
+          repo: "obra/superpowers",
+        },
+      ]);
+      for (const skill of lock.skills) {
+        expect(skill.hash).toMatch(/^sha256:[a-f0-9]{64}$/);
+      }
+
+      const written = await writeWorkflowLockFile(bundle, {
+        generatedAt: "2026-07-07T00:00:00.000Z",
+      });
+      expect(written.path).toBe(join(bundleDir, workflowLockFileName));
+      expect(await loadWorkflowLockFile(bundle)).toEqual(lock);
+
+      const bundleWithLock = await loadWorkflowBundle(bundleDir);
+      expect(bundleWithLock.lock).toEqual(lock);
+      expect(bundleWithLock.lockPath).toBe(join(bundleDir, workflowLockFileName));
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  test("rejects workflow lock files that no longer match the manifest", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "workflow-lock-mismatch-"));
+    const bundleDir = join(rootDir, "mismatched-lock");
+    await mkdir(join(bundleDir, "skills", "mismatched-lock"), { recursive: true });
+    await writeFile(
+      join(bundleDir, "skills", "mismatched-lock", "SKILL.md"),
+      [
+        "---",
+        "name: mismatched-lock",
+        'description: "Mismatched lock entry skill."',
+        "---",
+        "",
+        "# mismatched-lock",
+      ].join("\n"),
+    );
+    await writeFile(
+      join(bundleDir, "workflow.json"),
+      JSON.stringify(
+        {
+          schemaVersion: "0.1",
+          name: "mismatched-lock",
+          version: "0.1.0",
+          description: "Rejects stale lock files.",
+          skills: [{ source: "./skills/mismatched-lock", entry: true }],
+          steps: [{ id: "entry", title: "Entry", skill: "./skills/mismatched-lock" }],
+        },
+        null,
+        2,
+      ),
+    );
+    await writeFile(
+      join(bundleDir, workflowLockFileName),
+      JSON.stringify(
+        {
+          schemaVersion: "0.1",
+          workflow: "different-workflow",
+          workflowVersion: "0.1.0",
+          generatedAt: "2026-07-07T00:00:00.000Z",
+          skills: [
+            {
+              source: "./skills/mismatched-lock",
+              resolvedName: "mismatched-lock",
+              kind: "local",
+              hash: "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            },
+          ],
+        },
+        null,
+        2,
+      ),
+    );
+
+    try {
+      await expect(loadWorkflowBundle(bundleDir)).rejects.toThrow(
+        "Workflow lock file does not match manifest",
+      );
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
   test("scaffolds an authorable workflow bundle with a local skill", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "workflow-bundle-scaffold-"));
 
@@ -383,6 +676,227 @@ describe("workflow bundles", () => {
     await expect(
       readFile(join(scaffold.bundleDir, "skills", "custom-review", "SKILL.md"), "utf8"),
     ).resolves.toContain("Review this GetSuperpower from the author perspective.");
+  });
+
+  test("stores workflow install artifact metadata in installed records", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "workflow-bundle-install-artifacts-"));
+    const bundle = await loadWorkflowBundle("examples/workflows/release-review");
+    const installArtifacts: WorkflowInstallSkillArtifact[] = [
+      {
+        source: "./skills/release-risk-review",
+        skillName: "release-risk-review",
+        agent: "codex",
+        status: "installed",
+        paths: [
+          join(rootDir, ".agents", "skills", "release-risk-review"),
+          join(rootDir, ".codex", "skills", "release-risk-review"),
+        ],
+      },
+    ];
+
+    try {
+      const install = await installWorkflowBundle({ rootDir, bundle, installArtifacts });
+      const installed = JSON.parse(await readFile(install.path, "utf8"));
+
+      expect(installed.installArtifacts).toEqual(installArtifacts);
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  test("plans removal from recorded workflow artifacts", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "workflow-remove-plan-"));
+    const bundle = await loadWorkflowBundle("examples/workflows/release-review");
+    const artifactPath = join(rootDir, ".agents", "skills", "release-risk-review");
+
+    try {
+      await installWorkflowBundle({
+        rootDir,
+        bundle,
+        installArtifacts: [
+          {
+            source: "./skills/release-risk-review",
+            skillName: "release-risk-review",
+            agent: "codex",
+            status: "installed",
+            paths: [artifactPath],
+          },
+        ],
+      });
+
+      const plan = await createWorkflowRemovalPlan({
+        rootDir,
+        homeDir: rootDir,
+        workflowName: "release-review",
+      });
+
+      expect(plan.workflow.name).toBe("release-review");
+      expect(plan.legacy).toBe(false);
+      expect(plan.artifactsToRemove.map((artifact) => artifact.path)).toEqual([artifactPath]);
+      expect(plan.artifactsToKeep).toEqual([]);
+      expect(plan.skippedArtifacts).toEqual([]);
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  test("preserves artifacts referenced by another installed workflow", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "workflow-remove-shared-"));
+    const releaseBundle = await loadWorkflowBundle("examples/workflows/release-review");
+    const sharedPath = join(rootDir, ".agents", "skills", "pony-trail");
+    const otherBundle = {
+      ...releaseBundle,
+      manifest: { ...releaseBundle.manifest, name: "ops-review" },
+    };
+
+    try {
+      await installWorkflowBundle({
+        rootDir,
+        bundle: releaseBundle,
+        installArtifacts: [
+          {
+            source: "pony-trail",
+            skillName: "pony-trail",
+            agent: "codex",
+            status: "installed",
+            paths: [sharedPath],
+          },
+        ],
+      });
+      await installWorkflowBundle({
+        rootDir,
+        bundle: otherBundle,
+        installArtifacts: [
+          {
+            source: "pony-trail",
+            skillName: "pony-trail",
+            agent: "codex",
+            status: "installed",
+            paths: [sharedPath],
+          },
+        ],
+      });
+
+      const plan = await createWorkflowRemovalPlan({
+        rootDir,
+        homeDir: rootDir,
+        workflowName: "release-review",
+      });
+
+      expect(plan.artifactsToRemove).toEqual([]);
+      expect(plan.artifactsToKeep).toEqual([
+        expect.objectContaining({ path: sharedPath, usedByWorkflows: ["ops-review"] }),
+      ]);
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  test("fails clearly when removing a workflow that is not installed", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "workflow-remove-missing-"));
+
+    try {
+      await expect(
+        createWorkflowRemovalPlan({
+          rootDir,
+          homeDir: rootDir,
+          workflowName: "missing-workflow",
+        }),
+      ).rejects.toThrow("GetSuperpower is not installed: missing-workflow");
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  test("executes a removal plan by deleting artifacts and the workflow record", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "workflow-remove-execute-"));
+    const bundle = await loadWorkflowBundle("examples/workflows/release-review");
+    const artifactPath = join(rootDir, ".agents", "skills", "release-risk-review");
+
+    try {
+      await mkdir(artifactPath, { recursive: true });
+      await writeFile(join(artifactPath, "SKILL.md"), "installed skill");
+      const install = await installWorkflowBundle({
+        rootDir,
+        bundle,
+        installArtifacts: [
+          {
+            source: "./skills/release-risk-review",
+            skillName: "release-risk-review",
+            agent: "codex",
+            status: "installed",
+            paths: [artifactPath],
+          },
+        ],
+      });
+
+      const plan = await createWorkflowRemovalPlan({
+        rootDir,
+        homeDir: rootDir,
+        workflowName: "release-review",
+      });
+      await executeWorkflowRemovalPlan(plan);
+
+      await expect(stat(artifactPath)).rejects.toThrow();
+      await expect(stat(install.path)).rejects.toThrow();
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  test("infers legacy removal artifacts and skips unmappable legacy sources", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "workflow-remove-legacy-"));
+    const workflowDir = join(rootDir, ".getsuperpower", "workflows");
+
+    try {
+      await mkdir(workflowDir, { recursive: true });
+      await writeFile(
+        join(workflowDir, "legacy-workflow.json"),
+        JSON.stringify(
+          {
+            schemaVersion: "0.1",
+            name: "legacy-workflow",
+            version: "0.1.0",
+            description: "Legacy workflow record.",
+            source: { kind: "local", path: "/tmp/legacy-workflow" },
+            skills: [
+              { source: "./skills/local-review" },
+              { source: "superpowers:brainstorming" },
+              { source: "https://example.com/unknown.git#skills/custom" },
+            ],
+            steps: [
+              { id: "local", title: "Local", skill: "./skills/local-review" },
+              { id: "shape", title: "Shape", skill: "superpowers:brainstorming" },
+            ],
+          },
+          null,
+          2,
+        ),
+      );
+
+      const plan = await createWorkflowRemovalPlan({
+        rootDir,
+        homeDir: rootDir,
+        workflowName: "legacy-workflow",
+      });
+
+      expect(plan.legacy).toBe(true);
+      expect(plan.artifactsToRemove.map((artifact) => artifact.path)).toContain(
+        join(rootDir, ".agents", "skills", "local-review"),
+      );
+      expect(plan.artifactsToRemove.map((artifact) => artifact.path)).toContain(
+        join(rootDir, ".agents", "skills", "superpowers-brainstorming"),
+      );
+      expect(plan.skippedArtifacts).toEqual([
+        {
+          source: "https://example.com/unknown.git#skills/custom",
+          reason:
+            "Cannot safely infer installed skill name from https://example.com/unknown.git#skills/custom",
+        },
+      ]);
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
   });
 
   test("loads the release-review example workflow with its local skill", async () => {
