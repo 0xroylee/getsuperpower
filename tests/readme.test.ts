@@ -9,6 +9,10 @@ function readReadme(): string {
   return readFileSync(readmePath, "utf8");
 }
 
+function readRepoFile(path: string): string {
+  return readFileSync(join(repoRoot, path), "utf8");
+}
+
 describe("README source contract", () => {
   test("leads with startup superpower positioning", () => {
     const readme = readReadme();
@@ -16,6 +20,7 @@ describe("README source contract", () => {
 
     expect(readme.trimStart().startsWith("# GetSuperpower")).toBe(true);
     expect(firstScreen).toContain("# GetSuperpower");
+    expect(firstScreen).toContain("[繁體中文](README.zh-Hant.md)");
     expect(firstScreen).toContain("Power your ability.");
     expect(firstScreen).toContain("many-skill bank");
     expect(firstScreen).toContain("one entry skill");
@@ -101,5 +106,23 @@ describe("README source contract", () => {
     expect(readme).not.toContain("startup-goal-workflow-editorial.svg");
     expect(readme).not.toContain("startup-goal-workflow-funny.svg");
     expect(readme).not.toContain("startup-goal-workflow-claude.svg");
+  });
+
+  test("provides a Traditional Chinese README with commands and identifiers preserved", () => {
+    const readme = readRepoFile("README.zh-Hant.md");
+
+    expect(readme.startsWith("# GetSuperpower")).toBe(true);
+    expect(readme).toContain("[English](README.md)");
+    expect(readme).toContain("繁體中文");
+    expect(readme).toContain("Power your ability.");
+    expect(readme).toContain("npx getsuperpower@latest install startup-goal");
+    expect(readme).toContain("npx getsuperpower@latest install ceo");
+    expect(readme).toContain("npx getsuperpower@latest install qa-lead");
+    expect(readme).toContain("$startup-goal help me launch this product from idea to shipped v1");
+    expect(readme).toContain("npx getsuperpower@latest loop start grilled-product-dev --json");
+    expect(readme).toContain("workflow.json");
+    expect(readme).toContain("$creating-bundle-skills");
+    expect(readme).toContain("examples/workflows/startup-goal");
+    expect(readme).toContain("getsuperpower");
   });
 });

@@ -1,5 +1,7 @@
 # GetSuperpower
 
+[繁體中文](README.zh-Hant.md)
+
 Power your ability.
 
 GetSuperpower is a many-skill bank for AI agents: install one workflow skill
@@ -8,6 +10,8 @@ playbooks, and verification habits for the problem in front of it. The point is
 simple: 3x your ability without manually juggling every specialist skill.
 
 Start with Startup Goal when you want to move a company-building goal through many role workflows instead of manually juggling every skill: CEO, CTO, Product Manager, Engineering Manager, Founding Engineer, and QA Lead.
+
+<img src="/assets/getsupwerpower.jpg" alt="GetSuperpower" width="640" />
 
 ## Quick Start
 
