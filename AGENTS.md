@@ -53,7 +53,7 @@ Author or user request
 
 - A GetSuperpower is a deployable bundle skills set with a `workflow.json`,
   optional `workflow.lock.json`, README, and optional local skills.
-- Role workflows such as `startup-team`, `cto`, `product-manager`, and
+- Role workflows such as `startup-goal`, `cto`, `product-manager`, and
   `founding-engineer` are the primary public examples. Older workflows remain
   compatibility/demo examples for now.
 - If a workflow provides one callable entry skill, that skill must be listed in
@@ -70,10 +70,10 @@ Author or user request
 ```bash
 bun install                 # Install dependencies
 bun run dev -- --help       # Show CLI commands
-bun run dev -- install examples/workflows/startup-team
-bun run dev -- deps examples/workflows/startup-team
+bun run dev -- install examples/workflows/startup-goal
+bun run dev -- deps examples/workflows/startup-goal
 bun run dev -- list
-bun run dev -- remove startup-team --dry-run
+bun run dev -- remove startup-goal --dry-run
 bun run dev -- loop status examples/workflows/grilled-product-dev --latest --json
 bun run dev -- init my-workflow
 bun run dev -- lock examples/workflows/cto
@@ -125,6 +125,6 @@ For CLI changes, also run a smoke check against a scratch directory under
 
 ```bash
 rtk bun run dev -- --help
-rtk bun run dev -- deps examples/workflows/startup-team
-rtk bun run dev -- validate examples/workflows/startup-team
+rtk bun run dev -- deps examples/workflows/startup-goal
+rtk bun run dev -- validate examples/workflows/startup-goal
 ```

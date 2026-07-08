@@ -215,7 +215,7 @@ describe("workflow bundles", () => {
       "engineering-manager",
       "founding-engineer",
       "qa-lead",
-      "startup-team",
+      "startup-goal",
       "haaland",
     ];
 
@@ -231,6 +231,72 @@ describe("workflow bundles", () => {
       );
       expect(bundle.manifest.skills.map((skill) => skill.source)).not.toContain("pony-trail");
     }
+  });
+
+  test("startup goal entry skill dispatches role subagents and combines results", async () => {
+    const skill = await readFile(
+      join(
+        import.meta.dir,
+        "..",
+        "examples",
+        "workflows",
+        "startup-goal",
+        "skills",
+        "startup-goal",
+        "SKILL.md",
+      ),
+      "utf8",
+    );
+
+    expect(skill).toContain("name: startup-goal");
+    expect(skill).toContain("Dispatch a separate role-scoped subagent");
+    expect(skill).toContain("Wait for all dispatched role subagents to finish");
+    expect(skill).toContain("Combine the role outputs into one owner-facing decision log");
+    expect(skill).toContain("Recommend the next action from the combined result");
+  });
+
+  test("haaland workflow stays one-step and unconditional", async () => {
+    const bundle = await loadWorkflowBundle(
+      join(import.meta.dir, "..", "examples", "workflows", "haaland"),
+    );
+    const skill = await readFile(
+      join(
+        import.meta.dir,
+        "..",
+        "examples",
+        "workflows",
+        "haaland",
+        "skills",
+        "haaland",
+        "SKILL.md",
+      ),
+      "utf8",
+    );
+    const profileIconPath = join(
+      import.meta.dir,
+      "..",
+      "examples",
+      "workflows",
+      "haaland",
+      "skills",
+      "haaland",
+      "assets",
+      "haaland-profile-icon.svg",
+    );
+    const profileIcon = await readFile(profileIconPath, "utf8");
+
+    expect(bundle.manifest.skills).toEqual([{ source: "./skills/haaland", entry: true }]);
+    expect(bundle.manifest.steps).toEqual([
+      { id: "finish", title: "Create one Haaland meme", skill: "./skills/haaland" },
+    ]);
+    expect(skill).toContain("Create exactly one finished meme concept");
+    expect(skill).toContain("assets/haaland-profile-icon.svg");
+    expect(skill).not.toContain("Required Companion Skills");
+    expect(skill).not.toContain("If a companion skill is unavailable");
+    expect(profileIcon).toContain("Haaland profile icon");
+    await expect(
+      readFile(join(profileIconPath, "..", "haaland-meme-logo.svg"), "utf8"),
+    ).rejects.toThrow();
   });
 
   test("rejects looped workflows without exactly one entry skill", async () => {

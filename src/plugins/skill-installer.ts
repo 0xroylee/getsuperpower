@@ -103,6 +103,12 @@ const supportedSuperpowersSkills = [
     skillFolder: "writing-plans",
     installName: "superpowers-writing-plans",
   },
+  {
+    source: "superpowers:verification-before-completion",
+    displayName: "verification-before-completion",
+    skillFolder: "verification-before-completion",
+    installName: "superpowers-verification-before-completion",
+  },
 ] as const satisfies readonly SupportedSuperpowersSkill[];
 const bundledSkillAliases: Record<string, string> = {
   "record-change-evidence": "pony-trail",
@@ -257,6 +263,14 @@ export async function resolveInstallSkillSource(
   if (bundledPath) {
     const name = await readSkillName(bundledPath);
     return { kind: "bundled", name, path: bundledPath };
+  }
+
+  if (!looksLikePath(sourceOrName)) {
+    const homeDir = options.homeDir ?? process.env.HOME ?? process.cwd();
+    const installedSkillPath = await findInstalledSkillPath(homeDir, sourceOrName);
+    if (installedSkillPath) {
+      return resolvePathSkill(installedSkillPath);
+    }
   }
 
   if (await pathExists(pathCandidate)) {

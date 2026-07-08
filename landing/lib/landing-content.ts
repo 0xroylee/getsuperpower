@@ -52,18 +52,18 @@ export const agents: AgentBadgeContent[] = [
 
 export const workflows: WorkflowCardContent[] = [
   {
-    slug: "startup-team",
-    name: "Startup Team",
+    slug: "startup-goal",
+    name: "Startup Goal",
     description:
-      "Install the core startup operating roles as one workflow: CEO, CTO, PM, EM, founding engineer, and QA lead.",
-    entrySkill: "startup-team",
+      "Move a startup goal through the core operating roles: CEO, CTO, PM, EM, founding engineer, and QA lead.",
+    entrySkill: "startup-goal",
     avatarSeed: "sha256:e2445fdfee4ef3d0a8aae8333a820a8485338bd1f62674c2596be49dba878f5f",
-    tag: "Team",
+    tag: "Goal",
     accent: "text-violet-300",
-    sourceUrl: `${githubUrl}/tree/main/examples/workflows/startup-team`,
-    installCommand: "npx getsuperpower@latest install startup-team",
+    sourceUrl: `${githubUrl}/tree/main/examples/workflows/startup-goal`,
+    installCommand: "npx getsuperpower@latest install startup-goal",
     skills: [
-      { name: "startup-team", description: "Route work across startup roles" },
+      { name: "startup-goal", description: "Coordinate role subagents around one goal" },
       { name: "ceo", description: "Company direction and tradeoffs" },
       { name: "cto", description: "Architecture and technical risk" },
       { name: "product-manager", description: "Discovery, PRDs, and issue slicing" },
@@ -90,8 +90,8 @@ export const workflows: WorkflowCardContent[] = [
     diagramSteps: [
       {
         label: "Route",
-        skill: "startup-team",
-        description: "Pick the accountable role for the next decision.",
+        skill: "startup-goal",
+        description: "Dispatch the needed role subagents for the next decision.",
       },
       {
         label: "Strategy",
@@ -393,38 +393,19 @@ export const workflows: WorkflowCardContent[] = [
     slug: "haaland",
     name: "Haaland",
     description:
-      "A playful JTS meme workflow for football-finisher captions, parody post concepts, and the included original H9/JTS logo asset.",
+      "A one-shot JTS meme workflow for a football-finisher caption, parody post concept, and original Haaland profile icon asset.",
     entrySkill: "haaland",
-    avatarSeed: "sha256:5296e05286fac64d6b7e62d7f8834096f57f09f537db7f37bd4c163627a60b5e",
+    avatarSeed: "sha256:d10bf16eca98054b3a23bbe0aac21ccb00e7f904c5f3b1c3480bb1009c575583",
     tag: "Meme",
     accent: "text-lime-300",
     sourceUrl: `${githubUrl}/tree/main/examples/workflows/haaland`,
     installCommand: "npx getsuperpower@latest install haaland",
-    skills: [
-      { name: "haaland", description: "Set the JTS meme frame" },
-      { name: "superpowers:brainstorming", description: "Generate meme angles" },
-      { name: "mattpocock:writing-fragments", description: "Shape punchline fragments" },
-    ],
+    skills: [{ name: "haaland", description: "Create one profile-icon meme concept" }],
     diagramSteps: [
       {
-        label: "Brief",
+        label: "One Shot",
         skill: "haaland",
-        description: "Name the meme target and tone boundary.",
-      },
-      {
-        label: "Angles",
-        skill: "superpowers:brainstorming",
-        description: "Explore tap-in, robot-finisher, and deadpan angles.",
-      },
-      {
-        label: "Fragments",
-        skill: "mattpocock:writing-fragments",
-        description: "Draft short caption fragments.",
-      },
-      {
-        label: "Final",
-        skill: "haaland",
-        description: "Choose the caption and logo placement.",
+        description: "Create one caption and profile icon placement note.",
       },
     ],
   },
@@ -432,16 +413,16 @@ export const workflows: WorkflowCardContent[] = [
 
 export const commands: CommandExample[] = [
   {
-    label: "Install Startup Team",
-    command: "npx getsuperpower@latest install startup-team",
+    label: "Install Startup Goal",
+    command: "npx getsuperpower@latest install startup-goal",
   },
   {
-    label: "Inspect Startup Team deps",
-    command: "npx getsuperpower@latest deps startup-team",
+    label: "Inspect Startup Goal deps",
+    command: "npx getsuperpower@latest deps startup-goal",
   },
   {
     label: "Lock skill fingerprints",
-    command: "npx getsuperpower@latest lock examples/workflows/startup-team",
+    command: "npx getsuperpower@latest lock examples/workflows/startup-goal",
   },
   {
     label: "Check loop status",
@@ -461,7 +442,7 @@ export const commands: CommandExample[] = [
   },
   {
     label: "Remove installed workflow",
-    command: "npx getsuperpower@latest remove startup-team",
+    command: "npx getsuperpower@latest remove startup-goal",
   },
 ];
 
@@ -472,7 +453,7 @@ export const howItWorks = [
   },
   {
     title: "The entry skill is the one command users call",
-    body: "Users invoke a single skill, such as $startup-team, and the workflow coordinates the rest.",
+    body: "Users invoke a single skill, such as $startup-goal, and the workflow coordinates the rest.",
   },
   {
     title: "Sub-skills run in a deliberate order",

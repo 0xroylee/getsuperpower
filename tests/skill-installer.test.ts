@@ -188,6 +188,40 @@ describe("skill installer", () => {
     }
   });
 
+  test("resolves superpowers verification-before-completion from the local plugin cache", async () => {
+    const homeDir = await mkdtemp(join(tmpdir(), "skill-installer-home-"));
+    const sourceDir = join(
+      homeDir,
+      ".codex",
+      "plugins",
+      "cache",
+      "openai-curated",
+      "superpowers",
+      "fake-plugin",
+      "skills",
+      "verification-before-completion",
+    );
+
+    try {
+      await writeSuperpowersSkill(sourceDir, {
+        name: "verification-before-completion",
+        description: "Use when about to claim work is complete.",
+      });
+
+      const source = await resolveInstallSkillSource("superpowers:verification-before-completion", {
+        homeDir,
+      });
+
+      expect(source).toEqual({
+        kind: "path",
+        name: "superpowers-verification-before-completion",
+        path: sourceDir,
+      });
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
   test("resolves superpowers brainstorming from installed local skill folders", async () => {
     const homeDir = await mkdtemp(join(tmpdir(), "skill-installer-home-"));
     const sourceDir = join(homeDir, ".agents", "skills", "brainstorming");
@@ -259,6 +293,28 @@ describe("skill installer", () => {
         path: sourceDir,
       });
       expect(githubSource).toEqual(aliasSource);
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test("resolves installed bare skill names from local skill folders", async () => {
+    const homeDir = await mkdtemp(join(tmpdir(), "skill-installer-home-"));
+    const sourceDir = join(homeDir, ".agents", "skills", "implement");
+
+    try {
+      await writeSuperpowersSkill(sourceDir, {
+        name: "implement",
+        description: "Implement a piece of work based on a plan.",
+      });
+
+      const source = await resolveInstallSkillSource("implement", { homeDir });
+
+      expect(source).toEqual({
+        kind: "path",
+        name: "implement",
+        path: sourceDir,
+      });
     } finally {
       await rm(homeDir, { recursive: true, force: true });
     }

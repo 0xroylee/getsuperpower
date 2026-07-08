@@ -17,9 +17,10 @@ describe("README source contract", () => {
     expect(readme.trimStart().startsWith("# GetSuperpower")).toBe(true);
     expect(firstScreen).toContain("# GetSuperpower");
     expect(firstScreen).toContain("Power your ability.");
-    expect(firstScreen).toContain("installable workflow skill trees");
-    expect(firstScreen).toContain("one callable entry skill");
-    expect(firstScreen).toContain("Startup Team");
+    expect(firstScreen).toContain("many-skill bank");
+    expect(firstScreen).toContain("one entry skill");
+    expect(firstScreen).toContain("3x your ability");
+    expect(firstScreen).toContain("Startup Goal");
     expect(firstScreen).toContain("CEO");
     expect(firstScreen).toContain("CTO");
     expect(firstScreen).toContain("Product Manager");
@@ -30,10 +31,10 @@ describe("README source contract", () => {
     expect(firstScreen).not.toContain("assets/diagrams/getsuperpower-install-sequence.svg");
   });
 
-  test("documents startup-team and individual startup role commands", () => {
+  test("documents startup-goal and individual startup role commands", () => {
     const readme = readReadme();
     const roleAliases = [
-      "startup-team",
+      "startup-goal",
       "ceo",
       "cto",
       "product-manager",
@@ -46,9 +47,13 @@ describe("README source contract", () => {
       expect(readme).toContain(`npx getsuperpower@latest install ${alias}`);
     }
 
-    expect(readme).toContain("$startup-team help me launch this product from idea to shipped v1");
+    expect(readme).toContain("$startup-goal help me launch this product from idea to shipped v1");
     expect(readme).toContain(
-      "npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/startup-team'",
+      "npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/startup-goal'",
+    );
+    expect(readme).not.toContain("npx getsuperpower@latest install startup-team");
+    expect(readme).not.toContain(
+      "$startup-team help me launch this product from idea to shipped v1",
     );
   });
 
@@ -93,5 +98,8 @@ describe("README source contract", () => {
     expect(existsSync(join(repoRoot, imageSrc))).toBe(true);
     expect(readme).not.toContain("assets/diagrams/getsuperpower-how-it-works.svg");
     expect(readme).not.toContain("assets/diagrams/getsuperpower-install-sequence.svg");
+    expect(readme).not.toContain("startup-goal-workflow-editorial.svg");
+    expect(readme).not.toContain("startup-goal-workflow-funny.svg");
+    expect(readme).not.toContain("startup-goal-workflow-claude.svg");
   });
 });

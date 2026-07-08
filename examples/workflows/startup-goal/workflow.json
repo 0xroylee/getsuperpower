@@ -1,11 +1,11 @@
 {
   "schemaVersion": "0.1",
-  "name": "startup-team",
+  "name": "startup-goal",
   "version": "0.1.0",
-  "description": "Install the core startup operating roles as one GetSuperpower: CEO, CTO, product manager, engineering manager, founding engineer, and QA lead.",
+  "description": "Install the core startup operating roles as one goal-oriented GetSuperpower: CEO, CTO, product manager, engineering manager, founding engineer, and QA lead.",
   "skills": [
     {
-      "source": "./skills/startup-team",
+      "source": "./skills/startup-goal",
       "entry": true
     },
     {
@@ -81,8 +81,8 @@
   "steps": [
     {
       "id": "route",
-      "title": "Route the startup request",
-      "skill": "./skills/startup-team",
+      "title": "Route the startup goal",
+      "skill": "./skills/startup-goal",
       "gate": "human_approval"
     },
     {

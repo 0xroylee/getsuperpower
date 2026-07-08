@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Haaland profile icon</title>
+  <desc id="desc">Original profile-style parody icon of a blond football finisher with H9 lettering.</desc>
+  <defs>
+    <linearGradient id="bg" x1="88" x2="424" y1="80" y2="432" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#d8ff4f" />
+      <stop offset="0.45" stop-color="#31d38c" />
+      <stop offset="1" stop-color="#0b1220" />
+    </linearGradient>
+    <linearGradient id="hair" x1="162" x2="354" y1="96" y2="224" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff27a" />
+      <stop offset="0.62" stop-color="#f7bd2e" />
+      <stop offset="1" stop-color="#cf7d14" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="#071015" />
+  <circle cx="256" cy="256" r="205" fill="url(#bg)" />
+  <circle cx="256" cy="256" r="184" fill="none" stroke="#ecfff5" stroke-opacity="0.34" stroke-width="12" />
+  <path d="M125 399c20-76 74-120 131-120s111 44 131 120c-35 33-82 52-131 52s-96-19-131-52Z" fill="#09111f" />
+  <path d="M168 360c19-45 54-69 88-69s69 24 88 69c-24 23-54 36-88 36s-64-13-88-36Z" fill="#9df72f" opacity="0.95" />
+  <path d="M182 186c0-61 34-101 82-101 49 0 81 40 81 100 0 68-35 111-82 111s-81-43-81-110Z" fill="#f3c5a6" />
+  <path d="M171 192c11-73 53-112 107-104 48 7 78 43 80 108-31-26-60-31-94-17-35 14-63 16-93 13Z" fill="url(#hair)" />
+  <path d="M166 187c13-62 51-101 101-101 55 0 91 43 91 106-28-33-61-42-99-25-31 14-60 20-93 20Z" fill="#ffe35a" />
+  <path d="M210 206c17 17 73 17 91 0" fill="none" stroke="#101827" stroke-width="11" stroke-linecap="round" />
+  <path d="M224 243c17 12 61 12 78 0" fill="none" stroke="#101827" stroke-width="9" stroke-linecap="round" opacity="0.55" />
+  <circle cx="206" cy="214" r="7" fill="#101827" />
+  <circle cx="319" cy="214" r="7" fill="#101827" />
+  <text x="256" y="433" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="58" fill="#ffffff">H9</text>
+  <path d="M121 127 151 95 181 127" fill="none" stroke="#ecfff5" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" opacity="0.85" />
+  <path d="M331 127 361 95 391 127" fill="none" stroke="#ecfff5" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" opacity="0.85" />
+</svg>

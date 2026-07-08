@@ -1,14 +1,14 @@
 {
   "schemaVersion": "0.1",
-  "workflow": "startup-team",
+  "workflow": "startup-goal",
   "workflowVersion": "0.1.0",
-  "generatedAt": "2026-07-07T12:15:34.144Z",
+  "generatedAt": "2026-07-08T10:10:04.181Z",
   "skills": [
     {
-      "source": "./skills/startup-team",
-      "resolvedName": "startup-team",
+      "source": "./skills/startup-goal",
+      "resolvedName": "startup-goal",
       "kind": "local",
-      "hash": "sha256:e2445fdfee4ef3d0a8aae8333a820a8485338bd1f62674c2596be49dba878f5f"
+      "hash": "sha256:255ed6ff48f4072507df7c2e804711bfb10bb9e816b5598d6f0c0f51a7aee600"
     },
     {
       "source": "./skills/ceo",
@@ -62,7 +62,7 @@
     },
     {
       "source": "superpowers:verification-before-completion",
-      "resolvedName": "superpowers:verification-before-completion",
+      "resolvedName": "superpowers-verification-before-completion",
       "kind": "external",
       "repo": "obra/superpowers",
       "hash": "sha256:c0cd676b75a7eed20cc419b3c5fe46abbac00fd28cd87b6617fbc3607b1d3fd8"

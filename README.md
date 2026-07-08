@@ -2,28 +2,31 @@
 
 Power your ability.
 
-GetSuperpower packages role-based AI-agent workflows as installable workflow skill trees. Install one GetSuperpower, call one callable entry skill with a goal, and let bundled role and process skills carry complex work forward.
+GetSuperpower is a many-skill bank for AI agents: install one workflow skill
+tree, call one entry skill with a goal, and give your agent the right roles,
+playbooks, and verification habits for the problem in front of it. The point is
+simple: 3x your ability without manually juggling every specialist skill.
 
-Start with the Startup Team when you want to start a company with many role workflows instead of manually juggling every skill: CEO, CTO, Product Manager, Engineering Manager, Founding Engineer, and QA Lead.
+Start with Startup Goal when you want to move a company-building goal through many role workflows instead of manually juggling every skill: CEO, CTO, Product Manager, Engineering Manager, Founding Engineer, and QA Lead.
 
 ## Quick Start
 
-Install the full startup operating bench:
+Install the full startup goal workflow:
 
 ```bash
-npx getsuperpower@latest install startup-team
+npx getsuperpower@latest install startup-goal
 ```
 
 Then ask your agent to run the entry skill with a goal:
 
 ```text
-$startup-team help me launch this product from idea to shipped v1
+$startup-goal help me launch this product from idea to shipped v1
 ```
 
 The alias points to the checked-in workflow bundle:
 
 ```bash
-npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/startup-team'
+npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/startup-goal'
 ```
 
 Install individual startup roles when you want one specialist workflow:
@@ -50,7 +53,7 @@ copy the install command.
 
 | GetSuperpower | Entry skill | What it helps with |
 | --- | --- | --- |
-| Startup Team | `$startup-team` | Route a company-building goal through strategy, product, architecture, delivery, implementation, and QA roles. |
+| Startup Goal | `$startup-goal` | Route a company-building goal through strategy, product, architecture, delivery, implementation, and QA role subagents. |
 | CEO | `$ceo` | Direction, hard tradeoffs, fundraising/customer framing, and company decisions. |
 | CTO | `$cto` | Architecture, domain model, platform direction, and engineering risk. |
 | Product Manager | `$product-manager` | Product discovery, PRDs, acceptance criteria, roadmap tradeoffs, and issue slicing. |
@@ -179,7 +182,7 @@ The full guide is in [`docs/workflow-author-guide.md`](docs/workflow-author-guid
 
 | Example | Use it for | Notes |
 | --- | --- | --- |
-| `examples/workflows/startup-team` | Install a realistic startup operating bench in one shot. | Includes `$startup-team`, `$ceo`, `$cto`, `$product-manager`, `$engineering-manager`, `$founding-engineer`, and `$qa-lead`. |
+| `examples/workflows/startup-goal` | Install a realistic startup operating bench around one goal. | Includes `$startup-goal`, `$ceo`, `$cto`, `$product-manager`, `$engineering-manager`, `$founding-engineer`, and `$qa-lead`. |
 | `examples/workflows/ceo` | Company direction, strategy, tradeoffs, and decision mapping. | Uses Matt Pocock decision and grilling skills. |
 | `examples/workflows/cto` | Architecture, domain model, technical risk, and review. | Uses Matt Pocock architecture/review skills. |
 | `examples/workflows/product-manager` | Discovery, PRD, issue slicing, and product planning. | Uses Superpowers plus Matt Pocock PRD/issue skills. |

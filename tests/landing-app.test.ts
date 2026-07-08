@@ -45,7 +45,7 @@ describe("landing app source contract", () => {
 
     expect(page).toContain("LandingPage");
     expect(content).toContain("GetSuperpower");
-    expect(content).toContain("Startup Team");
+    expect(content).toContain("Startup Goal");
     expect(content).toContain("CEO");
     expect(content).toContain("CTO");
     expect(content).toContain("Product Manager");
@@ -53,16 +53,17 @@ describe("landing app source contract", () => {
     expect(content).toContain("Founding Engineer");
     expect(content).toContain("QA Lead");
     expect(content).toContain("avatarSeed");
-    expect(content).toContain("npx getsuperpower@latest install startup-team");
+    expect(content).toContain("npx getsuperpower@latest install startup-goal");
     expect(content).toContain("npx getsuperpower@latest install ceo");
     expect(content).toContain("npx getsuperpower@latest install cto");
     expect(content).toContain("npx getsuperpower@latest install product-manager");
     expect(content).toContain("npx getsuperpower@latest install engineering-manager");
     expect(content).toContain("npx getsuperpower@latest install founding-engineer");
     expect(content).toContain("npx getsuperpower@latest install qa-lead");
-    expect(content).toContain("npx getsuperpower@latest deps startup-team");
-    expect(content).toContain("npx getsuperpower@latest lock examples/workflows/startup-team");
-    expect(content).toContain("npx getsuperpower@latest remove startup-team");
+    expect(content).toContain("npx getsuperpower@latest deps startup-goal");
+    expect(content).toContain("npx getsuperpower@latest lock examples/workflows/startup-goal");
+    expect(content).toContain("npx getsuperpower@latest remove startup-goal");
+    expect(content).not.toContain("npx getsuperpower@latest install startup-team");
     expect(content).toContain(
       "npx getsuperpower@latest loop status grilled-product-dev --latest --json",
     );
@@ -123,14 +124,16 @@ describe("landing app source contract", () => {
     expect(content).toContain("sourceUrl: string");
     expect(content).toContain("installCommand: string");
     expect(content).toContain("diagramSteps: WorkflowDiagramStep[]");
-    expect(content).toContain('slug: "startup-team"');
+    expect(content).toContain('slug: "startup-goal"');
     expect(content).toContain('slug: "founding-engineer"');
     expect(content).toContain('slug: "haaland"');
-    expect(content).toContain(`\${githubUrl}/tree/main/examples/workflows/startup-team`);
+    expect(content).toContain(`\${githubUrl}/tree/main/examples/workflows/startup-goal`);
     expect(content).toContain(`\${githubUrl}/tree/main/examples/workflows/cto`);
     expect(content).toContain(`\${githubUrl}/tree/main/examples/workflows/haaland`);
-    expect(content).toContain("npx getsuperpower@latest install startup-team");
+    expect(content).toContain("npx getsuperpower@latest install startup-goal");
     expect(content).toContain("npx getsuperpower@latest install haaland");
+    expect(content).toContain("Create one profile-icon meme concept");
+    expect(content).not.toContain("Generate meme angles");
     expect(content).toContain('label: "Implementation"');
     expect(content).toContain('skill: "founding-engineer"');
   });
