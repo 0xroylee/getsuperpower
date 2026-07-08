@@ -20,29 +20,29 @@
 
 ## 3. Plan Implementation
 
-- [ ] Confirm public test seams for the README TDD pass.
-- [ ] Write an implementation plan in `docs/superpowers/plans/`.
-- [ ] Include TDD slices for README positioning, startup role commands, goal
+- [x] Confirm public test seams for the README TDD pass.
+- [x] Write an implementation plan in `docs/superpowers/plans/`.
+- [x] Include TDD slices for README positioning, startup role commands, goal
       loop copy, ecosystem copy, screenshot asset reference, and old diagram
       removal.
 
 ## 4. Implement With TDD
 
-- [ ] Add failing README/source-contract tests for the new headline and product
+- [x] Add failing README/source-contract tests for the new headline and product
       promise.
-- [ ] Add failing tests for startup-team and individual role command coverage.
-- [ ] Add failing tests for action-only goal loop copy.
-- [ ] Add failing tests for Matt Pocock, Superpowers, Ponytrail, and future pack
+- [x] Add failing tests for startup-team and individual role command coverage.
+- [x] Add failing tests for action-only goal loop copy.
+- [x] Add failing tests for Matt Pocock, Superpowers, Ponytrail, and future pack
       ecosystem copy.
-- [ ] Add failing tests for the new README image asset and old diagram removal.
-- [ ] Copy the provided screenshot into a stable repo asset path.
-- [ ] Rewrite `README.md` to the approved structure.
-- [ ] Preserve current command surfaces and avoid fake metrics or unsupported
+- [x] Add failing tests for the new README image asset and old diagram removal.
+- [x] Copy the provided screenshot into a stable repo asset path.
+- [x] Rewrite `README.md` to the approved structure.
+- [x] Preserve current command surfaces and avoid fake metrics or unsupported
       automation claims.
 
 ## 5. Verify And Archive
 
-- [ ] Run README-focused tests.
-- [ ] Run `rtk bun run check`.
-- [ ] Record Pony Trail post-change evidence.
+- [x] Run README-focused tests.
+- [x] Run `rtk bun run check`.
+- [x] Record Pony Trail post-change evidence.
 - [ ] Run `/opsx:archive` after human approval and verified delivery.
