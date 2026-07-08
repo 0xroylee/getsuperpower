@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "0.1",
+  "name": "haaland",
+  "version": "0.1.0",
+  "description": "Create one direct Haaland/JTS meme concept with an original profile icon asset.",
+  "skills": [
+    {
+      "source": "./skills/haaland",
+      "entry": true
+    }
+  ],
+  "steps": [
+    {
+      "id": "finish",
+      "title": "Create one Haaland meme",
+      "skill": "./skills/haaland"
+    }
+  ]
+}

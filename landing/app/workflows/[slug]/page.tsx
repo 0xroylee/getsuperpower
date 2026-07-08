@@ -1,6 +1,8 @@
-import { ArrowLeft, ArrowRight, ExternalLink, GitBranch, Terminal, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, ExternalLink, GitBranch, Zap } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CopyableInstallCommand } from "../../../components/copyable-install-command";
+import { WorkflowAvatar } from "../../../components/workflow-avatar";
 import { workflows } from "../../../lib/landing-content";
 
 interface WorkflowPageProps {
@@ -47,24 +49,21 @@ export default async function WorkflowPage({ params }: WorkflowPageProps) {
 
       <section className="mx-auto grid max-w-6xl gap-10 px-5 py-16 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div>
-          <span
-            className={`inline-flex rounded-full border border-current/20 px-2 py-0.5 text-xs ${workflow.accent}`}
-          >
-            {workflow.tag}
-          </span>
+          <div className="flex flex-wrap items-center gap-3">
+            <WorkflowAvatar seed={workflow.avatarSeed} label={workflow.name} size={52} />
+            <span
+              className={`inline-flex rounded-full border border-current/20 px-2 py-0.5 text-xs ${workflow.accent}`}
+            >
+              {workflow.tag}
+            </span>
+          </div>
           <h1 className="mt-5 text-4xl font-semibold leading-tight text-white sm:text-5xl">
             {workflow.name}
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-7 text-white/48">{workflow.description}</p>
 
-          <div className="mt-8 rounded-lg border border-white/10 bg-white/[0.035] p-4">
-            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-white/35">
-              <Terminal size={13} className="text-emerald-300" />
-              install command
-            </div>
-            <code className="mt-3 block break-words font-mono text-sm leading-6 text-white/72">
-              {workflow.installCommand}
-            </code>
+          <div className="mt-8">
+            <CopyableInstallCommand command={workflow.installCommand} />
           </div>
 
           <div className="mt-8 rounded-lg border border-white/10 bg-white/[0.035] p-4">

@@ -39,7 +39,7 @@ describe("package metadata", () => {
     const packageMetadata = await readPackageMetadata();
 
     expect(packageMetadata.name).toBe("getsuperpower");
-    expect(packageMetadata.version).toBe("0.3.6");
+    expect(packageMetadata.version).toBe("0.4.0");
     expect(packageMetadata.scripts?.build).toBe(
       "bun build --target=node --outfile=dist/cli.js src/cli.ts",
     );
@@ -58,7 +58,7 @@ describe("package metadata", () => {
       "utf8",
     );
     const workflowBundleSource = await readFile(
-      join(import.meta.dir, "..", "src", "runtimes", "ponytrail", "workflow-bundles.ts"),
+      join(import.meta.dir, "..", "src", "runtimes", "getsuperpower", "workflow-bundles.ts"),
       "utf8",
     );
 

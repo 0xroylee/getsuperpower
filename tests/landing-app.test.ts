@@ -30,6 +30,7 @@ describe("landing app source contract", () => {
     expect(pkg.dependencies?.next).toBe("16.2.0");
     expect(pkg.dependencies?.react).toBe("19.2.7");
     expect(pkg.dependencies?.["react-dom"]).toBe("19.2.7");
+    expect(pkg.dependencies?.["boring-avatars"]).toBe("2.0.4");
     expect(pkg.devDependencies?.tailwindcss).toBe("4.1.12");
     expect(pkg.devDependencies?.["@tailwindcss/postcss"]).toBe("4.1.12");
 
@@ -44,13 +45,90 @@ describe("landing app source contract", () => {
 
     expect(page).toContain("LandingPage");
     expect(content).toContain("GetSuperpower");
-    expect(content).toContain("OpenSpec Delivery");
-    expect(content).toContain("Release Review");
-    expect(content).toContain("Real Engineering");
-    expect(content).toContain("Development Design Delivery");
-    expect(content).toContain("npx getsuperpower@latest install");
+    expect(content).toContain("Startup Goal");
+    expect(content).toContain("CEO");
+    expect(content).toContain("CTO");
+    expect(content).toContain("Product Manager");
+    expect(content).toContain("Engineering Manager");
+    expect(content).toContain("Founding Engineer");
+    expect(content).toContain("QA Lead");
+    expect(content).toContain("avatarSeed");
+    expect(content).toContain("npx getsuperpower@latest install startup-goal");
+    expect(content).toContain("npx getsuperpower@latest install ceo");
+    expect(content).toContain("npx getsuperpower@latest install cto");
+    expect(content).toContain("npx getsuperpower@latest install product-manager");
+    expect(content).toContain("npx getsuperpower@latest install engineering-manager");
+    expect(content).toContain("npx getsuperpower@latest install founding-engineer");
+    expect(content).toContain("npx getsuperpower@latest install qa-lead");
+    expect(content).toContain("npx getsuperpower@latest deps startup-goal");
+    expect(content).toContain("npx getsuperpower@latest lock examples/workflows/startup-goal");
+    expect(content).toContain("npx getsuperpower@latest remove startup-goal");
+    expect(content).not.toContain("npx getsuperpower@latest install startup-team");
+    expect(content).toContain(
+      "npx getsuperpower@latest loop status grilled-product-dev --latest --json",
+    );
     expect(content).toContain("npx getsuperpower@latest validate");
     expect(content).not.toContain("npx getsuperpower@latest getsuperpower");
+  });
+
+  test("leads with the power-your-ability positioning", () => {
+    const page = readLandingFile("components/landing-page.tsx");
+    const content = readLandingFile("lib/landing-content.ts");
+
+    expect(page).toContain("Power your ability.");
+    expect(page).toContain("Install the workflow.");
+    expect(page).toContain("many-skill bank");
+    expect(page).toContain("3x your ability");
+    expect(page).toContain("npx getsuperpower@latest install startup-goal");
+    expect(page).toContain("One entry skill. Many specialist skills.");
+    expect(content).toContain("Install a many-skill bank");
+    expect(content).toContain("Call one entry skill with a goal");
+    expect(content).toContain("Compound specialist judgment");
+    expect(content).toContain("3x your ability without manual skill juggling");
+  });
+
+  test("uses Vercel Geist Sans as the landing app font", () => {
+    const layout = readLandingFile("app/layout.tsx");
+    const globals = readLandingFile("app/globals.css");
+    const design = readLandingFile("design.md");
+
+    expect(layout).toContain('import { Geist } from "next/font/google"');
+    expect(layout).toContain("const geistSans = Geist");
+    expect(layout).toContain('variable: "--font-geist-sans"');
+    expect(layout).toContain("className={geistSans.variable}");
+    expect(globals).toContain('var(--font-geist-sans), "Geist Sans"');
+    expect(design).toContain("Vercel Geist Sans");
+  });
+
+  test("documents the reference-derived registry design", () => {
+    const design = readLandingFile("design.md");
+
+    expect(design).toContain("/Users/roy/Downloads/Create GetSuperpower Workflows/");
+    expect(design).toContain("Workflow Registry");
+    expect(design).toContain("hide activity, rank, and install counts");
+    expect(design).toContain("copyable");
+    expect(design).toContain("landing/components/workflow-card.tsx");
+    expect(design).not.toContain("Workflows Leaderboard");
+    expect(design).not.toContain("All Time");
+    expect(design).not.toContain("Trending");
+    expect(design).not.toContain("Hot");
+    expect(design).not.toContain("dependency-free mini bar/sparkline");
+  });
+
+  test("does not define placeholder workflow activity or install metrics", () => {
+    const content = readLandingFile("lib/landing-content.ts");
+
+    expect(content).not.toContain("export type WorkflowActivityMode");
+    expect(content).not.toContain("export interface WorkflowDisplayMetrics");
+    expect(content).not.toContain("displayMetrics");
+    expect(content).not.toContain("sourceLabel");
+    expect(content).not.toContain("installCount");
+    expect(content).not.toContain("activity:");
+    expect(content).not.toContain("rank");
+    expect(content).not.toContain("workflow telemetry");
+    expect(content).not.toContain('"allTime"');
+    expect(content).not.toContain('"trending"');
+    expect(content).not.toContain('"hot"');
   });
 
   test("defines workflow detail metadata for route pages", () => {
@@ -58,29 +136,45 @@ describe("landing app source contract", () => {
 
     expect(content).toContain("export interface WorkflowDiagramStep");
     expect(content).toContain("slug: string");
+    expect(content).toContain("avatarSeed: string");
     expect(content).toContain("sourceUrl: string");
     expect(content).toContain("installCommand: string");
     expect(content).toContain("diagramSteps: WorkflowDiagramStep[]");
-    expect(content).toContain('slug: "openspec-delivery"');
-    expect(content).toContain(`\${githubUrl}/tree/main/examples/workflows/openspec-superpowers`);
-    expect(content).toContain(`\${githubUrl}/tree/main/examples/workflows/release-review`);
-    expect(content).toContain(`\${githubUrl}/tree/main/examples/workflows/real-engineering`);
-    expect(content).toContain(
-      `\${githubUrl}/tree/main/examples/workflows/development-design-delivery`,
-    );
-    expect(content).toContain(
-      "npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/openspec-superpowers'",
-    );
-    expect(content).toContain('label: "Proposal"');
-    expect(content).toContain('skill: "opsx-handoff-review"');
+    expect(content).toContain('slug: "startup-goal"');
+    expect(content).toContain('slug: "founding-engineer"');
+    expect(content).toContain('slug: "haaland"');
+    expect(content).toContain(`\${githubUrl}/tree/main/examples/workflows/startup-goal`);
+    expect(content).toContain(`\${githubUrl}/tree/main/examples/workflows/cto`);
+    expect(content).toContain(`\${githubUrl}/tree/main/examples/workflows/haaland`);
+    expect(content).toContain("npx getsuperpower@latest install startup-goal");
+    expect(content).toContain("npx getsuperpower@latest install haaland");
+    expect(content).toContain("Create one profile-icon meme concept");
+    expect(content).not.toContain("Generate meme angles");
+    expect(content).toContain('label: "Implementation"');
+    expect(content).toContain('skill: "founding-engineer"');
   });
 
-  test("renders workflow cards as route links", () => {
+  test("renders workflow cards as route links with hash-seeded avatars", () => {
     const card = readLandingFile("components/workflow-card.tsx");
+    const avatar = readLandingFile("components/workflow-avatar.tsx");
 
     expect(card).toContain('import Link from "next/link"');
+    expect(card).toContain('import { WorkflowAvatar } from "./workflow-avatar"');
     expect(card).toContain(`href={\`/workflows/\${slug}\`}`);
+    expect(card).toContain("avatarSeed");
+    expect(card).toContain("<WorkflowAvatar");
     expect(card).toContain("View workflow");
+    expect(card).toContain("skills.length");
+    expect(avatar).toContain('import Avatar from "boring-avatars"');
+    expect(avatar).toContain("name={seed}");
+    expect(avatar).toContain('variant="beam"');
+    expect(card).not.toContain("activityValues");
+    expect(card).not.toContain("installCount");
+    expect(card).not.toContain("sourceLabel");
+    expect(card).not.toContain("Local activity signal");
+    expect(card).not.toContain("Download");
+    expect(card).not.toContain("recharts");
+    expect(card).not.toContain("AreaChart");
     expect(card).not.toContain("isSelected");
     expect(card).not.toContain("onViewWorkflow");
     expect(card).not.toContain('type="button"');
@@ -91,10 +185,55 @@ describe("landing app source contract", () => {
     const page = readLandingFile("components/landing-page.tsx");
 
     expect(page).toContain("<WorkflowCard");
+    expect(page).toContain("Workflow Registry");
+    expect(page).toContain("filteredWorkflows.map");
+    expect(page).toContain(
+      '<span className="text-xs uppercase tracking-[0.18em] text-white/25">Workflow</span>',
+    );
+    expect(page).toContain("Detail");
+    expect(page).not.toContain("type WorkflowActivityMode");
+    expect(page).not.toContain("Workflows Leaderboard");
+    expect(page).not.toContain("All Time");
+    expect(page).not.toContain("Trending");
+    expect(page).not.toContain("Hot");
+    expect(page).not.toContain("activeActivityMode");
+    expect(page).not.toContain("setActiveActivityMode");
+    expect(page).not.toContain("displayMetrics.activity");
+    expect(page).not.toContain("Installs");
+    expect(page).not.toContain("Activity");
     expect(page).not.toContain("selectedWorkflowSlug");
     expect(page).not.toContain("selectedWorkflow");
     expect(page).not.toContain("setSelectedWorkflowSlug");
     expect(page).not.toContain("WorkflowDetail");
+    expect(page).not.toContain("AreaChart");
+    expect(page).not.toContain("recharts");
+  });
+
+  test("explains current install behavior without reading generated workflow state", () => {
+    const page = readLandingFile("components/landing-page.tsx");
+
+    expect(page).toContain("Install by alias, public git URL, or local path");
+    expect(page).toContain("validates the workflow");
+    expect(page).toContain("manifest");
+    expect(page).toContain("bootstraps missing external skills");
+    expect(page).toContain("~/.getsuperpower/workflows/");
+    expect(page).toContain("getsuperpower loop");
+    expect(page).toContain("action-only");
+    expect(page).not.toContain("browser executes live agent workflows");
+    expect(page).not.toContain("generated .getsuperpower run state");
+  });
+
+  test("describes loop-enabled workflows as CLI-controlled and action-only", () => {
+    const content = readLandingFile("lib/landing-content.ts");
+    const demo = readLandingFile("components/workflow-run-demo.tsx");
+
+    expect(content).toContain(
+      "npx getsuperpower@latest loop status grilled-product-dev --latest --json",
+    );
+    expect(content).toContain("resumable, action-only workflow state");
+    expect(demo).toContain("Simulate calling");
+    expect(content).not.toContain("executes tools");
+    expect(content).not.toContain("runs live workflows in the browser");
   });
 
   test("renders static workflow detail routes from local workflow data", () => {
@@ -112,11 +251,29 @@ describe("landing app source contract", () => {
     expect(route).toContain("workflows.find");
     expect(route).toContain("notFound()");
     expect(route).toContain("workflow.installCommand");
+    expect(route).toContain("WorkflowAvatar");
+    expect(route).toContain("workflow.avatarSeed");
     expect(route).toContain('href="/#workflows"');
     expect(route).toContain("diagramSteps.map");
     expect(route).toContain("View source on GitHub");
     expect(route).toContain('target="_blank"');
     expect(route).toContain('rel="noreferrer"');
+  });
+
+  test("renders copyable install commands on workflow detail pages", () => {
+    const route = readLandingFile("app/workflows/[slug]/page.tsx");
+
+    expect(existsSync(join(landingRoot, "components", "copyable-install-command.tsx"))).toBe(true);
+    expect(route).toContain("CopyableInstallCommand");
+    expect(route).toContain("workflow.installCommand");
+
+    const copyable = readLandingFile("components/copyable-install-command.tsx");
+
+    expect(copyable).toContain('"use client"');
+    expect(copyable).toContain("navigator.clipboard.writeText(command)");
+    expect(copyable).toContain("Copied");
+    expect(copyable).toContain("Copy");
+    expect(copyable).toContain("install command");
   });
 
   test("renders GitHub stars in the landing header from cached server metadata", () => {
@@ -137,17 +294,28 @@ describe("landing app source contract", () => {
 
   test("renders an interactive simulated workflow run section", () => {
     const demo = readLandingFile("components/workflow-run-demo.tsx");
+    const flow = readLandingFile("components/flow-diagram.tsx");
     const page = readLandingFile("components/landing-page.tsx");
 
     expect(demo).toContain("export function WorkflowRunDemo");
     expect(demo).toContain("const STEPS: SkillStep[]");
-    expect(demo).toContain("OpenSpec Proposal");
-    expect(demo).toContain("Design Brainstorm");
-    expect(demo).toContain("Implementation Plan");
-    expect(demo).toContain("TDD Build");
+    expect(flow).toContain("$startup-goal");
+    expect(flow).toContain("startup-goal entry skill");
+    expect(flow).toContain("Role skills combine");
+    expect(demo).toContain("Route Goal");
+    expect(demo).toContain("Strategy");
+    expect(demo).toContain("Product Scope");
+    expect(demo).toContain("Architecture");
+    expect(demo).toContain("Implementation");
+    expect(demo).toContain("QA Review");
     expect(demo).toContain("Try it live");
     expect(demo).toContain("Watch the workflow run");
-    expect(demo).toContain("> $openspec-delivery implement idempotency for /payments/charge");
+    expect(demo).toContain("> $startup-goal help me launch this product from idea to shipped v1");
+    expect(page).toContain("$startup-goal help me launch this product from idea to shipped v1");
+    expect(page).toContain("[ok] CEO");
+    expect(page).toContain("[ok] QA");
+    expect(demo).not.toContain("$openspec-delivery");
+    expect(flow).not.toContain("$openspec-delivery");
     expect(demo).toContain("setCompletedSteps");
     expect(demo).toContain("scrollRef.current?.scrollTo");
     expect(demo).toContain("Replay");

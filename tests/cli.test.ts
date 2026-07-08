@@ -44,7 +44,74 @@ async function writeSuperpowersProcessSkills(homeDir: string): Promise<void> {
   });
 }
 
+async function writeLoopedWorkflowFixture(workflowDir: string): Promise<void> {
+  await mkdir(join(workflowDir, "skills", "looped-entry"), { recursive: true });
+  await writeFile(
+    join(workflowDir, "skills", "looped-entry", "SKILL.md"),
+    [
+      "---",
+      "name: looped-entry",
+      'description: "Entry skill for a looped workflow."',
+      "---",
+      "",
+      "# looped-entry",
+    ].join("\n"),
+  );
+  await writeFile(
+    join(workflowDir, "workflow.json"),
+    JSON.stringify(
+      {
+        schemaVersion: "0.1",
+        name: "looped-cli",
+        version: "0.1.0",
+        description: "Looped workflow CLI fixture.",
+        loop: { script: "./loop.mjs", state: "global", execution: "action-only" },
+        skills: [{ source: "./skills/looped-entry", entry: true }],
+        steps: [
+          {
+            id: "entry",
+            title: "Entry",
+            skill: "./skills/looped-entry",
+            instruction: "Run the loop status command.",
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+  );
+}
+
+async function captureProgramOutput(action: () => Promise<unknown>): Promise<{
+  stdout: string;
+  stderr: string;
+}> {
+  const stdout: string[] = [];
+  const stderr: string[] = [];
+  const originalStdoutWrite = process.stdout.write;
+  const originalStderrWrite = process.stderr.write;
+
+  process.stdout.write = ((chunk: string | Uint8Array) => {
+    stdout.push(String(chunk));
+    return true;
+  }) as typeof process.stdout.write;
+  process.stderr.write = ((chunk: string | Uint8Array) => {
+    stderr.push(String(chunk));
+    return true;
+  }) as typeof process.stderr.write;
+
+  try {
+    await action();
+  } finally {
+    process.stdout.write = originalStdoutWrite;
+    process.stderr.write = originalStderrWrite;
+  }
+
+  return { stdout: stdout.join(""), stderr: stderr.join("") };
+}
+
 describe("cli", () => {
+  const repoRoot = join(import.meta.dir, "..");
   const releaseReviewWorkflow = join(
     import.meta.dir,
     "..",
@@ -60,10 +127,13 @@ describe("cli", () => {
     expect(program.commands.map((command) => command.name())).toEqual([
       "init",
       "validate",
+      "lock",
       "install",
       "list",
+      "remove",
       "deps",
       "onboard",
+      "loop",
       "bundle",
       "workflow",
       "skills",
@@ -85,10 +155,26 @@ describe("cli", () => {
     const bundleCommand = program.commands.find((command) => command.name() === "bundle");
     const workflowCommand = program.commands.find((command) => command.name() === "workflow");
     const skillsCommand = program.commands.find((command) => command.name() === "skills");
+    const loopCommand = program.commands.find((command) => command.name() === "loop");
 
     expect(rootDepsCommand?.aliases()).toEqual(["dependencies", "dependence"]);
-    expect(bundleCommand?.commands.map((command) => command.name())).toEqual(["init", "validate"]);
-    expect(workflowCommand?.commands.map((command) => command.name())).toEqual(["install", "list"]);
+    expect(bundleCommand?.commands.map((command) => command.name())).toEqual([
+      "init",
+      "validate",
+      "lock",
+    ]);
+    expect(workflowCommand?.commands.map((command) => command.name())).toEqual([
+      "install",
+      "list",
+      "remove",
+    ]);
+    expect(loopCommand?.commands.map((command) => command.name())).toEqual([
+      "start",
+      "status",
+      "log",
+      "advance",
+      "summary",
+    ]);
     expect(skillsCommand?.commands.map((command) => command.name())).toEqual(["install", "update"]);
     expect(
       skillsCommand?.commands
@@ -108,6 +194,7 @@ describe("cli", () => {
     program.outputHelp();
 
     const help = stripAnsi(output.join(""));
+    const normalizedHelp = help.replace(/\s+/g, " ");
 
     expect(help).toContain("GETSUPERPOWER");
     expect(help).toContain("Welcome to GetSuperpower.");
@@ -117,7 +204,7 @@ describe("cli", () => {
     expect(help).toContain("getsuperpower install ./release-review");
     expect(help).toContain("getsuperpower deps ./release-review");
     expect(help).toContain("bundle");
-    expect(help).toContain("Compatibility alias for GetSuperpower authoring.");
+    expect(normalizedHelp).toContain("Compatibility alias for GetSuperpower authoring.");
     expect(help).not.toContain("ponyrace");
     expect(help).not.toContain("getsuperpower clone");
     expect(help).not.toContain("history");
@@ -147,7 +234,7 @@ describe("cli", () => {
 
   test("prints the CLI version with -v", async () => {
     const program = buildProgram();
-    const expectedVersion = "0.3.6";
+    const expectedVersion = "0.4.0";
     const output: string[] = [];
 
     expect(program.version()).toBe(expectedVersion);
@@ -184,6 +271,12 @@ describe("cli", () => {
         ["bundle", "validate", "bundles/release-review"],
         { from: "user" },
       );
+      await buildProgram({ cwd: rootDir }).parseAsync(
+        ["bundle", "lock", "bundles/release-review"],
+        {
+          from: "user",
+        },
+      );
 
       await expect(
         stat(join(rootDir, "bundles", "release-review", "workflow.json")),
@@ -194,10 +287,14 @@ describe("cli", () => {
       await expect(
         stat(join(rootDir, "bundles", "release-review", "skills", "custom-review", "SKILL.md")),
       ).resolves.toBeTruthy();
+      await expect(
+        stat(join(rootDir, "bundles", "release-review", "workflow.lock.json")),
+      ).resolves.toBeTruthy();
       expect(stripAnsiLines(logs)).toContain(
         `GetSuperpower created: ${join(rootDir, "bundles", "release-review")}`,
       );
       expect(stripAnsiLines(logs)).toContain("GetSuperpower valid: release-review@0.1.0");
+      expect(stripAnsiLines(logs)).toContain("GetSuperpower lock written: release-review");
     } finally {
       console.log = originalLog;
       await rm(rootDir, { recursive: true, force: true });
@@ -243,6 +340,199 @@ describe("cli", () => {
     } finally {
       console.log = originalLog;
       await rm(rootDir, { recursive: true, force: true });
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test("getsuperpower install writes generated loop runner files into the installed entry skill", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "ponytrail-loop-cli-"));
+    const homeDir = await mkdtemp(join(tmpdir(), "ponytrail-loop-home-"));
+    const workflowDir = join(rootDir, "looped-cli");
+    const logs: string[] = [];
+    const originalLog = console.log;
+
+    console.log = (...values: unknown[]) => {
+      logs.push(values.join(" "));
+    };
+
+    try {
+      await writeLoopedWorkflowFixture(workflowDir);
+
+      await buildProgram({ cwd: rootDir }).parseAsync(
+        ["install", workflowDir, "--home", homeDir, "--agents", "codex"],
+        { from: "user" },
+      );
+
+      const installedSkillDir = join(homeDir, ".agents", "skills", "looped-entry");
+      await expect(stat(join(installedSkillDir, "SKILL.md"))).resolves.toBeTruthy();
+      await expect(readFile(join(installedSkillDir, "workflow.json"), "utf8")).resolves.toContain(
+        '"loop"',
+      );
+      const generatedRunner = await readFile(join(installedSkillDir, "loop.mjs"), "utf8");
+      expect(generatedRunner).toContain("GETSUPERPOWER_BIN");
+      expect(generatedRunner).toContain("getsuperpower");
+      expect(generatedRunner).toContain("workflow.json");
+      await expect(stat(join(installedSkillDir, "loop-runtime.mjs"))).rejects.toThrow();
+      const metadata = JSON.parse(
+        await readFile(join(installedSkillDir, "loop.metadata.json"), "utf8"),
+      );
+      expect(metadata).toEqual({
+        schemaVersion: "0.1",
+        workflow: "looped-cli",
+        entrySkill: "./skills/looped-entry",
+        loopScript: "./loop.mjs",
+        state: "global",
+        execution: "action-only",
+        commands: ["start", "status", "log", "advance", "summary"],
+      });
+      await expect(
+        stat(join(homeDir, ".getsuperpower", "workflows", "looped-cli.json")),
+      ).resolves.toBeTruthy();
+      expect(stripAnsiLines(logs)).toContain("GetSuperpower installed: looped-cli");
+    } finally {
+      console.log = originalLog;
+      await rm(rootDir, { recursive: true, force: true });
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test("getsuperpower loop controls looped workflows through the CLI", async () => {
+    const homeDir = await mkdtemp(join(tmpdir(), "ponytrail-loop-run-home-"));
+    const workflowSource = "examples/workflows/grilled-product-dev";
+
+    try {
+      const start = await captureProgramOutput(() =>
+        buildProgram({ cwd: repoRoot }).parseAsync(
+          ["loop", "start", workflowSource, "--home", homeDir, "--run", "cli-smoke", "--json"],
+          { from: "user" },
+        ),
+      );
+      expect(start.stderr).toBe("");
+      const startPayload = JSON.parse(start.stdout) as {
+        goal: { type: string; goal: string };
+        runId: string;
+        step: { id: string; verify: { type: string } };
+        actions: Array<{
+          type: string;
+          step?: string;
+          command?: string;
+          description?: string;
+          verify?: { type: string; event?: string; message_includes?: string };
+        }>;
+      };
+      expect(startPayload.runId).toBe("cli-smoke");
+      expect(startPayload.goal).toMatchObject({
+        type: "goal_based",
+        goal: "Produce an approved implementation plan for a product-development request.",
+      });
+      expect(startPayload.step.id).toBe("grill");
+      expect(startPayload.step.verify.type).toBe("human_approval");
+      expect(startPayload.actions).toContainEqual({
+        type: "verify",
+        step: "grill",
+        verify: {
+          type: "human_approval",
+          event: "approval",
+          message_includes: "direction ready",
+        },
+        description: "Check the phase verification rule before advancing.",
+      });
+      const startCommands = startPayload.actions.map((action) => action.command).filter(Boolean);
+      expect(startCommands).toContain(
+        `getsuperpower loop log ${workflowSource} --home ${homeDir} --run cli-smoke --type phase_result --message "..."`,
+      );
+      expect(startCommands).toContain(
+        `getsuperpower loop advance ${workflowSource} --home ${homeDir} --run cli-smoke`,
+      );
+      expect(startCommands.join("\n")).not.toContain("node loop.mjs");
+
+      const status = await captureProgramOutput(() =>
+        buildProgram({ cwd: repoRoot }).parseAsync(
+          ["loop", "status", workflowSource, "--home", homeDir, "--latest", "--json"],
+          { from: "user" },
+        ),
+      );
+      expect(status.stderr).toBe("");
+      expect(JSON.parse(status.stdout)).toMatchObject({
+        selectedByLatest: true,
+        runId: "cli-smoke",
+        step: { id: "grill" },
+      });
+
+      const log = await captureProgramOutput(() =>
+        buildProgram({ cwd: repoRoot }).parseAsync(
+          [
+            "loop",
+            "log",
+            workflowSource,
+            "--home",
+            homeDir,
+            "--run",
+            "cli-smoke",
+            "--type",
+            "phase_result",
+            "--message",
+            "CLI loop event",
+            "--metadata",
+            '{"ok":true}',
+            "--json",
+          ],
+          { from: "user" },
+        ),
+      );
+      expect(log.stderr).toBe("");
+      expect(JSON.parse(log.stdout)).toMatchObject({
+        runId: "cli-smoke",
+        event: {
+          type: "phase_result",
+          step: "grill",
+          message: "CLI loop event",
+          metadata: { ok: true },
+        },
+      });
+
+      const advance = await captureProgramOutput(() =>
+        buildProgram({ cwd: repoRoot }).parseAsync(
+          ["loop", "advance", workflowSource, "--home", homeDir, "--run", "cli-smoke", "--json"],
+          { from: "user" },
+        ),
+      );
+      expect(advance.stderr).toBe("");
+      expect(JSON.parse(advance.stdout)).toMatchObject({
+        runId: "cli-smoke",
+        status: "active",
+        step: { id: "shape" },
+      });
+
+      const summary = await captureProgramOutput(() =>
+        buildProgram({ cwd: repoRoot }).parseAsync(
+          ["loop", "summary", workflowSource, "--home", homeDir, "--run", "cli-smoke", "--json"],
+          { from: "user" },
+        ),
+      );
+      expect(summary.stderr).toBe("");
+      const summaryPayload = JSON.parse(summary.stdout) as { summaryPath: string };
+      await expect(readFile(summaryPayload.summaryPath, "utf8")).resolves.toContain(
+        "Current step: shape",
+      );
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test("getsuperpower loop fails plainly for non-loop workflows", async () => {
+    const homeDir = await mkdtemp(join(tmpdir(), "ponytrail-loop-non-loop-home-"));
+
+    try {
+      await expect(
+        captureProgramOutput(() =>
+          buildProgram({ cwd: repoRoot }).parseAsync(
+            ["loop", "start", "examples/workflows/release-review", "--home", homeDir],
+            { from: "user" },
+          ),
+        ),
+      ).rejects.toThrow("GetSuperpower is not loop-enabled: release-review");
+    } finally {
       await rm(homeDir, { recursive: true, force: true });
     }
   });

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "0.1",
+  "workflow": "haaland",
+  "workflowVersion": "0.1.0",
+  "generatedAt": "2026-07-08T14:15:19.041Z",
+  "skills": [
+    {
+      "source": "./skills/haaland",
+      "resolvedName": "haaland",
+      "kind": "local",
+      "hash": "sha256:d10bf16eca98054b3a23bbe0aac21ccb00e7f904c5f3b1c3480bb1009c575583"
+    }
+  ]
+}

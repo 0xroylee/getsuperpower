@@ -13,7 +13,7 @@ Vocabulary:
 Command note:
 
 - In a cloned GetSuperpower repo, use `bun run dev -- <command>`.
-- In another project, use `npx getsuperpower <command>`.
+- In another project, use `npx getsuperpower@latest <command>`.
 
 ## Recommended: Call The Authoring Skill
 
@@ -21,7 +21,7 @@ Start here when you want an agent to help create the workflow and skills set.
 Install the bundled authoring skill:
 
 ```bash
-npx getsuperpower skills install creating-bundle-skills
+npx getsuperpower@latest skills install creating-bundle-skills
 ```
 
 Restart your agent app so it reloads the skill, then call it directly:
@@ -33,6 +33,8 @@ $creating-bundle-skills create a GetSuperpower named support-triage that classif
 The authoring skill should help you produce or review:
 
 - `workflow.json`: the installable workflow manifest
+- `workflow.lock.json`: generated skill fingerprints for the workflow's local
+  and external skill sources
 - `README.md`: when to use the GetSuperpower and how to install it
 - `skills/<workflow-name>/SKILL.md`: the entry skill users call
 - `skills/<local-skill>/SKILL.md`: any local skills used by the workflow
@@ -48,10 +50,10 @@ Start with one repeatable workflow, not a whole operating system.
 
 Good examples:
 
-- `support-triage`: classify a support issue, plan a fix, record evidence
-- `release-review`: review release risk before implementation
-- `bugfix-with-tests`: clarify a bug, plan the fix, verify regression coverage
-- `real-engineering`: combine RTK, Ponytrail, Superpowers, and Matt Pocock skills
+- `cto`: architecture, technical risk, and engineering strategy
+- `product-manager`: discovery, PRD, and issue slicing
+- `founding-engineer`: implement, test, debug, review, and verify
+- `support-triage`: classify a support issue and plan a fix
 
 Use a lowercase name with hyphens:
 
@@ -139,6 +141,67 @@ name used by workflow steps, and set `repo` to the package passed to
 The entry skill itself belongs in `skills[]`, but it does not need its own step.
 It is the callable wrapper that instructs the agent to run the declared steps.
 
+### Generate `workflow.lock.json`
+
+After editing `workflow.json` or any local skill in `skills/`, refresh the lock
+file:
+
+```bash
+bun run dev -- lock examples/workflows/support-triage
+```
+
+The lock file records deterministic hashes for local skill contents and stable
+fingerprints for external skill sources. Commit it with the workflow so reviewers
+can see when the skill tree changed.
+
+### Optional Loop Runtime
+
+A workflow can opt into resumable, action-only loop state by declaring a
+generated loop runner path in `workflow.json`:
+
+```json
+{
+  "loop": {
+    "script": "./loop.mjs",
+    "state": "global",
+    "execution": "action-only"
+  },
+  "skills": [{ "source": "./skills/support-triage", "entry": true }],
+  "steps": [
+    {
+      "id": "shape",
+      "title": "Clarify the support issue",
+      "skill": "superpowers:brainstorming",
+      "instruction": "Clarify the issue and wait for explicit approval."
+    }
+  ]
+}
+```
+
+Looped workflows must mark exactly one local skill as `entry: true`. Put the
+exact phase prompt in `steps[].instruction`; `getsuperpower loop status
+<source> --json` returns that instruction.
+
+`loop.script` is an install output path, not a required source file. During
+install, GetSuperpower copies `workflow.json`, writes generated
+`loop.metadata.json`, and writes a generated `loop.mjs` bridge into the
+installed entry skill folder only. The bridge delegates back to the
+GetSuperpower CLI, where the generic loop runtime lives.
+
+Agents should operate looped workflows with:
+
+```bash
+getsuperpower loop start <source> --json
+getsuperpower loop status <source> --latest --json
+getsuperpower loop log <source> --run <id> --type phase_result --message "..."
+getsuperpower loop advance <source> --run <id> --json
+getsuperpower loop summary <source> --run <id> --json
+```
+
+The generated `loop.mjs` wrapper remains a Node compatibility fallback after
+install. It requires the `getsuperpower` CLI on `PATH` or a `GETSUPERPOWER_BIN`
+environment override.
+
 ## 4. Edit The Entry Skill
 
 Open:
@@ -202,6 +265,7 @@ Then update `workflow.json` to use:
 Run:
 
 ```bash
+bun run dev -- lock examples/workflows/support-triage
 bun run dev -- validate examples/workflows/support-triage
 ```
 
@@ -284,14 +348,14 @@ Users can also install a workflow directly from a public git repository when
 the repository root contains `workflow.json`:
 
 ```bash
-npx getsuperpower install https://github.com/acme/support-triage.git
+npx getsuperpower@latest install https://github.com/acme/support-triage.git
 ```
 
 If the workflow lives in a subdirectory, add the workflow path as a URL
 fragment:
 
 ```bash
-npx getsuperpower install 'https://github.com/acme/workflows.git#examples/workflows/support-triage'
+npx getsuperpower@latest install 'https://github.com/acme/workflows.git#examples/workflows/support-triage'
 ```
 
 Before opening the pull request, run:
@@ -312,6 +376,7 @@ In the pull request, include:
 Before sharing, check:
 
 - The workflow name is lowercase and hyphenated.
+- `workflow.lock.json` exists and was regenerated after the latest skill edit.
 - `workflow.json` passes `getsuperpower validate`.
 - The entry skill exists at `skills/<workflow-name>/SKILL.md`.
 - The entry skill lists required sub-skills in step order.
@@ -320,10 +385,35 @@ Before sharing, check:
 - The README explains when to use the workflow.
 - The workflow is narrow enough to run repeatedly.
 
-## Example: Combine RTK, Ponytrail, Superpowers, And Matt Pocock Skills
+## Example: Startup Role Catalog
+
+The checked-in startup role workflows show the preferred public example style:
+real job roles with one callable entry skill and explicit companion skills.
+
+```bash
+bun run dev -- validate examples/workflows/startup-goal
+bun run dev -- deps examples/workflows/startup-goal
+```
+
+Install individual roles when you want one job lane:
+
+```bash
+bun run dev -- install examples/workflows/cto
+bun run dev -- install examples/workflows/product-manager
+bun run dev -- install examples/workflows/founding-engineer
+```
+
+Install `startup-goal` when you want the full role bench:
+
+```bash
+bun run dev -- install examples/workflows/startup-goal
+```
+
+## Compatibility Example: Combine RTK, Ponytrail, Superpowers, And Matt Pocock Skills
 
 The checked-in `real-engineering` workflow shows how to combine local workflow
-guidance with external skill packs:
+guidance with external skill packs. It remains available as a compatibility demo
+while the startup role catalog becomes the primary example set:
 
 ```bash
 bun run dev -- validate examples/workflows/real-engineering

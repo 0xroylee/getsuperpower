@@ -26,6 +26,7 @@ export interface ResolvedInstallSkillSource {
 export interface SkillInstallTargetResult {
   agent: SkillInstallAgent;
   destination: string;
+  artifactPaths: string[];
   status: SkillInstallStatus;
 }
 
@@ -102,6 +103,12 @@ const supportedSuperpowersSkills = [
     skillFolder: "writing-plans",
     installName: "superpowers-writing-plans",
   },
+  {
+    source: "superpowers:verification-before-completion",
+    displayName: "verification-before-completion",
+    skillFolder: "verification-before-completion",
+    installName: "superpowers-verification-before-completion",
+  },
 ] as const satisfies readonly SupportedSuperpowersSkill[];
 const bundledSkillAliases: Record<string, string> = {
   "record-change-evidence": "pony-trail",
@@ -153,6 +160,7 @@ export async function installAgentSkill(
   for (const agent of input.agents) {
     const destination = getSkillDestination(input.homeDir, agent, source.name);
     const mirrorDestinations = getSkillMirrorDestinations(input.homeDir, agent, source.name);
+    const artifactPaths = [destination, ...mirrorDestinations];
     const handledStatus = handledDestinations.get(destination);
     if (handledStatus) {
       if (
@@ -164,7 +172,7 @@ export async function installAgentSkill(
           await refreshSkillTarget({ agent, source, destination: mirrorDestination });
         }
       }
-      targets.push({ agent, destination, status: handledStatus });
+      targets.push({ agent, destination, artifactPaths, status: handledStatus });
       if (input.installPrehook && hasPrehookSupport(agent)) {
         prehooks.push(
           await installAgentSkillPrehook({
@@ -204,7 +212,7 @@ export async function installAgentSkill(
     }
 
     handledDestinations.set(destination, status);
-    targets.push({ agent, destination, status });
+    targets.push({ agent, destination, artifactPaths, status });
 
     if (input.installPrehook && hasPrehookSupport(agent)) {
       prehooks.push(
@@ -255,6 +263,14 @@ export async function resolveInstallSkillSource(
   if (bundledPath) {
     const name = await readSkillName(bundledPath);
     return { kind: "bundled", name, path: bundledPath };
+  }
+
+  if (!looksLikePath(sourceOrName)) {
+    const homeDir = options.homeDir ?? process.env.HOME ?? process.cwd();
+    const installedSkillPath = await findInstalledSkillPath(homeDir, sourceOrName);
+    if (installedSkillPath) {
+      return resolvePathSkill(installedSkillPath);
+    }
   }
 
   if (await pathExists(pathCandidate)) {

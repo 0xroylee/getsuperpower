@@ -100,17 +100,18 @@ export function LandingPage({ githubStarsLabel = "Stars" }: LandingPageProps) {
           </span>
         </div>
         <h1 className="text-5xl font-semibold leading-[1.05] text-white sm:text-6xl lg:text-7xl">
-          One command.
+          Power your ability.
           <br />
-          Whole workflow.
+          Install the workflow.
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-white/48">
-          GetSuperpower packages a complete AI-agent workflow as a single callable skill. Install
-          once, invoke the entry skill, and the agent follows every required sub-skill in order.
+          GetSuperpower is a many-skill bank for AI agents. Install one workflow skill tree, call
+          one entry skill with a goal, and give your agent the roles, playbooks, and verification
+          habits that 3x your ability.
         </p>
         <div className="mt-10 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
           <div className="rounded-lg border border-white/10 bg-[#0d0d0d] px-4 py-3 font-mono text-sm text-white/70">
-            <span className="break-words">npx getsuperpower@latest install ...</span>
+            <span className="break-words">npx getsuperpower@latest install startup-goal</span>
           </div>
           <a
             href="#workflows"
@@ -150,7 +151,7 @@ export function LandingPage({ githubStarsLabel = "Stars" }: LandingPageProps) {
         <div className="mb-12 text-center">
           <p className="mb-3 text-xs uppercase tracking-[0.22em] text-white/32">How it works</p>
           <h2 className="text-3xl font-medium text-white/90">
-            Install the skill tree. Invoke once.
+            One entry skill. Many specialist skills.
           </h2>
         </div>
         <div className="grid items-center gap-12 lg:grid-cols-2">
@@ -178,38 +179,71 @@ export function LandingPage({ githubStarsLabel = "Stars" }: LandingPageProps) {
       <WorkflowRunDemo />
 
       <section id="workflows" className="relative z-10 mx-auto max-w-6xl px-5 py-20">
-        <div className="mb-10 text-center">
-          <p className="mb-3 text-xs uppercase tracking-[0.22em] text-white/32">Workflow bundles</p>
-          <h2 className="text-3xl font-medium text-white/90">Pick a GetSuperpower</h2>
-          <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-white/42">
-            Each workflow is a shareable bundle of skills with one entry point.
+        <div className="mb-8">
+          <p className="mb-3 text-xs uppercase tracking-[0.22em] text-white/32">
+            Workflow Registry
           </p>
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_28rem] lg:items-end">
+            <div>
+              <h2 className="text-3xl font-medium text-white/90">Pick a GetSuperpower</h2>
+              <p className="mt-3 max-w-xl text-sm leading-6 text-white/42">
+                Browse installable workflow bundles, then open a detail route for the role map,
+                skill tree, and copyable install command.
+              </p>
+            </div>
+            <div className="relative">
+              <Search
+                size={15}
+                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30"
+              />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search workflows, skills, tags..."
+                className="w-full rounded-lg border border-white/10 bg-white/[0.04] py-2.5 pl-9 pr-9 text-sm text-white/80 outline-none transition placeholder:text-white/25 focus:border-violet-400/50"
+              />
+              {query ? (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/35 transition hover:text-white/70"
+                >
+                  <X size={14} />
+                </button>
+              ) : null}
+            </div>
+          </div>
         </div>
-        <div className="relative mx-auto mb-10 max-w-md">
-          <Search
-            size={15}
-            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30"
-          />
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search workflows, skills, tags..."
-            className="w-full rounded-lg border border-white/10 bg-white/[0.04] py-2.5 pl-9 pr-9 text-sm text-white/80 outline-none transition placeholder:text-white/25 focus:border-violet-400/50"
-          />
-          {query ? (
-            <button
-              type="button"
-              onClick={() => setQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/35 transition hover:text-white/70"
-            >
-              <X size={14} />
-            </button>
+
+        <div className="overflow-hidden rounded-lg border border-white/10">
+          <div className="hidden grid-cols-[minmax(0,1fr)_auto] gap-4 border-b border-white/10 bg-white/[0.02] px-4 py-2.5 md:grid">
+            <span className="text-xs uppercase tracking-[0.18em] text-white/25">Workflow</span>
+            <span className="text-right text-xs uppercase tracking-[0.18em] text-white/25">
+              Detail
+            </span>
+          </div>
+
+          <div className="divide-y divide-white/10">
+            {filteredWorkflows.map((workflow) => (
+              <WorkflowCard key={workflow.slug} {...workflow} />
+            ))}
+          </div>
+
+          {filteredWorkflows.length === 0 ? (
+            <div className="px-5 py-14 text-center text-white/35">
+              <Search size={26} className="mx-auto mb-3 opacity-45" />
+              <p className="text-sm">
+                No workflows match <span className="text-white/55">"{query}"</span>
+              </p>
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                className="mt-3 text-xs text-violet-300 transition hover:text-violet-200"
+              >
+                Clear search
+              </button>
+            </div>
           ) : null}
-        </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          {filteredWorkflows.map((workflow) => (
-            <WorkflowCard key={workflow.slug} {...workflow} />
-          ))}
         </div>
       </section>
 
@@ -221,9 +255,12 @@ export function LandingPage({ githubStarsLabel = "Stars" }: LandingPageProps) {
             </p>
             <h2 className="mb-4 text-3xl font-medium text-white/90">Get up and running fast</h2>
             <p className="mb-8 text-sm leading-6 text-white/45">
-              Install from npm, git, or a local path. The CLI handles validation, dependency
-              resolution, and local workflow records under{" "}
-              <code className="text-white/65">.getsuperpower/</code>.
+              Install by alias, public git URL, or local path. The CLI validates the workflow
+              manifest, bootstraps missing external skills from workflow metadata, and records
+              installed GetSuperpowers under{" "}
+              <code className="text-white/65">~/.getsuperpower/workflows/</code> by default.
+              Loop-enabled workflows use <code className="text-white/65">getsuperpower loop</code>{" "}
+              for resumable, action-only state.
             </p>
             <div className="space-y-2">
               {commands.map((command, index) => (
@@ -261,20 +298,15 @@ export function LandingPage({ githubStarsLabel = "Stars" }: LandingPageProps) {
                 lines={[
                   {
                     prefix: ">",
-                    text: "$openspec-delivery implement this OpenSpec change",
+                    text: "$startup-goal help me launch this product from idea to shipped v1",
                   },
                   { text: "", dim: true },
-                  { text: "[ok] proposal   scoped the change", dim: true },
-                  { text: "[ok] design     selected the approach", dim: true },
-                  { text: "[ok] plan       wrote executable tasks", dim: true },
-                  {
-                    text: "[ok] TDD        built through public seams",
-                    dim: true,
-                  },
-                  {
-                    text: "[ok] archive    preserved project knowledge",
-                    dim: true,
-                  },
+                  { text: "[ok] CEO        framed strategy and tradeoffs", dim: true },
+                  { text: "[ok] PM         scoped the v1 promise", dim: true },
+                  { text: "[ok] CTO        set architecture guardrails", dim: true },
+                  { text: "[ok] EM         sequenced delivery risk", dim: true },
+                  { text: "[ok] engineer   selected the smallest implementation slice", dim: true },
+                  { text: "[ok] QA         checked release risk and evidence", dim: true },
                 ]}
               />
             </div>

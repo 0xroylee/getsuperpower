@@ -15,18 +15,18 @@ Eyebrow: Works with Claude, Codex, Cursor, opencode, and GitHub Copilot.
 Headline:
 
 ```text
-One command.
-Whole workflow.
+Power your ability.
+Install the workflow.
 ```
 
-Body: GetSuperpower packages a complete AI-agent workflow as a single callable
-skill. Install once, invoke the entry skill, and the agent follows every
-required sub-skill in order.
+Body: GetSuperpower is a many-skill bank for AI agents. Install one workflow
+skill tree, call one entry skill with a goal, and give your agent the roles,
+playbooks, and verification habits that 3x your ability.
 
 Primary command preview:
 
 ```bash
-npx getsuperpower@latest install ...
+npx getsuperpower@latest install startup-goal
 ```
 
 Primary action: Browse workflows.
@@ -52,22 +52,24 @@ Primary action: Browse workflows.
 
 Section label: How it works.
 
-Heading: Install the skill tree. Invoke once.
+Heading: One entry skill. Many specialist skills.
 
-1. workflow.json installs the skill tree
+1. Install a many-skill bank
 
-   A single manifest defines the callable entry skill and every local or
-   external sub-skill it needs.
+   A workflow manifest defines the callable entry skill plus every local or
+   external specialist skill it needs.
 
-2. The entry skill is the one command users call
+2. Call one entry skill with a goal
 
-   Users invoke a single skill, such as $openspec-delivery, and the workflow
-   coordinates the rest.
+   Users invoke a single skill, such as $startup-goal, and the workflow routes
+   the goal through the right roles.
 
-3. Sub-skills run in a deliberate order
+3. Compound specialist judgment
 
-   Proposal, design, planning, TDD, verification, and archive steps stay aligned
-   without manual juggling.
+   Strategy, product, architecture, delivery, implementation, and QA roles stay
+   aligned so the agent can 3x your ability without manual skill juggling.
+   Looped workflows can track resumable, action-only workflow state through the
+   CLI.
 
 ## Workflow Run Demo
 
@@ -75,216 +77,378 @@ Section label: Try it live.
 
 Heading: Watch the workflow run.
 
-Body: Simulate calling `$openspec-delivery` and see each sub-skill execute in
-order, just like your agent would.
+Body: Simulate calling `$startup-goal` and see each role skill return its part
+of the combined answer.
 
 Prompt:
 
 ```text
-> $openspec-delivery implement idempotency for /payments/charge
+> $startup-goal help me launch this product from idea to shipped v1
 ```
 
 Demo steps:
 
-1. OpenSpec Proposal
-   - skill: `opsx-propose`
+1. Route Goal
+   - skill: `startup-goal`
    - lines:
-     - Reading current OpenSpec contract...
-     - Identifying change surface: /payments/charge endpoint
-     - Drafting spec amendment - adding idempotency-key header
-     - Aligning with existing versioning conventions
-     - Spec proposal written -> openspec-proposal.md
-2. Design Brainstorm
-   - skill: `brainstorming`
+     - Reading goal: launch this product from idea to shipped v1
+     - Selecting the role skills needed for the next decision
+     - Dispatching CEO, CTO, PM, EM, founding engineer, and QA lead
+     - Startup Goal route assembled
+2. Strategy
+   - skill: `ceo`
    - lines:
-     - Exploring approach A: client-generated UUID header
-     - Exploring approach B: server-side dedup store (Redis TTL)
-     - Exploring approach C: database unique constraint + retry
-     - Evaluating tradeoffs: latency, storage, failure modes
-     - Selected: approach B - best balance of correctness & perf
-     - Design decision recorded -> brainstorm-notes.md
-3. Implementation Plan
-   - skill: `writing-plans`
+     - Clarifying customer, wedge, and first painful workflow
+     - Choosing launch learning over broad platform scope
+     - Naming the hard tradeoff: speed before breadth
+     - CEO strategy frame returned
+3. Product Scope
+   - skill: `product-manager`
    - lines:
-     - Breaking spec into ordered tasks...
-     - [1] Add idempotency middleware to Express stack
-     - [2] Provision Redis dedup store with 24h TTL
-     - [3] Wire idempotency-key header validation
-     - [4] Return cached response on duplicate key
-     - Plan written -> implementation-plan.md (4 tasks)
-4. TDD Build
-   - skill: `tdd-build`
+     - Translating strategy into user problem and v1 promise
+     - Writing acceptance criteria for the first useful demo
+     - Slicing launch work into docs, onboarding, and feedback loop
+     - PM scope and issue slices returned
+4. Architecture
+   - skill: `cto`
    - lines:
-     - Writing failing tests first...
-     - should reject missing idempotency-key
-     - should return 200 on first request
-     - should return cached response on duplicate
-     - Implementing middleware...
-     - should reject missing idempotency-key
-     - should return 200 on first request
-     - should return cached response on duplicate
-     - All 3 tests passing - coverage 94%
+     - Checking the workflow manifest and install path
+     - Flagging integration risk around external skill dependencies
+     - Keeping the entry skill thin and role coordination explicit
+     - CTO architecture guardrails returned
+5. Implementation
+   - skill: `founding-engineer`
+   - lines:
+     - Finding the smallest implementation slice
+     - Updating the manifest, README, and landing source contract
+     - Running focused tests before the repo gate
+     - Verified implementation path returned
+6. QA Review
+   - skill: `qa-lead`
+   - lines:
+     - Checking acceptance against the original startup goal
+     - Scanning for stale startup-team and OpenSpec-facing examples
+     - Separating verified facts from residual launch risk
+     - Combined startup answer ready
 
-Completion copy: Workflow complete - all 4 skills executed. Artifacts saved to
-workspace.
+Completion copy: Workflow complete - all 6 role steps returned. Startup answer
+ready.
 
-## Workflow Bundles
+## Workflow Registry
 
-Section label: Workflow bundles.
+Section label: Workflow Registry.
 
 Heading: Pick a GetSuperpower.
 
-Body: Each workflow is a shareable bundle of skills with one entry point.
+Body: Browse installable workflow bundles, then open a detail route for the
+role map, skill tree, and copyable install command.
 
 Search placeholder: Search workflows, skills, tags...
 
-### OpenSpec Delivery
+### Startup Goal
 
-- slug: `openspec-delivery`
-- tag: Featured
-- entry skill: `$openspec-delivery`
+- slug: `startup-goal`
+- tag: Goal
+- entry skill: `$startup-goal`
+- avatar seed: `sha256:e2445fdfee4ef3d0a8aae8333a820a8485338bd1f62674c2596be49dba878f5f`
 - accent: `text-violet-300`
-- source:
-  `https://github.com/0xroylee/getsuperpower/tree/main/examples/workflows/openspec-superpowers`
+- source: `https://github.com/0xroylee/getsuperpower/tree/main/examples/workflows/startup-goal`
 - install:
 
 ```bash
-npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/openspec-superpowers'
+npx getsuperpower@latest install startup-goal
 ```
 
-Description: A complete delivery lifecycle from proposal through design, TDD
-build, verification, and archive.
+Description: Move a startup goal through the core operating roles: CEO, CTO,
+PM, EM, founding engineer, and QA lead.
 
 Skills:
 
-- `opsx-propose`: Draft the scoped spec change
-- `brainstorming`: Explore viable design approaches
-- `writing-plans`: Create an executable implementation plan
-- `tdd-build`: Build task by task with tests first
-- `pony-trail`: Record verification and rollback context
+- `startup-goal`: Coordinate role subagents around one goal
+- `ceo`: Company direction and tradeoffs
+- `cto`: Architecture and technical risk
+- `product-manager`: Discovery, PRDs, and issue slicing
+- `engineering-manager`: Delivery sequencing and quality gates
+- `founding-engineer`: Implementation and verification
+- `qa-lead`: Acceptance checks and release risk
+- `superpowers:brainstorming`: Explore options before scope locks
+- `superpowers:writing-plans`: Create executable plans
+- `superpowers:verification-before-completion`: Verify before claiming done
+- `mattpocock:decision-mapping`: Map decisions and uncertainty
+- `mattpocock:grill-with-docs`: Stress-test direction
+- `mattpocock:to-prd`: Write product requirements
+- `mattpocock:to-issues`: Slice work into issues
+- `mattpocock:codebase-design`: Review codebase boundaries
+- `mattpocock:domain-modeling`: Name domain concepts
+- `mattpocock:tdd`: Build with tests where practical
+- `mattpocock:diagnosing-bugs`: Diagnose failures from evidence
+- `mattpocock:review`: Review behavior and risk
+- `implement`: Execute the implementation slice
 
 Ordered skill path:
 
-1. Proposal -> `opsx-handoff-review`
-   - Create proposal, specs, and task handoff.
-2. Design -> `superpowers:brainstorming`
-   - Explore approaches and get human approval.
-3. Plan -> `superpowers:writing-plans`
-   - Split approved scope into executable tasks.
-4. Build -> `mattpocock:tdd`
-   - Implement each slice with failing tests first.
-5. Evidence -> `pony-trail`
-   - Record verification, rationale, and rollback context.
-6. Archive -> `opsx-handoff-review`
-   - Update specs and project knowledge after delivery.
+1. Route -> `startup-goal`
+   - Dispatch the needed role subagents for the next decision.
+2. Strategy -> `ceo`
+   - Clarify company direction and tradeoffs.
+3. Product -> `product-manager`
+   - Shape customer value, PRD, and issue slices.
+4. Technology -> `cto`
+   - Set architecture and technical risk boundaries.
+5. Delivery -> `engineering-manager`
+   - Sequence execution and quality gates.
+6. Implementation -> `founding-engineer`
+   - Build the smallest verified slice.
+7. QA -> `qa-lead`
+   - Check release readiness and residual risk.
 
-### Release Review
+### CEO
 
-- slug: `release-review`
-- tag: Starter
-- entry skill: `$release-review`
+- slug: `ceo`
+- tag: Strategy
+- entry skill: `$ceo`
+- avatar seed: `sha256:e28e960ca32f944aad4353c9248e43ca7526a5f4451d1293cd79590878f2b25a`
+- accent: `text-rose-300`
+- source: `https://github.com/0xroylee/getsuperpower/tree/main/examples/workflows/ceo`
+- install:
+
+```bash
+npx getsuperpower@latest install ceo
+```
+
+Description: Founder-level strategy for direction, hard tradeoffs,
+fundraising/customer framing, and company decisions.
+
+Skills:
+
+- `ceo`: Set the executive frame
+- `mattpocock:decision-mapping`: Map strategic uncertainty
+- `mattpocock:grill-with-docs`: Stress-test the company direction
+
+Ordered skill path:
+
+1. Brief -> `ceo`
+   - State the company-level decision.
+2. Decision Map -> `mattpocock:decision-mapping`
+   - Map options, constraints, and uncertainties.
+3. Grill -> `mattpocock:grill-with-docs`
+   - Stress-test the direction before committing.
+
+### CTO
+
+- slug: `cto`
+- tag: Architecture
+- entry skill: `$cto`
+- avatar seed: `sha256:644afba52d60f4bbcf9a608c6ead98688650e9fc3f8ed0a63ac0d30ca4931156`
 - accent: `text-sky-300`
-- source:
-  `https://github.com/0xroylee/getsuperpower/tree/main/examples/workflows/release-review`
+- source: `https://github.com/0xroylee/getsuperpower/tree/main/examples/workflows/cto`
 - install:
 
 ```bash
-npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/release-review'
+npx getsuperpower@latest install cto
 ```
 
-Description: A lightweight workflow for shaping release risk, reviewing diffs,
-and preserving evidence.
+Description: Technical leadership for architecture, domain model, platform
+direction, and engineering risk.
 
 Skills:
 
-- `shape`: Clarify the release request
-- `release-risk-review`: Flag risk by surface area
-- `writing-plans`: Plan the release follow-through
-- `pony-trail`: Capture evidence and rollback notes
+- `cto`: Set the technical frame
+- `mattpocock:codebase-design`: Review module boundaries
+- `mattpocock:domain-modeling`: Clarify domain concepts
+- `mattpocock:diagnosing-bugs`: Diagnose technical risk
+- `mattpocock:review`: Review the technical decision
 
 Ordered skill path:
 
-1. Shape -> `shape`
-   - Clarify the release goal and constraints.
-2. Risk Review -> `release-risk-review`
-   - Review the diff for release risks.
-3. Plan -> `writing-plans`
-   - Write concrete follow-through tasks.
-4. Evidence -> `pony-trail`
-   - Preserve checks, rationale, and rollback notes.
+1. Brief -> `cto`
+   - Identify the technical trajectory decision.
+2. Domain -> `mattpocock:domain-modeling`
+   - Name the business concepts before abstractions.
+3. Architecture -> `mattpocock:codebase-design`
+   - Review boundaries and interfaces.
+4. Risk -> `mattpocock:diagnosing-bugs`
+   - Diagnose failures and fragile assumptions.
+5. Review -> `mattpocock:review`
+   - Check behavior, blast radius, and tradeoffs.
 
-### Real Engineering
+### Product Manager
 
-- slug: `real-engineering`
-- tag: Advanced
-- entry skill: `$real-engineering`
-- accent: `text-amber-300`
-- source:
-  `https://github.com/0xroylee/getsuperpower/tree/main/examples/workflows/real-engineering`
-- install:
-
-```bash
-npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/real-engineering'
-```
-
-Description: Combines RTK, pony-trail, Superpowers, and Matt Pocock skills for
-TypeScript-heavy engineering.
-
-Skills:
-
-- `rtk`: Token-efficient command execution
-- `mattpocock:tdd`: Focused red-green-refactor loops
-- `superpowers:verify`: Completion checks before delivery
-- `pony-trail`: Decision snapshots around file changes
-
-Ordered skill path:
-
-1. Run -> `rtk`
-   - Use token-efficient commands for repo work.
-2. Test -> `mattpocock:tdd`
-   - Drive behavior with focused tests.
-3. Verify -> `superpowers:verification-before-completion`
-   - Check completion claims before handoff.
-4. Record -> `pony-trail`
-   - Snapshot file-change intent and evidence.
-
-### Development Design Delivery
-
-- slug: `development-design-delivery`
+- slug: `product-manager`
 - tag: Product
-- entry skill: `$development-design-delivery`
+- entry skill: `$product-manager`
+- avatar seed: `sha256:c0c7094ce1e2d9c614bd9939d9a379f488d809b0316d568017f584263f1eab8f`
 - accent: `text-emerald-300`
-- source:
-  `https://github.com/0xroylee/getsuperpower/tree/main/examples/workflows/development-design-delivery`
+- source: `https://github.com/0xroylee/getsuperpower/tree/main/examples/workflows/product-manager`
 - install:
 
 ```bash
-npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/development-design-delivery'
+npx getsuperpower@latest install product-manager
 ```
 
-Description: Product-minded engineering from shape to interface design, plan,
-TDD, review, and evidence.
+Description: Product discovery, PRDs, acceptance criteria, roadmap tradeoffs,
+and issue slicing.
 
 Skills:
 
-- `brainstorming`: Shape the feature and constraints
-- `design-an-interface`: Explore interface directions
-- `writing-plans`: Split the work into small tasks
-- `tdd`: Build through public seams
-- `review`: Check behavior and risks
+- `product-manager`: Frame the product problem
+- `superpowers:brainstorming`: Explore product options
+- `mattpocock:to-prd`: Write the PRD
+- `mattpocock:to-issues`: Slice delivery issues
+- `superpowers:writing-plans`: Write the delivery plan
 
 Ordered skill path:
 
-1. Shape -> `brainstorming`
-   - Clarify the product problem and constraints.
-2. Design -> `design-an-interface`
-   - Explore interface directions before building.
-3. Plan -> `writing-plans`
-   - Break the approved design into implementation tasks.
-4. Build -> `tdd`
-   - Implement through public behavior seams.
-5. Review -> `review`
-   - Check risks, behavior, and evidence.
+1. Brief -> `product-manager`
+   - Name the user, pain, and desired behavior change.
+2. Brainstorm -> `superpowers:brainstorming`
+   - Explore product options before locking scope.
+3. PRD -> `mattpocock:to-prd`
+   - Write the requirement and acceptance criteria.
+4. Issues -> `mattpocock:to-issues`
+   - Slice the PRD into visible progress.
+5. Plan -> `superpowers:writing-plans`
+   - Turn scope into executable delivery steps.
+
+### Engineering Manager
+
+- slug: `engineering-manager`
+- tag: Delivery
+- entry skill: `$engineering-manager`
+- avatar seed: `sha256:70d97c45ac61d3774317681dc7ae318126e14a3d0b19f00183d8227ca0fb1071`
+- accent: `text-amber-300`
+- source: `https://github.com/0xroylee/getsuperpower/tree/main/examples/workflows/engineering-manager`
+- install:
+
+```bash
+npx getsuperpower@latest install engineering-manager
+```
+
+Description: Delivery sequencing, execution risk, quality gates, blocker
+triage, and engineering process.
+
+Skills:
+
+- `engineering-manager`: Set the delivery frame
+- `superpowers:writing-plans`: Write the execution plan
+- `mattpocock:tdd`: Choose the test strategy
+- `mattpocock:diagnosing-bugs`: Triage blockers
+- `mattpocock:review`: Review delivery risk
+
+Ordered skill path:
+
+1. Brief -> `engineering-manager`
+   - Identify the shippable outcome and delivery risk.
+2. Plan -> `superpowers:writing-plans`
+   - Sequence work into verifiable steps.
+3. Quality -> `mattpocock:tdd`
+   - Pick test gates by blast radius.
+4. Debug -> `mattpocock:diagnosing-bugs`
+   - Triage blockers from evidence.
+5. Review -> `mattpocock:review`
+   - Review delivery risk before handoff.
+
+### Founding Engineer
+
+- slug: `founding-engineer`
+- tag: Build
+- entry skill: `$founding-engineer`
+- avatar seed: `sha256:2c1ee7f8710c90004a958f81aa84321fad2efc83d8839fede97689f6ebf1b078`
+- accent: `text-fuchsia-300`
+- source: `https://github.com/0xroylee/getsuperpower/tree/main/examples/workflows/founding-engineer`
+- install:
+
+```bash
+npx getsuperpower@latest install founding-engineer
+```
+
+Description: Implementation lane for the smallest correct change: tests,
+debugging, review, and verification.
+
+Skills:
+
+- `founding-engineer`: Set the implementation frame
+- `implement`: Implement the planned change
+- `mattpocock:tdd`: Use test-first development
+- `mattpocock:diagnosing-bugs`: Diagnose failures
+- `mattpocock:review`: Review the implementation
+- `superpowers:verification-before-completion`: Verify completion
+
+Ordered skill path:
+
+1. Brief -> `founding-engineer`
+   - Read the plan and acceptance criteria.
+2. Implement -> `implement`
+   - Ship the smallest correct slice.
+3. TDD -> `mattpocock:tdd`
+   - Keep tests close to changed behavior.
+4. Debug -> `mattpocock:diagnosing-bugs`
+   - Debug from evidence when checks fail.
+5. Review -> `mattpocock:review`
+   - Review risks and behavior.
+6. Verify -> `superpowers:verification-before-completion`
+   - Run final checks before handoff.
+
+### QA Lead
+
+- slug: `qa-lead`
+- tag: Quality
+- entry skill: `$qa-lead`
+- avatar seed: `sha256:17b5f20fa744bdbc0791717b5705e8be940b7cbdfaf4d5604e9d6a6a19124a53`
+- accent: `text-cyan-300`
+- source: `https://github.com/0xroylee/getsuperpower/tree/main/examples/workflows/qa-lead`
+- install:
+
+```bash
+npx getsuperpower@latest install qa-lead
+```
+
+Description: Release-risk lens for acceptance checks, regression focus,
+reproduction gaps, and verification evidence.
+
+Skills:
+
+- `qa-lead`: Set the release-risk frame
+- `mattpocock:review`: Review acceptance and risk
+- `mattpocock:diagnosing-bugs`: Diagnose failures
+- `superpowers:verification-before-completion`: Verify before handoff
+
+Ordered skill path:
+
+1. Brief -> `qa-lead`
+   - Restate the user-facing behavior that must be true.
+2. Review -> `mattpocock:review`
+   - Review acceptance and release risk.
+3. Debug -> `mattpocock:diagnosing-bugs`
+   - Identify reproduction gaps and failure evidence.
+4. Verify -> `superpowers:verification-before-completion`
+   - Separate verified facts from residual risk.
+
+### Haaland
+
+- slug: `haaland`
+- tag: Meme
+- entry skill: `$haaland`
+- avatar seed: `sha256:d10bf16eca98054b3a23bbe0aac21ccb00e7f904c5f3b1c3480bb1009c575583`
+- accent: `text-lime-300`
+- source: `https://github.com/0xroylee/getsuperpower/tree/main/examples/workflows/haaland`
+- install:
+
+```bash
+npx getsuperpower@latest install haaland
+```
+
+Description: A one-shot JTS meme workflow for a football-finisher caption,
+parody post concept, and original Haaland profile icon asset.
+
+Skills:
+
+- `haaland`: Create one profile-icon meme concept
+
+Ordered skill path:
+
+1. One Shot -> `haaland`
+   - Create one caption and profile icon placement note.
 
 ## Common Commands
 
@@ -292,25 +456,34 @@ Section label: Common commands.
 
 Heading: Get up and running fast.
 
-Body: Install from npm, git, or a local path. The CLI handles validation,
-dependency resolution, and local workflow records under `.getsuperpower/`.
+Body: Install by alias, public git URL, or local path. The CLI validates the
+workflow manifest, bootstraps missing external skills from workflow metadata,
+and records installed GetSuperpowers under `~/.getsuperpower/workflows/` by
+default. Loop-enabled workflows use `getsuperpower loop` for resumable,
+action-only state.
 
-### Install OpenSpec Delivery
+### Install Startup Goal
 
 ```bash
-npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/openspec-superpowers'
+npx getsuperpower@latest install startup-goal
 ```
 
-### Install Release Review
+### Inspect Startup Goal deps
 
 ```bash
-npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/release-review'
+npx getsuperpower@latest deps startup-goal
 ```
 
-### List installed GetSuperpowers
+### Lock skill fingerprints
 
 ```bash
-npx getsuperpower@latest list
+npx getsuperpower@latest lock examples/workflows/startup-goal
+```
+
+### Check loop status
+
+```bash
+npx getsuperpower@latest loop status grilled-product-dev --latest --json
 ```
 
 ### Create your own workflow
@@ -325,16 +498,29 @@ npx getsuperpower@latest init my-workflow
 npx getsuperpower@latest validate my-workflow
 ```
 
+### List installed GetSuperpowers
+
+```bash
+npx getsuperpower@latest list
+```
+
+### Remove installed workflow
+
+```bash
+npx getsuperpower@latest remove startup-goal
+```
+
 Then invoke in your agent:
 
 ```text
-> $openspec-delivery implement this OpenSpec change
+> $startup-goal help me launch this product from idea to shipped v1
 
-[ok] proposal   scoped the change
-[ok] design     selected the approach
-[ok] plan       wrote executable tasks
-[ok] TDD        built through public seams
-[ok] archive    preserved project knowledge
+[ok] CEO        framed strategy and tradeoffs
+[ok] PM         scoped the v1 promise
+[ok] CTO        set architecture guardrails
+[ok] EM         sequenced delivery risk
+[ok] engineer   selected the smallest implementation slice
+[ok] QA         checked release risk and evidence
 ```
 
 ## Author Your Own Workflow

@@ -18,6 +18,24 @@ The callable entry skill is:
 skills/grilled-product-dev/SKILL.md
 ```
 
+This example also declares a generated loop runner:
+
+```text
+workflow.json -> loop.script: ./loop.mjs
+```
+
+The loop is goal-based and action-only. Its goal is to produce an approved
+implementation plan, with explicit `done_when`, `stop_when`, and per-step
+`verify` rules in `workflow.json`. The runtime prints those rules as actions;
+the agent still performs the work and decides whether the evidence is good
+enough to advance.
+
+The generated runner is written into the installed entry skill during
+`getsuperpower install`. Loop state lives under
+`~/.getsuperpower/runs/grilled-product-dev/<run-id>/`, and the runtime only
+returns suggested actions. It never executes tools or shell commands for the
+agent.
+
 After install and agent restart, invoke:
 
 ```text
@@ -33,9 +51,9 @@ This GetSuperpower combines one Matt Pocock skill with two Superpowers skills:
 - `superpowers:brainstorming`
 - `superpowers:writing-plans`
 
-`getsuperpower install` and `getsuperpower clone` automatically use the Skills
-CLI to fetch missing `mattpocock:*` dependencies. If that automatic bootstrap
-fails, install the Matt Pocock skills package and retry:
+`getsuperpower install` automatically uses the Skills CLI to fetch missing
+`mattpocock:*` dependencies. If that automatic bootstrap fails, install the
+Matt Pocock skills package and retry:
 
 ```bash
 bun run dev -- skills install mattpocock/skills
@@ -59,10 +77,17 @@ Install it into a project:
 
 ```bash
 bun run dev -- install examples/workflows/grilled-product-dev
-bun run dev -- clone examples/workflows/grilled-product-dev
 ```
 
-`clone <source>` is equivalent to `install <source>`.
+Try the loop runtime through the GetSuperpower CLI:
+
+```bash
+bun run dev -- loop start examples/workflows/grilled-product-dev --json
+bun run dev -- loop status examples/workflows/grilled-product-dev --latest --json
+```
+
+The installed `loop.mjs` remains runnable with plain Node for compatibility, but
+agents should use `getsuperpower loop ...`.
 
 Restart the agent app after install so the `$grilled-product-dev` entry skill
 and its sub-skills are available.
