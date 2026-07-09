@@ -291,6 +291,30 @@ describe("landing app source contract", () => {
     expect(copyable).toContain("install command");
   });
 
+  test("makes every visible landing command click-to-copy", () => {
+    const landingPage = readLandingFile("components/landing-page.tsx");
+    const terminal = readLandingFile("components/terminal-block.tsx");
+    const copyable = readLandingFile("components/copyable-install-command.tsx");
+
+    expect(landingPage).toContain("const heroInstallCommand =");
+    expect(landingPage).toContain("copyText={heroInstallCommand}");
+    expect(landingPage).toContain('copyLabel="Copy startup-goal install command"');
+    expect(landingPage).toContain("copiedCommandIndex");
+    expect(landingPage).toContain("navigator.clipboard.writeText(command.command)");
+    expect(landingPage).toContain("aria-label={`Copy command:");
+    expect(landingPage).toContain("command.command}`}");
+    expect(landingPage).toContain('{copiedCommandIndex === index ? "Copied" : "Copy"}');
+
+    expect(terminal).toContain("copyLabel?: string");
+    expect(terminal).toContain("aria-label={copyLabel ?? `Copy command:");
+    expect(terminal).toContain("copyText}`}");
+    expect(terminal).toContain("cursor-copy");
+
+    expect(copyable).toContain("aria-label={`Copy install command:");
+    expect(copyable).toContain("command}`}");
+    expect(copyable).toContain("cursor-copy");
+  });
+
   test("renders GitHub stars in the landing header from cached server metadata", () => {
     const page = readLandingFile("app/page.tsx");
     const landingPage = readLandingFile("components/landing-page.tsx");

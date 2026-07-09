@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, ChevronRight, Github, Search, Workflow, X, Zap } from "lucide-react";
+import { ArrowRight, Check, Copy, Github, Search, Workflow, X, Zap } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
   type AgentBadgeContent,
@@ -27,6 +27,7 @@ interface LandingPageProps {
 
 export function LandingPage({ githubStarsLabel = "Stars" }: LandingPageProps) {
   const [activeCommand, setActiveCommand] = useState(0);
+  const [copiedCommandIndex, setCopiedCommandIndex] = useState<number | null>(null);
   const [query, setQuery] = useState("");
 
   const filteredWorkflows = useMemo(() => {
@@ -49,6 +50,17 @@ export function LandingPage({ githubStarsLabel = "Stars" }: LandingPageProps) {
   }, [query]);
 
   const active = commands[activeCommand] ?? commands[0];
+  const heroInstallCommand =
+    commands[0]?.command ?? "npx getsuperpower@latest install startup-goal";
+
+  function copyCommand(command: (typeof commands)[number], index: number) {
+    setActiveCommand(index);
+    void navigator.clipboard.writeText(command.command);
+    setCopiedCommandIndex(index);
+    window.setTimeout(() => {
+      setCopiedCommandIndex((current) => (current === index ? null : current));
+    }, 1600);
+  }
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#080808] text-white">
@@ -95,8 +107,13 @@ export function LandingPage({ githubStarsLabel = "Stars" }: LandingPageProps) {
           habits that 3x your ability.
         </p>
         <div className="mt-10 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
-          <div className="rounded-lg border border-white/10 bg-[#0d0d0d] px-4 py-3 font-mono text-sm text-white/70">
-            <span className="break-words">npx getsuperpower@latest install startup-goal</span>
+          <div className="min-w-0 sm:min-w-[24rem]">
+            <TerminalBlock
+              compact
+              copyText={heroInstallCommand}
+              copyLabel="Copy startup-goal install command"
+              lines={[{ prefix: "$", text: heroInstallCommand }]}
+            />
           </div>
           <a
             href="#workflows"
@@ -240,19 +257,41 @@ export function LandingPage({ githubStarsLabel = "Stars" }: LandingPageProps) {
                 <button
                   key={command.label}
                   type="button"
-                  onClick={() => setActiveCommand(index)}
-                  className={`w-full rounded-lg border px-4 py-3 text-left text-sm transition ${
+                  onClick={() => copyCommand(command, index)}
+                  aria-label={`Copy command: ${command.command}`}
+                  className={`group w-full cursor-copy rounded-lg border px-4 py-3 text-left text-sm transition ${
                     activeCommand === index
                       ? "border-violet-400/45 bg-violet-400/10 text-white/85"
                       : "border-white/10 bg-white/[0.025] text-white/45 hover:border-white/20 hover:text-white/70"
                   }`}
                 >
-                  <span className="flex items-center justify-between gap-3">
-                    <span>{command.label}</span>
-                    <ChevronRight
-                      size={14}
-                      className={activeCommand === index ? "text-violet-300" : "text-white/25"}
-                    />
+                  <span className="flex items-start justify-between gap-3">
+                    <span className="min-w-0">
+                      <span className="block">{command.label}</span>
+                      <code
+                        className={`mt-1 block break-words font-mono text-xs ${
+                          activeCommand === index
+                            ? "text-white/55"
+                            : "text-white/30 group-hover:text-white/50"
+                        }`}
+                      >
+                        {command.command}
+                      </code>
+                    </span>
+                    <span
+                      className={`inline-flex shrink-0 items-center gap-1.5 rounded-md border px-2 py-1 text-xs transition ${
+                        activeCommand === index
+                          ? "border-violet-300/25 text-violet-100/70"
+                          : "border-white/10 text-white/35 group-hover:border-white/20 group-hover:text-white/65"
+                      }`}
+                    >
+                      {copiedCommandIndex === index ? (
+                        <Check size={12} className="text-emerald-300" />
+                      ) : (
+                        <Copy size={12} />
+                      )}
+                      {copiedCommandIndex === index ? "Copied" : "Copy"}
+                    </span>
                   </span>
                 </button>
               ))}

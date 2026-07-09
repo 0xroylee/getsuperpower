@@ -275,6 +275,13 @@ describe("workflow bundles", () => {
     expect(skill).toContain("smallest role set");
     expect(skill).toContain("Do not dispatch every role by default");
     expect(skill).toContain("Prefer the cheapest safe path before implementation");
+    expect(skill).toContain("Visible Processing Contract");
+    expect(skill).toContain("Never make the lazy path invisible");
+    expect(skill).toContain("Processing plan");
+    expect(skill).toContain("Active roles");
+    expect(skill).toContain("Skipped roles");
+    expect(skill).toContain("Completed role outputs");
+    expect(skill).toContain("Unavailable dispatch");
     expect(skill).toContain("Dispatch a separate role-scoped subagent");
     expect(skill).toContain("Wait for all dispatched role subagents to finish");
     expect(skill).toContain("Combine the role outputs into one owner-facing decision log");

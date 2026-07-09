@@ -52,12 +52,32 @@ questions or ambiguities, then present the brief and wait for explicit approval.
   architecture or dependency risk is real, `engineering-manager` only when
   sequencing or release coordination matters, and `ceo` only when company-level
   tradeoffs are involved.
-- If a goal is tiny, obvious, and reversible, skip multi-role dispatch and move
-  through the narrow implementation path after the approved brief.
+- If a goal is tiny, obvious, and reversible, keep the visible processing but
+  use the narrow implementation path after the approved brief.
 - If a goal has company, product, architecture, delivery, implementation, and QA
   uncertainty, use the full role bench. Otherwise, keep the bench lazy.
 - In the role plan, name the roles you are intentionally skipping and why, so the
   owner can see that the omission is deliberate.
+
+## Visible Processing Contract
+
+Never make the lazy path invisible. Lazy routing controls how many roles are
+needed; it does not remove the visible workflow. Even for a one-role or two-role
+slice, show the processing trace before, during, and after execution.
+
+Every processed goal must include:
+
+- Processing plan: the approved brief status, selected roles, skipped roles, and
+  the reason this route is the smallest safe route.
+- Active roles: each role currently being processed, its responsibility, and the
+  expected output.
+- Skipped roles: each omitted bundled role and the reason it is unnecessary for
+  this slice.
+- Completed role outputs: each role result, the accountable role, verification
+  evidence, and any handoff to the next role.
+- Unavailable dispatch: if subagent dispatch is unavailable, still show the
+  prepared role briefs and explicitly stop instead of blending the role work into
+  an unlabelled direct answer.
 
 ## Bundled Roles
 
@@ -79,16 +99,19 @@ questions or ambiguities, then present the brief and wait for explicit approval.
    approved brief.
 5. Present the role plan, including skipped roles and why they are unnecessary
    for this slice, then wait at any human approval gate.
-6. Dispatch a separate role-scoped subagent for each needed role.
-7. Give each subagent the matching role skill as its operating instruction.
-8. Give each subagent a compact brief containing the startup goal, current
+6. Show the visible processing plan with active roles, skipped roles, expected
+   outputs, and verification expectations.
+7. Dispatch a separate role-scoped subagent for each needed role.
+8. Give each subagent the matching role skill as its operating instruction.
+9. Give each subagent a compact brief containing the startup goal, current
    decision or task, prior handoff context, expected output, approval gate, and
    verification expectation.
-9. Wait for all dispatched role subagents to finish.
-10. Combine the role outputs into one owner-facing decision log.
-11. Name which role is accountable for each decision.
-12. Recommend the next action from the combined result.
-13. Stop at human approval gates before advancing to the next role or phase.
+10. Wait for all dispatched role subagents to finish.
+11. Show completed role outputs before combining them.
+12. Combine the role outputs into one owner-facing decision log.
+13. Name which role is accountable for each decision.
+14. Recommend the next action from the combined result.
+15. Stop at human approval gates before advancing to the next role or phase.
 
 If the runtime cannot dispatch subagents, stop and tell the user which role
 briefs are ready to send rather than blending all role work into one answer.
