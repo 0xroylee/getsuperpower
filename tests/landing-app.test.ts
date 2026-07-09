@@ -81,7 +81,7 @@ describe("landing app source contract", () => {
     expect(page).toContain("3x your ability");
     expect(page).toContain("npx getsuperpower@latest install startup-goal");
     expect(page).toContain("Agent run demo");
-    expect(page).toContain("Watch the roles answer.");
+    expect(page).toContain("See where startup-goal fits.");
     expect(page).not.toContain("How it works + Agent run demo");
     expect(page).not.toContain("One entry skill. Many specialist skills.");
     expect(page).not.toContain('href="#how-it-works"');
@@ -242,7 +242,7 @@ describe("landing app source contract", () => {
       "npx getsuperpower@latest loop status grilled-product-dev --latest --json",
     );
     expect(content).toContain("resumable, action-only workflow state");
-    expect(page).toContain("Simulate calling");
+    expect(page).toContain("Pick a real startup situation");
     expect(content).not.toContain("executes tools");
     expect(content).not.toContain("runs live workflows in the browser");
   });
@@ -336,7 +336,18 @@ describe("landing app source contract", () => {
     const page = readLandingFile("components/landing-page.tsx");
 
     expect(demo).toContain("export function WorkflowRunDemo");
-    expect(demo).toContain("const STEPS: SkillStep[]");
+    expect(demo).toContain("const WORKFLOW_CASES: WorkflowCase[]");
+    expect(demo).toContain("Idea to v1");
+    expect(demo).toContain("Pivot or focus");
+    expect(demo).toContain("Customer request");
+    expect(demo).toContain("Case categories");
+    expect(demo).toContain('className="space-y-3"');
+    expect(demo).toContain("Processing");
+    expect(demo).toContain("Case");
+    expect(demo).toContain("Intake");
+    expect(demo).toContain("Approval");
+    expect(demo).toContain("Routing");
+    expect(demo).toContain("Handoff");
     expect(demo).toContain("Route Goal");
     expect(demo).toContain("Strategy");
     expect(demo).toContain("Product Scope");
@@ -345,11 +356,23 @@ describe("landing app source contract", () => {
     expect(demo).toContain("Implementation");
     expect(demo).toContain("QA Review");
     expect(page).toContain("Agent run demo");
-    expect(page).toContain("Watch the roles answer.");
-    expect(page).toContain("Simulate calling");
-    expect(demo).toContain("/startup-goal help me launch this product from idea to shipped v1");
-    expect(page).toContain("/startup-goal help me launch this product from idea to shipped v1");
+    expect(page).toContain("See where startup-goal fits.");
+    expect(page).toContain("Pick a real startup situation");
+    expect(demo).toContain(
+      "/startup-goal I have an AI bookkeeping idea; help me choose the wedge and ship a v1 in two weeks",
+    );
+    expect(demo).toContain(
+      "/startup-goal activation is weak; should we rebuild onboarding, narrow ICP, or add concierge setup?",
+    );
+    expect(demo).toContain(
+      "/startup-goal customers keep asking for team seats; turn that into a safe release plan",
+    );
+    expect(page).toContain(
+      "/startup-goal I have an AI bookkeeping idea; help me choose the wedge and ship a v1 in two weeks",
+    );
     expect(demo).toContain("Run calls");
+    expect(demo).toContain("selectedCaseIndex");
+    expect(demo).toContain("selectCase");
     expect(demo).toContain("selectedStepIndex");
     expect(demo).toContain("Selected skill");
     expect(demo).toContain("View skill source");
@@ -357,7 +380,8 @@ describe("landing app source contract", () => {
     expect(demo).toContain("aria-pressed={isSelected}");
     expect(demo).toContain('aria-controls="selected-skill-preview"');
     expect(demo).toContain("owner: {selectedStep.owner}");
-    expect(demo).toContain("status: {getStepStatus(phase, selectedStepIndex, completedSteps)}");
+    expect(demo).toContain("const selectedStepStatus = getStepStatus");
+    expect(demo).toContain("status: {selectedStepStatus}");
     expect(demo).toContain(
       "https://github.com/0xroylee/getsuperpower/blob/main/examples/workflows/startup-goal/skills",
     );
@@ -366,11 +390,19 @@ describe("landing app source contract", () => {
     expect(demo).toContain("h-[44rem]");
     expect(demo).toContain("lg:h-[34rem]");
     expect(demo).toContain("grid h-full overflow-y-auto");
-    expect(demo).toContain("lg:grid-cols-[15rem_minmax(0,1fr)]");
+    expect(demo).toContain("lg:grid-cols-[18rem_minmax(0,1fr)]");
     expect(demo).not.toContain("lg:grid-cols-[16rem_minmax(0,1fr)_18rem]");
     expect(demo).toContain("min-h-0 flex-1 space-y-3 overflow-y-auto");
     expect(demo).toContain("font-mono text-xs leading-5");
     expect(demo).toContain("text-[11px]");
+    expect(demo).toContain("const ACTIVE_ACCENT");
+    expect(demo).toContain("showChecklist: !complete");
+    expect(demo).not.toContain("text-sky-200");
+    expect(demo).not.toContain("text-amber-200");
+    expect(demo).not.toContain("text-cyan-200");
+    expect(demo).not.toContain("text-lime-200");
+    expect(demo).not.toContain("text-emerald-200");
+    expect(demo).not.toContain("text-rose-200");
     expect(page).toContain("Landing simulation only");
     expect(page).toContain("No browser-side agent execution or fake telemetry");
     expect(demo).toContain("prefers-reduced-motion: reduce");

@@ -153,11 +153,12 @@ export function LandingPage({ githubStarsLabel = "Stars" }: LandingPageProps) {
         <div className="mb-10 grid gap-4 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-end">
           <div>
             <p className="mb-3 text-xs uppercase tracking-[0.22em] text-white/32">Agent run demo</p>
-            <h2 className="text-3xl font-medium text-white/90">Watch the roles answer.</h2>
+            <h2 className="text-3xl font-medium text-white/90">See where startup-goal fits.</h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-white/42">
-              Simulate calling <code className="text-white/60">/startup-goal</code> in an agent
-              workbench. The entry skill routes your goal, specialist roles respond, and the system
-              combines the handoff into one owner-facing answer.
+              Pick a real startup situation, then simulate calling{" "}
+              <code className="text-white/60">/startup-goal</code> in an agent workbench. The entry
+              skill records the intake, approval gate, role routing, handoffs, and combined next
+              action.
             </p>
           </div>
           <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-white/38">
@@ -310,15 +311,28 @@ export function LandingPage({ githubStarsLabel = "Stars" }: LandingPageProps) {
                 lines={[
                   {
                     prefix: ">",
-                    text: "/startup-goal help me launch this product from idea to shipped v1",
+                    text: "/startup-goal I have an AI bookkeeping idea; help me choose the wedge and ship a v1 in two weeks",
                   },
                   { text: "", dim: true },
-                  { text: "[ok] CEO        framed strategy and tradeoffs", dim: true },
-                  { text: "[ok] PM         scoped the v1 promise", dim: true },
-                  { text: "[ok] CTO        set architecture guardrails", dim: true },
-                  { text: "[ok] EM         sequenced delivery risk", dim: true },
-                  { text: "[ok] engineer   selected the smallest implementation slice", dim: true },
-                  { text: "[ok] QA         checked release risk and evidence", dim: true },
+                  {
+                    text: "[ok] Intake     clarified customer, deadline, and non-goals",
+                    dim: true,
+                  },
+                  { text: "[ok] CEO        chose a narrow first wedge", dim: true },
+                  {
+                    text: "[ok] PM         scoped receipt capture to month-end summary",
+                    dim: true,
+                  },
+                  { text: "[ok] CTO        kept finance automation behind seams", dim: true },
+                  {
+                    text: "[ok] EM         sequenced prototype, pilots, and release gate",
+                    dim: true,
+                  },
+                  { text: "[ok] engineer   selected the receipt-to-summary slice", dim: true },
+                  {
+                    text: "[ok] QA         checked privacy, totals, and recovery paths",
+                    dim: true,
+                  },
                 ]}
               />
             </div>
