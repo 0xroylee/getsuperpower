@@ -38,4 +38,16 @@ describe("GitHub Actions quality gates", () => {
     expect(packIndex).toBeGreaterThan(qualityGateIndex);
     expectFullQualityGate(workflow);
   });
+
+  test("publishes releases through npm trusted publishing", async () => {
+    const workflow = await readWorkflow("release.yml");
+
+    expect(workflow).toContain("id-token: write");
+    expect(workflow).toContain("node-version: 24");
+    expect(workflow).toContain("registry-url: https://registry.npmjs.org");
+    expect(workflow).toContain("npm publish --ignore-scripts --provenance --access public");
+    expect(workflow).not.toContain("secrets.NPM_TOKEN");
+    expect(workflow).not.toContain("NODE_AUTH_TOKEN");
+    expect(workflow).not.toContain("npm whoami");
+  });
 });

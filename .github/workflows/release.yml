@@ -72,14 +72,7 @@ jobs:
           echo "dist_tag=${dist_tag}" >> "$GITHUB_OUTPUT"
 
       - name: Publish to npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
-            echo "NPM_TOKEN secret is required to publish to npm." >&2
-            exit 1
-          fi
-
           package_ref="${{ steps.package.outputs.name }}@${{ steps.package.outputs.version }}"
           if npm view "$package_ref" version >/dev/null 2>&1; then
             echo "$package_ref already exists on npm; skipping publish."
@@ -88,7 +81,6 @@ jobs:
 
           node --version
           npm --version
-          npm whoami
           npm publish --ignore-scripts --provenance --access public --tag "${{ steps.package.outputs.dist_tag }}"
 
       - name: Publish GitHub release
