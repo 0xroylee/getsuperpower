@@ -14,6 +14,7 @@ export interface WorkflowCardContent {
   name: string;
   description: string;
   entrySkill: string;
+  localSkillNames: string[];
   avatarSeed: string;
   tag: string;
   accent: string;
@@ -38,6 +39,11 @@ export interface AgentBadgeContent {
 
 export const githubUrl = "https://github.com/0xroylee/getsuperpower";
 
+export function getLocalSkillSourceUrl(workflow: WorkflowCardContent, skill: string) {
+  if (!workflow.localSkillNames.includes(skill)) return null;
+  return `${workflow.sourceUrl.replace("/tree/", "/blob/")}/skills/${skill}/SKILL.md`;
+}
+
 export const agents: AgentBadgeContent[] = [
   { id: "claude", name: "Claude", logoSrc: "/agent-logos/claude.svg" },
   { id: "codex", name: "Codex", logoSrc: "/agent-logos/openai.svg" },
@@ -57,6 +63,15 @@ export const workflows: WorkflowCardContent[] = [
     description:
       "Move a startup goal through the core operating roles: CEO, CTO, PM, EM, founding engineer, and QA lead.",
     entrySkill: "startup-goal",
+    localSkillNames: [
+      "startup-goal",
+      "ceo",
+      "cto",
+      "product-manager",
+      "engineering-manager",
+      "founding-engineer",
+      "qa-lead",
+    ],
     avatarSeed: "sha256:e2445fdfee4ef3d0a8aae8333a820a8485338bd1f62674c2596be49dba878f5f",
     tag: "Goal",
     accent: "text-violet-300",
@@ -131,6 +146,7 @@ export const workflows: WorkflowCardContent[] = [
     description:
       "Founder-level strategy for direction, hard tradeoffs, fundraising/customer framing, and company decisions.",
     entrySkill: "ceo",
+    localSkillNames: ["ceo"],
     avatarSeed: "sha256:e28e960ca32f944aad4353c9248e43ca7526a5f4451d1293cd79590878f2b25a",
     tag: "Strategy",
     accent: "text-rose-300",
@@ -165,6 +181,7 @@ export const workflows: WorkflowCardContent[] = [
     description:
       "Technical leadership for architecture, domain model, platform direction, and engineering risk.",
     entrySkill: "cto",
+    localSkillNames: ["cto"],
     avatarSeed: "sha256:644afba52d60f4bbcf9a608c6ead98688650e9fc3f8ed0a63ac0d30ca4931156",
     tag: "Architecture",
     accent: "text-sky-300",
@@ -211,6 +228,7 @@ export const workflows: WorkflowCardContent[] = [
     description:
       "Product discovery, PRDs, acceptance criteria, roadmap tradeoffs, and issue slicing.",
     entrySkill: "product-manager",
+    localSkillNames: ["product-manager"],
     avatarSeed: "sha256:c0c7094ce1e2d9c614bd9939d9a379f488d809b0316d568017f584263f1eab8f",
     tag: "Product",
     accent: "text-emerald-300",
@@ -257,6 +275,7 @@ export const workflows: WorkflowCardContent[] = [
     description:
       "Delivery sequencing, execution risk, quality gates, blocker triage, and engineering process.",
     entrySkill: "engineering-manager",
+    localSkillNames: ["engineering-manager"],
     avatarSeed: "sha256:70d97c45ac61d3774317681dc7ae318126e14a3d0b19f00183d8227ca0fb1071",
     tag: "Delivery",
     accent: "text-amber-300",
@@ -303,6 +322,7 @@ export const workflows: WorkflowCardContent[] = [
     description:
       "Implementation lane for the smallest correct change: tests, debugging, review, and verification.",
     entrySkill: "founding-engineer",
+    localSkillNames: ["founding-engineer"],
     avatarSeed: "sha256:2c1ee7f8710c90004a958f81aa84321fad2efc83d8839fede97689f6ebf1b078",
     tag: "Build",
     accent: "text-fuchsia-300",
@@ -355,6 +375,7 @@ export const workflows: WorkflowCardContent[] = [
     description:
       "Release-risk lens for acceptance checks, regression focus, reproduction gaps, and verification evidence.",
     entrySkill: "qa-lead",
+    localSkillNames: ["qa-lead"],
     avatarSeed: "sha256:17b5f20fa744bdbc0791717b5705e8be940b7cbdfaf4d5604e9d6a6a19124a53",
     tag: "Quality",
     accent: "text-cyan-300",
@@ -395,6 +416,7 @@ export const workflows: WorkflowCardContent[] = [
     description:
       "A one-shot JTS meme workflow for a football-finisher caption, parody post concept, and original Haaland profile icon asset.",
     entrySkill: "haaland",
+    localSkillNames: ["haaland"],
     avatarSeed: "sha256:d10bf16eca98054b3a23bbe0aac21ccb00e7f904c5f3b1c3480bb1009c575583",
     tag: "Meme",
     accent: "text-lime-300",

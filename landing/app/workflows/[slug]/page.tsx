@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CopyableInstallCommand } from "../../../components/copyable-install-command";
 import { WorkflowAvatar } from "../../../components/workflow-avatar";
-import { workflows } from "../../../lib/landing-content";
+import { getLocalSkillSourceUrl, workflows } from "../../../lib/landing-content";
 
 interface WorkflowPageProps {
   params: Promise<{
@@ -24,6 +24,8 @@ export default async function WorkflowPage({ params }: WorkflowPageProps) {
   if (!workflow) {
     notFound();
   }
+
+  const entrySkillSourceUrl = getLocalSkillSourceUrl(workflow, workflow.entrySkill);
 
   return (
     <main className="min-h-screen bg-[#080808] text-white">
@@ -71,9 +73,21 @@ export default async function WorkflowPage({ params }: WorkflowPageProps) {
               <Zap size={13} className="text-amber-300" />
               entry skill
             </div>
-            <code className={`mt-3 block break-all font-mono text-base ${workflow.accent}`}>
-              ${workflow.entrySkill}
-            </code>
+            {entrySkillSourceUrl ? (
+              <a
+                href={entrySkillSourceUrl}
+                target="_blank"
+                rel="noreferrer"
+                className={`mt-3 inline-flex max-w-full items-center gap-2 break-all font-mono text-base transition hover:text-white ${workflow.accent}`}
+              >
+                ${workflow.entrySkill}
+                <ExternalLink size={14} className="shrink-0" />
+              </a>
+            ) : (
+              <code className={`mt-3 block break-all font-mono text-base ${workflow.accent}`}>
+                ${workflow.entrySkill}
+              </code>
+            )}
           </div>
         </div>
 
@@ -84,28 +98,43 @@ export default async function WorkflowPage({ params }: WorkflowPageProps) {
           </div>
 
           <div className="space-y-3">
-            {workflow.diagramSteps.map((step, index) => (
-              <div key={`${step.label}-${step.skill}`} className="relative flex gap-3">
-                <div className="flex flex-col items-center">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-xs text-white/55">
-                    {index + 1}
-                  </span>
-                  {index < workflow.diagramSteps.length - 1 ? (
-                    <span className="my-1 h-full min-h-5 w-px bg-white/10" />
-                  ) : null}
-                </div>
-                <div className="pb-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-sm font-medium text-white/82">{step.label}</p>
-                    <ArrowRight size={12} className="text-white/25" />
-                    <code className="rounded bg-black/30 px-1.5 py-0.5 font-mono text-xs text-white/62">
-                      {step.skill}
-                    </code>
+            {workflow.diagramSteps.map((step, index) => {
+              const skillSourceUrl = getLocalSkillSourceUrl(workflow, step.skill);
+              return (
+                <div key={`${step.label}-${step.skill}`} className="relative flex gap-3">
+                  <div className="flex flex-col items-center">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-xs text-white/55">
+                      {index + 1}
+                    </span>
+                    {index < workflow.diagramSteps.length - 1 ? (
+                      <span className="my-1 h-full min-h-5 w-px bg-white/10" />
+                    ) : null}
                   </div>
-                  <p className="mt-1 text-xs leading-5 text-white/42">{step.description}</p>
+                  <div className="pb-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-medium text-white/82">{step.label}</p>
+                      <ArrowRight size={12} className="text-white/25" />
+                      {skillSourceUrl ? (
+                        <a
+                          href={skillSourceUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 rounded bg-black/30 px-1.5 py-0.5 font-mono text-xs text-white/62 transition hover:text-white/86"
+                        >
+                          {step.skill}
+                          <ExternalLink size={11} />
+                        </a>
+                      ) : (
+                        <code className="rounded bg-black/30 px-1.5 py-0.5 font-mono text-xs text-white/62">
+                          {step.skill}
+                        </code>
+                      )}
+                    </div>
+                    <p className="mt-1 text-xs leading-5 text-white/42">{step.description}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </aside>
       </section>
