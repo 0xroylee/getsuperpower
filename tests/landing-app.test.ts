@@ -147,7 +147,10 @@ describe("landing app source contract", () => {
     expect(content).toContain("avatarSeed: string");
     expect(content).toContain("sourceUrl: string");
     expect(content).toContain("installCommand: string");
+    expect(content).toContain("localSkillNames: string[]");
     expect(content).toContain("diagramSteps: WorkflowDiagramStep[]");
+    expect(content).toContain("getLocalSkillSourceUrl");
+    expect(content).toContain('localSkillNames: ["haaland"]');
     expect(content).toContain('slug: "startup-goal"');
     expect(content).toContain('slug: "founding-engineer"');
     expect(content).toContain('slug: "haaland"');
@@ -254,6 +257,7 @@ describe("landing app source contract", () => {
     expect(route).toContain('import Link from "next/link"');
     expect(route).toContain('import { notFound } from "next/navigation"');
     expect(route).toContain('from "../../../lib/landing-content"');
+    expect(route).toContain("getLocalSkillSourceUrl");
     expect(route).toContain("export function generateStaticParams()");
     expect(route).toContain("workflows.map");
     expect(route).toContain("workflows.find");
@@ -264,6 +268,9 @@ describe("landing app source contract", () => {
     expect(route).toContain('href="/#workflows"');
     expect(route).toContain("diagramSteps.map");
     expect(route).toContain("View source on GitHub");
+    expect(route).toContain("entrySkillSourceUrl");
+    expect(route).toContain("skillSourceUrl");
+    expect(route).toContain("ExternalLink");
     expect(route).toContain('target="_blank"');
     expect(route).toContain('rel="noreferrer"');
   });
@@ -319,6 +326,17 @@ describe("landing app source contract", () => {
     expect(demo).toContain("/startup-goal help me launch this product from idea to shipped v1");
     expect(page).toContain("/startup-goal help me launch this product from idea to shipped v1");
     expect(demo).toContain("Run calls");
+    expect(demo).toContain("selectedStepIndex");
+    expect(demo).toContain("Selected skill");
+    expect(demo).toContain("View skill source");
+    expect(demo).toContain("aria-label={`View $" + "{step.skill} skill`}");
+    expect(demo).toContain("aria-pressed={isSelected}");
+    expect(demo).toContain('aria-controls="selected-skill-preview"');
+    expect(demo).toContain("owner: {selectedStep.owner}");
+    expect(demo).toContain("status: {getStepStatus(phase, selectedStepIndex, completedSteps)}");
+    expect(demo).toContain(
+      "https://github.com/0xroylee/getsuperpower/blob/main/examples/workflows/startup-goal/skills",
+    );
     expect(demo).not.toContain("Role calls");
     expect(demo).toContain("Combined answer");
     expect(demo).toContain("h-[44rem]");

@@ -7,6 +7,7 @@ import {
   ChevronRight,
   CircleDot,
   Code2,
+  ExternalLink,
   type LucideIcon,
   MessageSquare,
   RotateCcw,
@@ -31,6 +32,14 @@ interface SkillStep {
   shadow: string;
   lines: string[];
   response: string;
+  sourceUrl: string;
+}
+
+const STARTUP_GOAL_SKILL_SOURCE_ROOT =
+  "https://github.com/0xroylee/getsuperpower/blob/main/examples/workflows/startup-goal/skills";
+
+function skillSourceUrl(skill: string) {
+  return `${STARTUP_GOAL_SKILL_SOURCE_ROOT}/${skill}/SKILL.md`;
 }
 
 const STEPS: SkillStep[] = [
@@ -49,6 +58,7 @@ const STEPS: SkillStep[] = [
       "Dispatch role-scoped sub-agents",
     ],
     response: "Routing plan created with six accountable roles.",
+    sourceUrl: skillSourceUrl("startup-goal"),
   },
   {
     skill: "ceo",
@@ -65,6 +75,7 @@ const STEPS: SkillStep[] = [
       "Choose learning speed over breadth",
     ],
     response: "Launch learning wins; keep the first version narrow and painful.",
+    sourceUrl: skillSourceUrl("ceo"),
   },
   {
     skill: "product-manager",
@@ -81,6 +92,7 @@ const STEPS: SkillStep[] = [
       "Slice the first demo path",
     ],
     response: "Ship one compelling workflow path before broad catalog polish.",
+    sourceUrl: skillSourceUrl("product-manager"),
   },
   {
     skill: "cto",
@@ -97,6 +109,7 @@ const STEPS: SkillStep[] = [
       "Flag dependency and build risk",
     ],
     response: "Keep the landing demo client-only; runtime contracts stay in the CLI.",
+    sourceUrl: skillSourceUrl("cto"),
   },
   {
     skill: "engineering-manager",
@@ -113,6 +126,7 @@ const STEPS: SkillStep[] = [
       "Hold the full check gate for merge",
     ],
     response: "Deliver the demo as a bounded landing component change.",
+    sourceUrl: skillSourceUrl("engineering-manager"),
   },
   {
     skill: "founding-engineer",
@@ -129,6 +143,7 @@ const STEPS: SkillStep[] = [
       "Verify desktop and mobile fit",
     ],
     response: "Smallest shippable slice: animated transcript plus role status rail.",
+    sourceUrl: skillSourceUrl("founding-engineer"),
   },
   {
     skill: "qa-lead",
@@ -145,6 +160,7 @@ const STEPS: SkillStep[] = [
       "Call out residual launch risk",
     ],
     response: "Release when the source contract, build, and reduced-motion view pass.",
+    sourceUrl: skillSourceUrl("qa-lead"),
   },
 ];
 
@@ -190,6 +206,7 @@ export function WorkflowRunDemo() {
       : { kind: "typing", charIndex: 0 },
   );
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+  const [selectedStepIndex, setSelectedStepIndex] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -279,6 +296,8 @@ export function WorkflowRunDemo() {
   const isDone = phase.kind === "running" && phase.done;
   const isTyping = phase.kind === "typing";
   const typedPrompt = phase.kind === "typing" ? PROMPT.slice(0, phase.charIndex) : PROMPT;
+  const selectedStep = STEPS[selectedStepIndex] ?? STEPS[0];
+  const SelectedIcon = selectedStep.icon;
 
   const visibleTranscript = useMemo(() => {
     if (phase.kind === "typing") return [];
@@ -328,15 +347,23 @@ export function WorkflowRunDemo() {
             {STEPS.map((step, index) => {
               const status = getStepStatus(phase, index, completedSteps);
               const Icon = step.icon;
+              const isSelected = selectedStepIndex === index;
               return (
-                <div
+                <button
                   key={step.skill}
-                  className={`group relative overflow-hidden rounded-lg border px-2.5 py-2 transition-all duration-500 ${
+                  type="button"
+                  onClick={() => setSelectedStepIndex(index)}
+                  aria-label={`View ${step.skill} skill`}
+                  aria-pressed={isSelected}
+                  aria-controls="selected-skill-preview"
+                  className={`group relative w-full overflow-hidden rounded-lg border px-2.5 py-2 text-left transition-all duration-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/45 ${
                     status === "active"
                       ? `${step.border} ${step.bg} shadow-lg ${step.shadow}`
                       : status === "complete"
                         ? "border-white/10 bg-white/[0.04]"
                         : "border-white/[0.06] bg-transparent"
+                  } ${isSelected ? "ring-1 ring-white/35" : ""} ${
+                    isSelected && status === "queued" ? "bg-white/[0.025]" : ""
                   }`}
                 >
                   <div className="relative z-10 flex items-center gap-2">
@@ -377,9 +404,59 @@ export function WorkflowRunDemo() {
                   {status === "active" ? (
                     <span className="absolute inset-x-0 bottom-0 h-px bg-current opacity-60 motion-safe:animate-pulse" />
                   ) : null}
-                </div>
+                </button>
               );
             })}
+          </div>
+
+          <div
+            id="selected-skill-preview"
+            className={`mt-3 rounded-lg border ${selectedStep.border} ${selectedStep.bg} p-3`}
+          >
+            <p className="mb-2 text-[10px] uppercase tracking-[0.16em] text-white/30">
+              Selected skill
+            </p>
+            <div className="mb-2 flex items-center gap-2">
+              <span
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md border ${selectedStep.border} ${selectedStep.color}`}
+              >
+                <SelectedIcon size={13} />
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-[11px] font-medium text-white/78">
+                  {selectedStep.label}
+                </span>
+                <code className="block truncate font-mono text-[10px] text-white/42">
+                  {selectedStep.skill}
+                </code>
+              </span>
+            </div>
+            <div className="mb-2 flex flex-wrap items-center gap-1.5 text-[10px]">
+              <span className="rounded bg-black/25 px-1.5 py-0.5 text-white/42">
+                owner: {selectedStep.owner}
+              </span>
+              <span className="rounded bg-black/25 px-1.5 py-0.5 text-white/42">
+                status: {getStepStatus(phase, selectedStepIndex, completedSteps)}
+              </span>
+            </div>
+            <div className="mb-2 space-y-1">
+              {selectedStep.lines.map((line) => (
+                <div key={line} className="flex gap-1.5 text-[11px] leading-5 text-white/48">
+                  <ChevronRight size={11} className="mt-1 shrink-0 text-white/22" />
+                  <span>{line}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-[11px] leading-5 text-white/52">{selectedStep.response}</p>
+            <a
+              href={selectedStep.sourceUrl}
+              target="_blank"
+              rel="noreferrer"
+              className={`mt-2 inline-flex items-center gap-1.5 rounded-md border border-white/10 px-2 py-1 text-[10px] transition hover:border-white/20 hover:text-white/82 ${selectedStep.color}`}
+            >
+              View skill source
+              <ExternalLink size={11} />
+            </a>
           </div>
         </aside>
 

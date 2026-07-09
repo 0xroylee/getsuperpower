@@ -18,8 +18,7 @@ workflow skill running its ordered sub-skills.
 - **AND** the section shows the `/startup-goal` invocation
 - **AND** the section shows startup-goal, CEO, product manager, CTO,
   engineering manager, founding engineer, and QA lead role calls
-- **AND** the section appears after the "How it works" explanation and before
-  the workflow-card list
+- **AND** the section appears before the workflow-card list
 
 #### Scenario: visitor interprets the run demo
 
@@ -27,6 +26,15 @@ workflow skill running its ordered sub-skills.
 - **THEN** the section indicates that the displayed run is simulated
 - **AND** it does not imply the browser is executing a live agent workflow
 - **AND** it reinforces that the entry skill coordinates the sub-skills
+
+#### Scenario: visitor views a workflow-run skill
+
+- **WHEN** a visitor clicks or keyboard-selects a skill in the run-calls rail
+- **THEN** the page visibly selects that skill
+- **AND** the page shows the selected skill id, owner or role, current demo
+  status, checklist lines, and returned response
+- **AND** the page exposes a source link for the local `SKILL.md` without
+  implying that the browser is executing that skill
 
 ### Requirement: Workflow Run Demo Uses Local Static Content
 
