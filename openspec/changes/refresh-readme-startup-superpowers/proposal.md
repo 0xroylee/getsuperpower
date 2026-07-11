@@ -2,7 +2,7 @@
 
 ## Summary
 
-Rewrite the project README around the current GetSuperpower story:
+Rewrite the project README around the current Omniskill story:
 
 - "Power your ability" with installable workflow skill trees.
 - Start a company with a bundle of startup roles: CEO, CTO, Product Manager,
@@ -21,7 +21,7 @@ product image.
 
 The current README still reads like a technical bundle explainer. It explains
 `workflow.json`, shows old diagram assets, and lists many examples, but it does
-not make the new product promise obvious enough: install a GetSuperpower, give
+not make the new product promise obvious enough: install a Omniskill, give
 it a goal, and let the right startup roles and process skills move the work
 forward.
 
@@ -37,11 +37,11 @@ In scope:
 - Use the provided screenshot as README material, copied into a stable repo
   asset path.
 - Remove README references to the old diagram assets as primary content.
-- Keep the real public command style: `npx getsuperpower@latest ...`.
-- Lead with `npx getsuperpower@latest install startup-team`.
+- Keep the real public command style: `npx omniskill@latest ...`.
+- Lead with `npx omniskill@latest install startup-team`.
 - Include a goal/loop example for startup-team or a loop-capable workflow using
-  the current `getsuperpower loop` command surface.
-- Explain that GetSuperpower bundles compose Matt Pocock skills, Superpowers,
+  the current `omniskill loop` command surface.
+- Explain that Omniskill bundles compose Matt Pocock skills, Superpowers,
   Ponytrail evidence, and future skill packs.
 - Keep startup role aliases visible: `ceo`, `cto`, `product-manager`,
   `engineering-manager`, `founding-engineer`, and `qa-lead`.
@@ -63,17 +63,17 @@ Out of scope:
 
 1. Hero image from the provided startup role registry screenshot.
 2. Title and headline:
-   - `# GetSuperpower`
+   - `# Omniskill`
    - `Power your ability.`
 3. Short product promise:
    - Install a workflow skill tree.
    - Call one entry skill.
    - Let startup roles and process skills carry complex work forward.
 4. Quick start:
-   - `npx getsuperpower@latest install startup-team`
+   - `npx omniskill@latest install startup-team`
    - example invocation for `$startup-team`
 5. Goal loop:
-   - show `getsuperpower loop start ...`
+   - show `omniskill loop start ...`
    - explain action-only resumable loops that continue until the goal is done.
 6. Built-in startup roles:
    - Startup Team, CEO, CTO, Product Manager, Engineering Manager, Founding
@@ -89,7 +89,7 @@ Out of scope:
 
 - `README.md` starts with the new product positioning around "Power your
   ability."
-- `README.md` shows `npx getsuperpower@latest install startup-team` near the
+- `README.md` shows `npx omniskill@latest install startup-team` near the
   top.
 - `README.md` describes starting a company with startup role workflows.
 - `README.md` explains goal loops as action-only, resumable workflow state that
@@ -97,8 +97,8 @@ Out of scope:
 - `README.md` mentions Matt Pocock skills, Superpowers, Ponytrail evidence, and
   future workflow packs.
 - `README.md` uses the provided screenshot from a repo-local asset path.
-- `README.md` no longer embeds the old `getsuperpower-how-it-works.svg` or
-  `getsuperpower-install-sequence.svg` diagrams as primary visuals.
+- `README.md` no longer embeds the old `omniskill-how-it-works.svg` or
+  `omniskill-install-sequence.svg` diagrams as primary visuals.
 - README tests or source-contract checks cover the new positioning and image
   reference.
 - Existing landing and workflow tests still pass.

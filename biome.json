@@ -21,6 +21,7 @@
       "!.bun-cache",
       "!.devos",
       "!.getsuperpower",
+      "!.omniskill",
       "!.ponyrace",
       "!.ponytrail",
       "!coverage",

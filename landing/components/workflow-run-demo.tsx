@@ -83,7 +83,7 @@ const CHECKPOINTS: readonly Checkpoint[] = [
 ];
 
 const STARTUP_GOAL_SKILL_SOURCE_ROOT =
-  "https://github.com/0xroylee/getsuperpower/blob/main/examples/workflows/startup-goal/skills";
+  "https://github.com/devos-ing/omni-skills/blob/main/examples/workflows/startup-goal/skills";
 
 const ROLE_PRESENTATION: Record<
   SkillId,

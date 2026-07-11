@@ -8,7 +8,7 @@
 - [x] Decide whether to keep the dark visual direction from the downloaded
       export (keep the dark technical direction).
 - [x] Decide which GitHub URL the landing page should link to
-      (`https://github.com/0xroylee/getsuperpower`).
+      (`https://github.com/devos-ing/omni-skills`).
 
 ## 2. Brainstorm Design
 

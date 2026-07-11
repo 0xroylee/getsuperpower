@@ -1,4 +1,4 @@
-# Omniskills Landing Design
+# Omniskill Landing Design
 
 This file is the local design contract for the `landing/` app. It keeps visual,
 content, and interaction changes aligned with the current OpenSpec direction
@@ -9,15 +9,15 @@ without making the root CLI package depend on landing-only decisions.
 - Active OpenSpec change:
   `openspec/changes/refactor-landing-reference-design/proposal.md`
 - Active spec delta:
-  `openspec/changes/refactor-landing-reference-design/specs/getsuperpower-landing/spec.md`
-- Base landing spec: `openspec/specs/getsuperpower-landing/spec.md`
-- Reference folder: `/Users/roy/Downloads/Create GetSuperpower Workflows/`
+  `openspec/changes/refactor-landing-reference-design/specs/omniskill-landing/spec.md`
+- Base landing spec: `openspec/specs/omniskill-landing/spec.md`
+- Reference folder: `/Users/roy/Downloads/Create Omniskill Workflows/`
 - Reference home page:
-  `/Users/roy/Downloads/Create GetSuperpower Workflows/src/app/pages/Home.tsx`
+  `/Users/roy/Downloads/Create Omniskill Workflows/src/app/pages/Home.tsx`
 - Reference workflow row:
-  `/Users/roy/Downloads/Create GetSuperpower Workflows/src/app/components/WorkflowCard.tsx`
+  `/Users/roy/Downloads/Create Omniskill Workflows/src/app/components/WorkflowCard.tsx`
 - Reference workflow detail:
-  `/Users/roy/Downloads/Create GetSuperpower Workflows/src/app/pages/WorkflowDetail.tsx`
+  `/Users/roy/Downloads/Create Omniskill Workflows/src/app/pages/WorkflowDetail.tsx`
 - Page content model: `landing/lib/landing-content.ts`
 - Page shell: `landing/components/landing-page.tsx`
 - Workflow entry component: `landing/components/workflow-card.tsx`
@@ -26,14 +26,14 @@ without making the root CLI package depend on landing-only decisions.
 
 ## Product Story
 
-The first screen should make Omniskills unmistakable: one command installs a
+The first screen should make Omniskill unmistakable: one command installs a
 whole AI-agent workflow as a callable skill. Supporting copy should explain
 workflow bundles, skill-tree installation, and root-first commands, but the
 headline should stay short and product-led.
 
 Preferred message hierarchy:
 
-1. Omniskills is the product.
+1. Omniskill is the product.
 2. One install command gives an agent a complete workflow.
 3. Workflows are shareable bundles with one entry skill.
 4. Workflow bundles can be browsed like a registry, then inspected on detail
@@ -141,7 +141,7 @@ workflow comparison.
 - Keep workflow, command, and explanatory copy in
   `landing/lib/landing-content.ts`.
 - Keep components presentation-focused; they should not import root CLI runtime
-  modules or read generated `.getsuperpower/` state.
+  modules or read generated `.omniskill/` state.
 - Prefer small components for stable repeated pieces such as workflow rows,
   terminal blocks, flow diagrams, and copyable command controls.
 - Search, command selection, and copy feedback should remain client-side and
@@ -150,15 +150,15 @@ workflow comparison.
 
 ## Content Rules
 
-Use the current root-first Omniskills command surface:
+Use the current root-first Omniskill command surface:
 
-- `npx omniskills@latest install ...`
-- `npx omniskills@latest list`
-- `npx omniskills@latest init my-workflow`
-- `npx omniskills@latest validate my-workflow`
-- `npx omniskills@latest deps ...`
+- `npx omniskill@latest install ...`
+- `npx omniskill@latest list`
+- `npx omniskill@latest init my-workflow`
+- `npx omniskill@latest validate my-workflow`
+- `npx omniskill@latest deps ...`
 
-Do not advertise removed nested Omniskills subcommands. Workflow entries
+Do not advertise removed nested Omniskill subcommands. Workflow entries
 should name the callable entry skill and important sub-skills in plain
 language.
 

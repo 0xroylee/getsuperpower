@@ -5,7 +5,7 @@
 - [x] Create OpenSpec proposal, spec delta, and task checklist.
 - [x] Review `proposal.md` scope with the human owner.
 - [x] Confirm canonical URL for the landing page
-      (`https://github.com/0xroylee/getsuperpower`).
+      (`https://github.com/devos-ing/omni-skills`).
 - [x] Confirm whether this pass should stay text-only for social previews.
 
 ## 2. Brainstorm Design

@@ -1,28 +1,28 @@
-# Proposal: Install GetSuperpower Workflows From Public Git
+# Proposal: Install Omniskill Workflows From Public Git
 
 ## Summary
 
-Allow `getsuperpower install` and `getsuperpower clone` to accept a public git
-repository source for a GetSuperpower workflow bundle.
+Allow `omniskill install` and `omniskill clone` to accept a public git
+repository source for a Omniskill workflow bundle.
 
 The v1 shape should keep the existing install semantics: load `workflow.json`,
 validate the manifest, install every declared skill dependency, and record the
-installed workflow under `.getsuperpower/workflows`. The only new behavior is
+installed workflow under `.omniskill/workflows`. The only new behavior is
 that the source can be fetched from public git before the existing bundle loader
 runs.
 
 Example command model:
 
 ```bash
-getsuperpower install https://github.com/acme/release-review.git
-getsuperpower clone https://github.com/acme/release-review.git
-getsuperpower validate https://github.com/acme/release-review.git
-getsuperpower deps https://github.com/acme/release-review.git
+omniskill install https://github.com/acme/release-review.git
+omniskill clone https://github.com/acme/release-review.git
+omniskill validate https://github.com/acme/release-review.git
+omniskill deps https://github.com/acme/release-review.git
 ```
 
 ## Motivation
 
-GetSuperpower already supports bundled names and local workflow folders. Authors
+Omniskill already supports bundled names and local workflow folders. Authors
 can create and share a workflow, but users still need a local clone before they
 can install it. Public git support makes sharing one step simpler:
 
@@ -62,7 +62,7 @@ Out of scope:
 
 ## Proposed Design Direction
 
-Add a small git workflow-source resolver in the GetSuperpower loading path. It
+Add a small git workflow-source resolver in the Omniskill loading path. It
 should detect public git URL sources before local/bundled source resolution,
 clone them with a non-shell command runner, and then pass the checked-out bundle
 directory into the existing manifest loader.
@@ -78,13 +78,13 @@ flow is proven.
 
 ## Acceptance Criteria
 
-- `getsuperpower install https://github.com/<owner>/<repo>.git` fetches a public
+- `omniskill install https://github.com/<owner>/<repo>.git` fetches a public
   workflow repo, installs the declared skills, and writes a workflow record.
-- `getsuperpower clone https://github.com/<owner>/<repo>.git` behaves the same
+- `omniskill clone https://github.com/<owner>/<repo>.git` behaves the same
   as install.
-- `getsuperpower validate <public-git-url>` validates the fetched
+- `omniskill validate <public-git-url>` validates the fetched
   `workflow.json` and prints the existing validation summary.
-- `getsuperpower deps <public-git-url>` lists the fetched workflow skill
+- `omniskill deps <public-git-url>` lists the fetched workflow skill
   dependencies.
 - Local skill paths declared by the fetched workflow resolve relative to the
   fetched repository during install.
@@ -95,7 +95,7 @@ flow is proven.
 - Invalid or unsupported git sources fail with a clear message.
 - A raw sandbox smoke install succeeds from an empty project directory with an
   empty `--home` directory and a minimal environment, then writes only the
-  expected `.getsuperpower/workflows` record and agent skill files inside that
+  expected `.omniskill/workflows` record and agent skill files inside that
   sandbox.
 - Existing bundled and local source behavior continues to work.
 - `rtk bun run check` passes before delivery.

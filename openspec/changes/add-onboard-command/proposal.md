@@ -2,7 +2,7 @@
 
 ## Summary
 
-Add a root `getsuperpower onboard` command that guides a user through first-run
+Add a root `omniskill onboard` command that guides a user through first-run
 workspace setup one step at a time.
 
 The command should ask whether the user wants to set up:
@@ -17,7 +17,7 @@ next command or result before moving on.
 
 ## Motivation
 
-GetSuperpower depends on a good local agent environment. Today that setup lives
+Omniskill depends on a good local agent environment. Today that setup lives
 in repository instructions and prior operator knowledge, so a new user has to
 discover the pieces manually. An `onboard` command can make the first-run path
 feel guided:
@@ -31,9 +31,9 @@ feel guided:
 
 In scope:
 
-- Add a root `getsuperpower onboard` command.
-- Keep the command in the root-first GetSuperpower surface, not under the
-  removed nested `getsuperpower` subcommand.
+- Add a root `omniskill onboard` command.
+- Keep the command in the root-first Omniskill surface, not under the
+  removed nested `omniskill` subcommand.
 - Ask whether the user wants RTK setup.
 - Ask whether the user wants CodeGraph setup.
 - Check whether `rtk` appears available before suggesting or running RTK setup.
@@ -60,7 +60,7 @@ Out of scope:
 
 ## Proposed Design Direction
 
-Add `configureOnboardCommand` in `src/getsuperpower.ts` and register it from the
+Add `configureOnboardCommand` in `src/omniskill.ts` and register it from the
 existing root command configuration path. Keep `src/cli.ts` as the thin shell
 that wires real prompts and command execution into the command module.
 
@@ -87,7 +87,7 @@ depending on the final approved design.
 
 ## Acceptance Criteria
 
-- `getsuperpower onboard` appears in root command registration and help.
+- `omniskill onboard` appears in root command registration and help.
 - The command asks the user whether RTK setup is needed when RTK is not already
   available.
 - The command reports RTK as already ready when `rtk --version` succeeds.
@@ -102,7 +102,7 @@ depending on the final approved design.
   and preserve the underlying command failure detail.
 - Tests do not invoke the real `rtk`, mutate the real home directory, or build a
   real CodeGraph index.
-- Existing GetSuperpower commands continue to register and behave as before.
+- Existing Omniskill commands continue to register and behave as before.
 - `rtk bun run check` passes before delivery.
 
 ## Open Questions For Review

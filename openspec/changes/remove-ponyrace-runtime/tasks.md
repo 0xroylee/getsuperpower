@@ -18,7 +18,7 @@
 
 - [x] Write a Superpowers implementation plan with TDD slices.
 - [x] Include exact test removals, replacements, and smoke commands.
-- [x] Preserve acceptance criteria from `specs/getsuperpower-only/spec.md`.
+- [x] Preserve acceptance criteria from `specs/omniskill-only/spec.md`.
 
 ## 4. Remove Ponyrace Runtime
 
@@ -29,7 +29,7 @@
 
 ## 5. Update Docs And Examples
 
-- [x] Make README GetSuperpower-first and remove Ponyrace primitive copy.
+- [x] Make README Omniskill-first and remove Ponyrace primitive copy.
 - [x] Update architecture docs to describe the bundle-skill-only product.
 - [x] Keep author guide and examples aligned with current commands.
 

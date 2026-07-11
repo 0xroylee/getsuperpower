@@ -1,14 +1,14 @@
-# Proposal: Support GetSuperpower Workflow Source Aliases
+# Proposal: Support Omniskill Workflow Source Aliases
 
 ## Summary
 
-Allow GetSuperpower source commands to accept a public workflow alias such as
-`openspec-superpowers` as shorthand for the canonical GetSuperpower examples
+Allow Omniskill source commands to accept a public workflow alias such as
+`openspec-superpowers` as shorthand for the canonical Omniskill examples
 repository path:
 
 ```bash
-npx getsuperpower@latest install openspec-superpowers
-npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/openspec-superpowers'
+npx omniskill@latest install openspec-superpowers
+npx omniskill@latest install 'https://github.com/devos-ing/omni-skills.git#examples/workflows/openspec-superpowers'
 ```
 
 These two commands should resolve to the same workflow bundle. Existing public
@@ -19,7 +19,7 @@ git URL support remains unchanged.
 The public install command is currently runnable but visually heavy because
 users need to paste the full repository URL and workflow subdirectory. The
 examples repository already behaves like the default public catalog for
-GetSuperpower workflows, so common examples should be installable by name while
+Omniskill workflows, so common examples should be installable by name while
 preserving the explicit URL path for users who want copy-paste transparency.
 
 ## Scope
@@ -27,8 +27,8 @@ preserving the explicit URL path for users who want copy-paste transparency.
 In scope:
 
 - Treat bare workflow aliases as public examples under
-  `https://github.com/0xroylee/getsuperpower.git#examples/workflows/<alias>`.
-- Support alias sources anywhere the shared GetSuperpower source loader is used:
+  `https://github.com/devos-ing/omni-skills.git#examples/workflows/<alias>`.
+- Support alias sources anywhere the shared Omniskill source loader is used:
   `install`, `validate`, and `deps`.
 - Preserve the existing explicit public git URL behavior, including
   `#examples/workflows/<name>` fragments.
@@ -39,7 +39,7 @@ In scope:
   git URL, so alias installs and full-link installs have the same durable source
   identity.
 - Return a clear "not found" style error when the canonical examples path does
-  not contain a valid GetSuperpower workflow.
+  not contain a valid Omniskill workflow.
 - Update README and authoring guidance to show both the alias and explicit URL
   forms.
 - Add focused tests for alias source loading, install behavior, public URL
@@ -67,13 +67,13 @@ continue to use the existing local or git behavior.
 
 Alias "not found" should be clearer than a temporary checkout path error. When
 the resolved examples subdirectory has no `workflow.json`, the CLI should report
-that no GetSuperpower workflow alias was found for the requested name and include
+that no Omniskill workflow alias was found for the requested name and include
 the canonical path it checked.
 
 ## Acceptance Criteria
 
-- `npx getsuperpower@latest install openspec-superpowers` installs the same
-  workflow as `npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/openspec-superpowers'`.
+- `npx omniskill@latest install openspec-superpowers` installs the same
+  workflow as `npx omniskill@latest install 'https://github.com/devos-ing/omni-skills.git#examples/workflows/openspec-superpowers'`.
 - `validate` and `deps` accept the same alias source form because they
   share the workflow source loader.
 - Explicit public git URLs still work exactly as they do today.

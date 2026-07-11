@@ -8,7 +8,7 @@
 - [x] Decide whether source workflows keep checked-in `loop.mjs` or generate it
       entirely from `workflow.json`.
 - [x] Decide whether the generated `node loop.mjs` bridge may require the
-      `getsuperpower` CLI on `PATH`.
+      `omniskill` CLI on `PATH`.
 
 ## 2. Brainstorm Design
 
@@ -31,11 +31,11 @@
 - [x] Add failing tests that installed looped entry skills no longer receive
       `loop-runtime.mjs`.
 - [x] Add failing tests that installed `loop.mjs` is generated and forwards to
-      `getsuperpower loop ...`.
+      `omniskill loop ...`.
 - [x] Add failing validation tests for generated loop script semantics.
 - [x] Implement the CLI-owned runner renderer.
 - [x] Update grilled-product-dev workflow files and docs.
-- [x] Preserve `getsuperpower loop start/status/log/advance/summary` behavior.
+- [x] Preserve `omniskill loop start/status/log/advance/summary` behavior.
 
 ## 5. Verify And Archive
 

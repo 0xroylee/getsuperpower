@@ -1,6 +1,6 @@
 import { LandingPage } from "../components/landing-page";
 
-const githubRepositoryApiUrl = "https://api.github.com/repos/0xroylee/getsuperpower";
+const githubRepositoryApiUrl = "https://api.github.com/repos/devos-ing/omni-skills";
 const githubStarsFallbackLabel = "Stars";
 
 interface GitHubRepositoryMetadata {

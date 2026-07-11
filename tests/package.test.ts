@@ -38,15 +38,14 @@ describe("package metadata", () => {
   test("builds and publishes a bundled CLI binary", async () => {
     const packageMetadata = await readPackageMetadata();
 
-    expect(packageMetadata.name).toBe("omniskills");
+    expect(packageMetadata.name).toBe("omniskill");
     expect(packageMetadata.version).toBe("0.5.0");
     expect(packageMetadata.scripts?.build).toBe(
       "bun build --target=node --outfile=dist/cli.js src/cli.ts",
     );
     expect(packageMetadata.scripts?.prepack).toBe("bun run build");
-    expect(Object.keys(packageMetadata.bin ?? {})).toEqual(["omniskills", "getsuperpower"]);
-    expect(packageMetadata.bin?.omniskills).toBe("dist/cli.js");
-    expect(packageMetadata.bin?.getsuperpower).toBe("dist/cli.js");
+    expect(Object.keys(packageMetadata.bin ?? {})).toEqual(["omniskill"]);
+    expect(packageMetadata.bin?.omniskill).toBe("dist/cli.js");
     expect(packageMetadata.files).toContain("dist");
     expect(packageMetadata.files).toContain("bundled-skills");
     expect(packageMetadata.files).toContain("examples");
@@ -54,17 +53,17 @@ describe("package metadata", () => {
 
   test("publishes a Node-compatible CLI for npx users without Bun", async () => {
     const cliSource = await readFile(join(import.meta.dir, "..", "src", "cli.ts"), "utf8");
-    const getSuperpowerSource = await readFile(
-      join(import.meta.dir, "..", "src", "getsuperpower.ts"),
+    const omniskillSource = await readFile(
+      join(import.meta.dir, "..", "src", "omniskill.ts"),
       "utf8",
     );
     const workflowBundleSource = await readFile(
-      join(import.meta.dir, "..", "src", "runtimes", "getsuperpower", "workflow-bundles.ts"),
+      join(import.meta.dir, "..", "src", "runtimes", "omniskill", "workflow-bundles.ts"),
       "utf8",
     );
 
     expect(cliSource.startsWith("#!/usr/bin/env node\n")).toBe(true);
-    expect(getSuperpowerSource).not.toContain("Bun.");
+    expect(omniskillSource).not.toContain("Bun.");
     expect(workflowBundleSource).not.toContain("Bun.");
   });
 

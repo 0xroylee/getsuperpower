@@ -3,7 +3,7 @@
 ## Summary
 
 Merge the current two-file installed loop runtime shape into one generated
-`loop.mjs` runner. Generic loop functions should live in the GetSuperpower CLI;
+`loop.mjs` runner. Generic loop functions should live in the Omniskill CLI;
 installed workflow skills should only carry workflow-specific variables and
 metadata.
 
@@ -38,13 +38,13 @@ The generated runner should contain only dynamic values such as:
 
 ```js
 const workflowJson = new URL("./workflow.json", import.meta.url);
-const cliCommand = process.env.GETSUPERPOWER_BIN ?? "getsuperpower";
+const cliCommand = process.env.OMNISKILL_BIN ?? "omniskill";
 ```
 
 It should forward commands to the CLI:
 
 ```bash
-getsuperpower loop <command> <workflow-json> [...options]
+omniskill loop <command> <workflow-json> [...options]
 ```
 
 The installed entry skill should contain:
@@ -75,7 +75,7 @@ In scope:
 - avoid requiring workflow authors to maintain `loop.mjs` runtime logic;
 - update validation semantics so the loop script path is a generated output
   path, not a required source file;
-- keep `getsuperpower loop ...` as the primary execution path;
+- keep `omniskill loop ...` as the primary execution path;
 - update the grilled-product-dev example, docs, and tests.
 
 Out of scope:
@@ -84,7 +84,7 @@ Out of scope:
 - executing workflow phases automatically;
 - removing `loop.metadata.json`;
 - resolving installed workflow names without a source path;
-- requiring network fallback such as `npx getsuperpower` from generated runners.
+- requiring network fallback such as `npx omniskill` from generated runners.
 
 ## Recommended Design
 
@@ -93,11 +93,11 @@ Use a generated Node bridge, not an inline runtime blob.
 This keeps `loop.mjs` tiny and makes the source of truth obvious: the CLI owns
 the generic loop function. The generated file is only a compatibility shim for
 people who still run `node loop.mjs ...`; normal agents should continue to run
-`getsuperpower loop ...` directly.
+`omniskill loop ...` directly.
 
 ## Risks
 
-- Direct `node loop.mjs ...` compatibility now depends on the `getsuperpower`
+- Direct `node loop.mjs ...` compatibility now depends on the `omniskill`
   CLI being available on `PATH`.
 - Existing tests expect `loop-runtime.mjs` to be copied and must be updated.
 - Existing workflows that include a hand-written `loop.mjs` need a clear
@@ -105,7 +105,7 @@ people who still run `node loop.mjs ...`; normal agents should continue to run
 
 ## Approved Decisions
 
-1. `getsuperpower validate/install` should generate `loop.mjs` entirely from
+1. `omniskill validate/install` should generate `loop.mjs` entirely from
    `workflow.json`; source workflows should not need checked-in runtime code.
-2. Direct `node loop.mjs ...` compatibility may require `getsuperpower` on
+2. Direct `node loop.mjs ...` compatibility may require `omniskill` on
    `PATH`, because the CLI owns the generic loop function.

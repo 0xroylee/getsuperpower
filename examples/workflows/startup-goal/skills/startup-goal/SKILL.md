@@ -48,6 +48,12 @@ questions or ambiguities, then present the brief and wait for explicit approval.
   meaningful startup goals should include `product-manager`, `cto`,
   `engineering-manager`, `founding-engineer`, and `qa-lead`; add `ceo` when
   strategy, positioning, pricing, fundraising, or go/no-go tradeoffs are real.
+- Add `web-design` when the approved brief creates or materially changes a
+  customer-facing web interface, responsive layout, critical interaction,
+  visual hierarchy, or meaningful UI motion. Skip it only for backend-only,
+  infrastructure-only, data-only, or narrowly reversible work with no
+  user-facing surface change; name that evidence and the condition that would
+  bring the role back in.
 - Do not default to one or two roles for implementation-shaped goals. A narrow
   implementation path is allowed only when the approved brief proves the work is
   tiny, reversible, free of product or architecture uncertainty, free of
@@ -84,6 +90,8 @@ Every processed goal must include:
 
 - `ceo` for company direction and tradeoffs.
 - `product-manager` for customer value, PRDs, and issue slicing.
+- `web-design` for implementable interface direction, responsive interaction
+  states, and rigorous animation review.
 - `cto` for architecture and technical risk.
 - `engineering-manager` for execution sequencing and quality gates.
 - `founding-engineer` for implementation.
@@ -106,7 +114,9 @@ Every processed goal must include:
 8. Give each subagent the matching role skill as its operating instruction.
 9. Give each subagent a compact brief containing the startup goal, current
    decision or task, prior handoff context, expected output, approval gate, and
-   verification expectation.
+   verification expectation. For `web-design`, include the target user and job,
+   information hierarchy, interaction states, responsive and reduced-motion
+   expectations, each motion's purpose, and the review verdict.
 10. Wait for all dispatched role subagents to finish.
 11. Show completed role outputs before combining them.
 12. Combine the role outputs into one owner-facing decision log.

@@ -2,16 +2,16 @@
 
 ## Summary
 
-Add a "Watch the workflow run" section to the GetSuperpower landing page.
+Add a "Watch the workflow run" section to the Omniskill landing page.
 
-The section should adapt the downloaded "Create GetSuperpower Workflows"
+The section should adapt the downloaded "Create Omniskill Workflows"
 reference app's simulator idea for the current Next landing app: a visitor sees
 an agent invoke `$openspec-delivery`, then watches the required sub-skills run in
 order through a compact pipeline and terminal-style output.
 
 ## Motivation
 
-The landing page explains that a GetSuperpower installs a skill tree and exposes
+The landing page explains that a Omniskill installs a skill tree and exposes
 one callable entry skill, but that idea is still abstract. The downloaded
 reference app includes a simulator section that makes the core product promise
 concrete: one prompt triggers proposal, design, planning, TDD, verification, and
@@ -38,9 +38,9 @@ In scope:
 Out of scope:
 
 - Running a real agent workflow in the browser.
-- Fetching live workflow state from the CLI, GitHub, or `.getsuperpower/`.
+- Fetching live workflow state from the CLI, GitHub, or `.omniskill/`.
 - Adding video uploads, external embeds, server routes, or analytics.
-- Changing the GetSuperpower CLI or workflow manifest format.
+- Changing the Omniskill CLI or workflow manifest format.
 - Replacing the existing workflow-card detail view.
 
 ## Proposed Design Direction

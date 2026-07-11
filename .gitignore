@@ -4,6 +4,7 @@ dist/
 coverage/
 .pony-trail/
 .getsuperpower/
+.omniskill/
 .ponyrace/
 work/
 .worktrees/

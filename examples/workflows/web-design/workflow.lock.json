@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "0.1",
+  "workflow": "web-design",
+  "workflowVersion": "0.1.0",
+  "generatedAt": "2026-07-11T06:16:47.114Z",
+  "skills": [
+    {
+      "source": "./skills/web-design",
+      "resolvedName": "web-design",
+      "kind": "local",
+      "hash": "sha256:9c4e3ffd2ab7fec6147f3a6bffe49225944cd690298b98c4c88ce51d398ecfaa"
+    },
+    {
+      "source": "emilkowalski:emil-design-eng",
+      "resolvedName": "emilkowalski:emil-design-eng",
+      "kind": "external",
+      "repo": "emilkowalski/skills",
+      "hash": "sha256:1f03158cd7af01992dcd64db008efaa4b74f458196271af871f137dc941b8e72"
+    },
+    {
+      "source": "emilkowalski:animation-vocabulary",
+      "resolvedName": "emilkowalski:animation-vocabulary",
+      "kind": "external",
+      "repo": "emilkowalski/skills",
+      "hash": "sha256:1f58eb66d131c6d796f05f6e35993d0f3f3ace753249c1e01437cfc5817acf09"
+    },
+    {
+      "source": "emilkowalski:apple-design",
+      "resolvedName": "emilkowalski:apple-design",
+      "kind": "external",
+      "repo": "emilkowalski/skills",
+      "hash": "sha256:b0008e0cc0fa2c2295692e03b8dc44b7852359ab15d120ced2082619542f362f"
+    },
+    {
+      "source": "emilkowalski:review-animations",
+      "resolvedName": "emilkowalski:review-animations",
+      "kind": "external",
+      "repo": "emilkowalski/skills",
+      "hash": "sha256:a0e8317125f7232c6d44834830a709c915b94bae6988b83cc05910090dae9ca0"
+    }
+  ]
+}

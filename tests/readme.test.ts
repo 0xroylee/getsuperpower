@@ -18,8 +18,8 @@ describe("README source contract", () => {
     const readme = readReadme();
     const firstScreen = readme.slice(0, 1800);
 
-    expect(readme.trimStart().startsWith("# Omniskills")).toBe(true);
-    expect(firstScreen).toContain("# Omniskills");
+    expect(readme.trimStart().startsWith("# Omniskill")).toBe(true);
+    expect(firstScreen).toContain("# Omniskill");
     expect(firstScreen).toContain("[繁體中文](README.zh-Hant.md)");
     expect(firstScreen).toContain("Power your ability.");
     expect(firstScreen).toContain("many-skill bank");
@@ -32,8 +32,8 @@ describe("README source contract", () => {
     expect(firstScreen).toContain("Engineering Manager");
     expect(firstScreen).toContain("Founding Engineer");
     expect(firstScreen).toContain("QA Lead");
-    expect(firstScreen).not.toContain("assets/diagrams/getsuperpower-how-it-works.svg");
-    expect(firstScreen).not.toContain("assets/diagrams/getsuperpower-install-sequence.svg");
+    expect(firstScreen).not.toContain("assets/diagrams/omniskill-how-it-works.svg");
+    expect(firstScreen).not.toContain("assets/diagrams/omniskill-install-sequence.svg");
   });
 
   test("documents startup-goal and individual startup role commands", () => {
@@ -49,16 +49,16 @@ describe("README source contract", () => {
     ];
 
     for (const alias of roleAliases) {
-      expect(readme).toContain(`npx omniskills@latest install ${alias}`);
+      expect(readme).toContain(`npx omniskill@latest install ${alias}`);
     }
 
     expect(readme).toContain(
       "$startup-goal I have an AI bookkeeping idea; help me choose the wedge and ship a v1 in two weeks",
     );
     expect(readme).toContain(
-      "npx omniskills@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/startup-goal'",
+      "npx omniskill@latest install 'https://github.com/devos-ing/omni-skills.git#examples/workflows/startup-goal'",
     );
-    expect(readme).not.toContain("npx omniskills@latest install startup-team");
+    expect(readme).not.toContain("npx omniskill@latest install startup-team");
     expect(readme).not.toContain(
       "$startup-team help me launch this product from idea to shipped v1",
     );
@@ -74,12 +74,12 @@ describe("README source contract", () => {
     expect(readme).toContain("action-only");
     expect(readme).toContain("next suggested action");
     expect(readme).toContain("until the goal is done");
-    expect(readme).toContain("npx omniskills@latest loop start grilled-product-dev --json");
+    expect(readme).toContain("npx omniskill@latest loop start grilled-product-dev --json");
     expect(readme).toContain(
-      "npx omniskills@latest loop status grilled-product-dev --latest --json",
+      "npx omniskill@latest loop status grilled-product-dev --latest --json",
     );
     expect(readme).toContain(
-      "npx omniskills@latest loop advance grilled-product-dev --run <run-id> --json",
+      "npx omniskill@latest loop advance grilled-product-dev --run <run-id> --json",
     );
     expect(readme).toContain("does not silently execute tools or shell commands");
     expect(readme).not.toMatch(
@@ -98,16 +98,16 @@ describe("README source contract", () => {
 
   test("uses the startup role registry image instead of old diagrams", () => {
     const readme = readReadme();
-    const imageSrc = "assets/getsuperpower-startup-role-registry.png";
-    const imageTag = `<img src="${imageSrc}" alt="Omniskills startup role workflow registry" width="920" />`;
+    const imageSrc = "assets/omniskill-startup-role-registry.png";
+    const imageTag = `<img src="${imageSrc}" alt="Omniskill startup role workflow registry" width="920" />`;
     const imageIndex = readme.indexOf(imageTag);
     const quickStartIndex = readme.indexOf("## Quick Start");
 
     expect(readme.trimStart().startsWith(imageTag)).toBe(false);
     expect(imageIndex).toBeGreaterThan(quickStartIndex);
     expect(existsSync(join(repoRoot, imageSrc))).toBe(true);
-    expect(readme).not.toContain("assets/diagrams/getsuperpower-how-it-works.svg");
-    expect(readme).not.toContain("assets/diagrams/getsuperpower-install-sequence.svg");
+    expect(readme).not.toContain("assets/diagrams/omniskill-how-it-works.svg");
+    expect(readme).not.toContain("assets/diagrams/omniskill-install-sequence.svg");
     expect(readme).not.toContain("startup-goal-workflow-editorial.svg");
     expect(readme).not.toContain("startup-goal-workflow-funny.svg");
     expect(readme).not.toContain("startup-goal-workflow-claude.svg");
@@ -116,20 +116,20 @@ describe("README source contract", () => {
   test("provides a Traditional Chinese README with commands and identifiers preserved", () => {
     const readme = readRepoFile("README.zh-Hant.md");
 
-    expect(readme.startsWith("# Omniskills")).toBe(true);
+    expect(readme.startsWith("# Omniskill")).toBe(true);
     expect(readme).toContain("[English](README.md)");
     expect(readme).toContain("繁體中文");
     expect(readme).toContain("Power your ability.");
-    expect(readme).toContain("npx omniskills@latest install startup-goal");
-    expect(readme).toContain("npx omniskills@latest install ceo");
-    expect(readme).toContain("npx omniskills@latest install qa-lead");
+    expect(readme).toContain("npx omniskill@latest install startup-goal");
+    expect(readme).toContain("npx omniskill@latest install ceo");
+    expect(readme).toContain("npx omniskill@latest install qa-lead");
     expect(readme).toContain(
       "$startup-goal I have an AI bookkeeping idea; help me choose the wedge and ship a v1 in two weeks",
     );
-    expect(readme).toContain("npx omniskills@latest loop start grilled-product-dev --json");
+    expect(readme).toContain("npx omniskill@latest loop start grilled-product-dev --json");
     expect(readme).toContain("workflow.json");
     expect(readme).toContain("$creating-bundle-skills");
     expect(readme).toContain("examples/workflows/startup-goal");
-    expect(readme).toContain("omniskills");
+    expect(readme).toContain("omniskill");
   });
 });

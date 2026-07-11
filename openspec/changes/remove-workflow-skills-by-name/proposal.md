@@ -2,28 +2,28 @@
 
 ## Summary
 
-Add a GetSuperpower command that removes the skills installed for a named
+Add a Omniskill command that removes the skills installed for a named
 workflow.
 
 The command should be:
 
 ```bash
-getsuperpower remove <workflow-name>
+omniskill remove <workflow-name>
 ```
 
 It should also be available through the compatibility workflow surface:
 
 ```bash
-getsuperpower workflow remove <workflow-name>
+omniskill workflow remove <workflow-name>
 ```
 
 The command removes the workflow's recorded skill artifacts from the selected
-home directory, then removes the workflow record from `.getsuperpower/workflows`.
+home directory, then removes the workflow record from `.omniskill/workflows`.
 
 ## Motivation
 
-`getsuperpower install` creates agent skill files and writes a workflow record,
-and `getsuperpower list` shows installed workflows. There is no matching command
+`omniskill install` creates agent skill files and writes a workflow record,
+and `omniskill list` shows installed workflows. There is no matching command
 to clean up the installed skills for one workflow.
 
 That leaves users to manually inspect `.agents/skills`, `.codex/skills`,
@@ -38,8 +38,8 @@ when another installed workflow still references them.
 
 In scope:
 
-- Add `getsuperpower remove <workflow-name>`.
-- Add `getsuperpower workflow remove <workflow-name>` as the compatibility
+- Add `omniskill remove <workflow-name>`.
+- Add `omniskill workflow remove <workflow-name>` as the compatibility
   alias.
 - Support `--home <dir>` and `--dir <dir>` with the same default behavior as
   `install` and `list`: global home by default, project-local only when `--dir`
@@ -73,7 +73,7 @@ Out of scope:
 
 Use the installed workflow record as the removal source of truth.
 
-During `getsuperpower install`, extend the installed workflow record with a
+During `omniskill install`, extend the installed workflow record with a
 removal metadata section. Each installed skill entry should record:
 
 - manifest skill source, as written in `workflow.json`;
@@ -84,10 +84,10 @@ removal metadata section. Each installed skill entry should record:
 - enough status metadata to distinguish an installed or updated artifact from a
   skipped one.
 
-During `getsuperpower remove <workflow-name>`:
+During `omniskill remove <workflow-name>`:
 
 1. Resolve the workflow record root from `--dir` or `--home`.
-2. Read `<root>/.getsuperpower/workflows/<workflow-name>.json`.
+2. Read `<root>/.omniskill/workflows/<workflow-name>.json`.
 3. Build a removal plan from recorded artifact paths.
 4. Compare that plan with the other installed workflow records in the same root.
 5. Keep any artifact path still referenced by another workflow.
@@ -107,14 +107,14 @@ plain legacy fallback:
 
 ## Acceptance Criteria
 
-- `getsuperpower remove <workflow-name> --home <scratch-home> --yes` removes the
+- `omniskill remove <workflow-name> --home <scratch-home> --yes` removes the
   recorded skill artifacts for the named workflow and deletes that workflow's
   record.
-- `getsuperpower workflow remove <workflow-name>` behaves the same as the root
+- `omniskill workflow remove <workflow-name>` behaves the same as the root
   command.
-- `getsuperpower remove <workflow-name> --dry-run` prints the removal plan
+- `omniskill remove <workflow-name> --dry-run` prints the removal plan
   without deleting skill artifacts or the workflow record.
-- `getsuperpower remove <missing-workflow>` fails with a clear message that the
+- `omniskill remove <missing-workflow>` fails with a clear message that the
   workflow is not installed.
 - A workflow install record written by the new CLI includes exact skill artifact
   metadata for later removal.

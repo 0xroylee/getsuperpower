@@ -2,7 +2,7 @@
 
 ## Summary
 
-Make the GetSuperpower CLI's `skills install` and `skills update` target
+Make the Omniskill CLI's `skills install` and `skills update` target
 surface match the agents the product already advertises: Claude, Codex, Cursor,
 opencode, and GitHub Copilot.
 
@@ -12,14 +12,14 @@ today.
 
 ## Motivation
 
-The README says GetSuperpower works with Claude, Codex, opencode, Cursor, and
+The README says Omniskill works with Claude, Codex, opencode, Cursor, and
 GitHub Copilot. A user who trusts that copy should be able to run one CLI
 command and have a selected skill land in the right agent locations.
 
 This matters most for explicit skills commands:
 
-- `getsuperpower skills install <skill>` should accept the same target names.
-- `getsuperpower skills update <skill>` should refresh the same target names.
+- `omniskill skills install <skill>` should accept the same target names.
+- `omniskill skills update <skill>` should refresh the same target names.
 - `opencodex`, from the user request, should not create a separate target
   layout; it should behave as a friendly alias for the canonical `opencode`
   target.
@@ -77,13 +77,13 @@ repo has an explicit opencode hook contract.
 
 ## Acceptance Criteria
 
-- `getsuperpower skills install <skill> --agents claude,codex,cursor,opencode,copilot`
+- `omniskill skills install <skill> --agents claude,codex,cursor,opencode,copilot`
   succeeds and writes the expected target files under an isolated `--home`.
-- `getsuperpower skills install <skill> --agents opencodex` succeeds and reports
+- `omniskill skills install <skill> --agents opencodex` succeeds and reports
   an `opencode` target result.
-- `getsuperpower skills install <skill> --agents github-copilot` succeeds and
+- `omniskill skills install <skill> --agents github-copilot` succeeds and
   reports a `copilot` target result.
-- `getsuperpower skills update <skill> --agents claude,codex,cursor,opencode,copilot`
+- `omniskill skills update <skill> --agents claude,codex,cursor,opencode,copilot`
   refreshes those target files without requiring workflow commands.
 - Help text for skill install and skill update names the supported target
   list clearly.

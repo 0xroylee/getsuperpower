@@ -2,7 +2,7 @@
 
 ## Summary
 
-Refresh the GetSuperpower landing-page content so it matches the current CLI,
+Refresh the Omniskill landing-page content so it matches the current CLI,
 workflow manifests, and install flow.
 
 The page already has the right registry-style shape and the current Startup
@@ -16,7 +16,7 @@ records, and the live root command surface.
 The repository has moved since the landing copy was written. Current docs and
 CLI help now teach alias installs such as `install openspec-superpowers`, list
 `lock`, `remove`, `onboard`, and `loop` as live commands, document global
-workflow records under `~/.getsuperpower/workflows/`, and include a
+workflow records under `~/.omniskill/workflows/`, and include a
 loop-enabled `grilled-product-dev` example.
 
 The landing page already leads with the newer Startup Team role catalog, but its
@@ -45,7 +45,7 @@ In scope:
 
 Out of scope:
 
-- Changing GetSuperpower CLI behavior.
+- Changing Omniskill CLI behavior.
 - Redesigning the landing page layout.
 - Adding live registry telemetry, activity metrics, ranks, or install counts.
 - Reintroducing paused Pony Trail history, revert, or prehook features as
@@ -64,7 +64,7 @@ Out of scope:
   loop-enabled, action-only workflow with one `entry: true` local skill.
 - `docs/workflow-author-guide.md` documents the generated loop runner contract:
   installed entry skills receive generated `loop.mjs` and
-  `loop.metadata.json`; agents should use `getsuperpower loop ...`.
+  `loop.metadata.json`; agents should use `omniskill loop ...`.
 - The current landing content already uses the startup role catalog, but its
   common command examples and install behavior copy trail the current CLI.
 - Existing source-contract tests already guard against fake workflow telemetry;
@@ -74,12 +74,12 @@ Out of scope:
 
 Keep the first-screen message:
 
-1. GetSuperpower packages a whole AI-agent workflow as one callable skill.
+1. Omniskill packages a whole AI-agent workflow as one callable skill.
 2. Users install by alias, path, or public git URL.
 3. The install flow validates manifests, fetches missing external skills through
    the Skills CLI metadata, and records installed workflows globally by default.
 4. Some workflows can opt into resumable action-only loops through the
-   `getsuperpower loop` command.
+   `omniskill loop` command.
 5. The registry shows the current startup role catalog, without placeholder
    activity or install metrics.
 
@@ -88,7 +88,7 @@ Keep the first-screen message:
 - Landing command examples include alias-first startup role installs and current
   inspection, lock, loop, list, remove, init, and validate commands.
 - Landing copy mentions global workflow records under
-  `~/.getsuperpower/workflows/` rather than only local `.getsuperpower/`.
+  `~/.omniskill/workflows/` rather than only local `.omniskill/`.
 - Landing copy mentions current dependency bootstrap behavior without implying
   deterministic live agent execution in the browser.
 - Landing copy or command examples expose the current `loop` command surface

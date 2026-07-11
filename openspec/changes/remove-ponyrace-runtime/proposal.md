@@ -1,8 +1,8 @@
-# Remove Ponyrace Runtime And Focus On GetSuperpower Bundles
+# Remove Ponyrace Runtime And Focus On Omniskill Bundles
 
 ## Summary
 
-Refocus this repository on GetSuperpower bundle-skill authoring, validation,
+Refocus this repository on Omniskill bundle-skill authoring, validation,
 installation, and dependency bootstrapping. Remove the older Ponyrace
 requirement-court runtime, worker-backed pony discussion flow, onboarding/setup
 flow, and docs that position `/ponyrace` as a product primitive.
@@ -11,14 +11,14 @@ flow, and docs that position `/ponyrace` as a product primitive.
 
 The repository now has two product centers:
 
-- GetSuperpower bundle skills: workflow manifests, entry skills, dependency
+- Omniskill bundle skills: workflow manifests, entry skills, dependency
   installation, author guides, and examples.
 - Ponyrace requirement review: bots, goals, votes, local/worker pony runners,
   approval reports, onboarding/setup, and `/ponyrace` commands.
 
 The second surface makes the project harder to understand and keeps tests,
 docs, and runtime modules centered on a direction we no longer want. Users
-should see one idea: install or author a GetSuperpower that bundles skills.
+should see one idea: install or author a Omniskill that bundles skills.
 
 ## Proposed Direction
 
@@ -26,17 +26,17 @@ Keep the bundle-skill product and remove Ponyrace-specific review code.
 
 ### Keep
 
-- `getsuperpower` commands:
-  - `getsuperpower init`
-  - `getsuperpower validate`
-  - `getsuperpower install`
-  - `getsuperpower list`
-  - `getsuperpower deps`
+- `omniskill` commands:
+  - `omniskill init`
+  - `omniskill validate`
+  - `omniskill install`
+  - `omniskill list`
+  - `omniskill deps`
 - `skills install` and `skills update`, including external package support such
   as `ponyrace skills install mattpocock/skills`.
 - Workflow bundle loading, validation, scaffolding, install records, and example
   workflows.
-- The GetSuperpower authoring skill and bundled workflow examples.
+- The Omniskill authoring skill and bundled workflow examples.
 - Snapshot/history internals only where they support skill or bundle install
   evidence.
 
@@ -54,7 +54,7 @@ Keep the bundle-skill product and remove Ponyrace-specific review code.
 
 ## Design Notes
 
-- Prefer a small public CLI centered on GetSuperpower and skill installation.
+- Prefer a small public CLI centered on Omniskill and skill installation.
 - Move or rename surviving runtime code away from `ponytrail` if it remains
   bundle-specific after the cut.
 - Keep compatibility aliases only if they help existing bundle users:
@@ -77,6 +77,6 @@ Keep the bundle-skill product and remove Ponyrace-specific review code.
 Before implementation, confirm these two decisions:
 
 1. Should the npm package and binary remain `ponyrace` for now while the product
-   surface becomes GetSuperpower-only?
+   surface becomes Omniskill-only?
 2. Should `bundle` and `workflow` stay as compatibility aliases, or should the
    first cleanup remove them too?

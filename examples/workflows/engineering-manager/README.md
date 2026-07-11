@@ -1,4 +1,4 @@
-# Engineering Manager Omniskills Workflow
+# Engineering Manager Omniskill Workflow
 
 Use this workflow when an agent should act as a startup engineering manager:
 sequence delivery, manage execution risk, and keep quality gates realistic.

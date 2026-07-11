@@ -6,7 +6,7 @@
       and task checklist.
 - [x] Review `proposal.md` with the human owner.
 - [x] Decide whether loop commands require `<source>` every time or may also
-      resolve installed workflow names from `~/.getsuperpower/workflows`.
+      resolve installed workflow names from `~/.omniskill/workflows`.
 - [x] Decide final CLI argument order for loop subcommands.
 
 ## 2. Brainstorm Design
@@ -26,9 +26,9 @@
 ## 4. Implement With TDD
 
 - [x] Confirm public seams before writing tests.
-- [x] Add failing CLI tests for `getsuperpower loop start/status/log/advance/summary`.
+- [x] Add failing CLI tests for `omniskill loop start/status/log/advance/summary`.
 - [x] Add failing assertions that runtime action commands use
-      `getsuperpower loop ...` instead of `node loop.mjs ...`.
+      `omniskill loop ...` instead of `node loop.mjs ...`.
 - [x] Implement the CLI loop command by routing to the reusable runtime.
 - [x] Update docs and entry-skill instructions.
 - [x] Preserve direct Node wrapper compatibility with explicit tests.

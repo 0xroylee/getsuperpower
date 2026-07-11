@@ -1,10 +1,8 @@
 import pc from "picocolors";
 
-export const GETSUPERPOWER_ASCII_LOGO = ["OMNISKILLS", "Skill trees for serious agent work."].join(
-  "\n",
-);
+export const OMNISKILL_ASCII_LOGO = ["OMNISKILL", "Skill trees for serious agent work."].join("\n");
 
-const GETSUPERPOWER_WORDMARK_LINES = [
+const OMNISKILL_WORDMARK_LINES = [
   " OOO  M   M N   N I SSSS K   K I L     L    SSS ",
   "O   O MM MM NN  N I S    K  K  I L     L   S    ",
   "O   O M M M N N N I  SSS KKK   I L     L    SSS ",
@@ -18,10 +16,10 @@ function supportsWordmarkLogo(): boolean {
   return (process.stdout.columns ?? 120) >= WORDMARK_MIN_COLUMNS;
 }
 
-export function getSuperpowerWordmarkLogo(): string {
-  if (!supportsWordmarkLogo()) return GETSUPERPOWER_ASCII_LOGO;
+export function getOmniskillWordmarkLogo(): string {
+  if (!supportsWordmarkLogo()) return OMNISKILL_ASCII_LOGO;
 
-  const [top, high, mid, low, bottom] = GETSUPERPOWER_WORDMARK_LINES;
+  const [top, high, mid, low, bottom] = OMNISKILL_WORDMARK_LINES;
   return [
     pc.whiteBright(top),
     pc.white(high),
@@ -29,7 +27,7 @@ export function getSuperpowerWordmarkLogo(): string {
     pc.dim(low),
     pc.dim(bottom),
     pc.magenta("____"),
-    brand("OMNISKILLS"),
+    brand("OMNISKILL"),
     muted("Skill trees for serious agent work."),
   ].join("\n");
 }
@@ -77,7 +75,7 @@ export function borderBox(lines: string[]): string {
   return [horizontal, ...content.map((line) => `| ${line.padEnd(width)} |`), horizontal].join("\n");
 }
 
-export function getSuperpowerInstallResultBox(input: {
+export function getOmniskillInstallResultBox(input: {
   workflowName: string;
   workflowVersion: string;
   workflowFile: string;
@@ -85,32 +83,32 @@ export function getSuperpowerInstallResultBox(input: {
 }): string {
   return brand(
     borderBox([
-      GETSUPERPOWER_ASCII_LOGO,
+      OMNISKILL_ASCII_LOGO,
       "",
-      `Omniskills installed: ${input.workflowName}`,
+      `Omniskill installed: ${input.workflowName}`,
       `Version: ${input.workflowVersion}`,
       `Skills installed: ${input.skillCount}`,
-      `Omniskills file: ${input.workflowFile}`,
+      `Omniskill file: ${input.workflowFile}`,
     ]),
   );
 }
 
 export function rootHelpBanner(): string {
   return [
-    getSuperpowerWordmarkLogo(),
+    getOmniskillWordmarkLogo(),
     "",
-    success("Welcome to Omniskills."),
+    success("Welcome to Omniskill."),
     "Install and author workflow skill trees for agent work.",
     "",
     label("Start:"),
-    `  ${commandText("omniskills init release-review")}`,
-    `  ${commandText("omniskills validate ./release-review")}`,
-    `  ${commandText("omniskills install openspec-superpowers")}`,
-    `  ${commandText("omniskills install ./release-review")}`,
+    `  ${commandText("omniskill init release-review")}`,
+    `  ${commandText("omniskill validate ./release-review")}`,
+    `  ${commandText("omniskill install openspec-superpowers")}`,
+    `  ${commandText("omniskill install ./release-review")}`,
     "",
     label("Inspect:"),
-    `  ${commandText("omniskills list")}`,
-    `  ${commandText("omniskills deps ./release-review")}`,
+    `  ${commandText("omniskill list")}`,
+    `  ${commandText("omniskill deps ./release-review")}`,
     "",
   ].join("\n");
 }

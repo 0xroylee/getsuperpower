@@ -2,7 +2,7 @@
 
 ## Summary
 
-Add a root `getsuperpower loop` command with subcommands for looped workflow
+Add a root `omniskill loop` command with subcommands for looped workflow
 run control. Agents and docs should use the CLI command instead of invoking
 `node loop.mjs` directly.
 
@@ -16,7 +16,7 @@ node loop.mjs status --latest --json
 ```
 
 That is awkward for agents and authors because the user-facing product is the
-GetSuperpower CLI, not a Node wrapper file copied into an installed skill. It
+Omniskill CLI, not a Node wrapper file copied into an installed skill. It
 also means runtime action suggestions currently tell agents to run
 `node loop.mjs ...`, which is the wrong abstraction.
 
@@ -25,11 +25,11 @@ also means runtime action suggestions currently tell agents to run
 Expose loop execution through CLI subcommands:
 
 ```bash
-getsuperpower loop start <source> --json
-getsuperpower loop status <source> --latest --json
-getsuperpower loop log <source> --run <id> --type phase_result --message "..."
-getsuperpower loop advance <source> --run <id> --json
-getsuperpower loop summary <source> --run <id> --json
+omniskill loop start <source> --json
+omniskill loop status <source> --latest --json
+omniskill loop log <source> --run <id> --type phase_result --message "..."
+omniskill loop advance <source> --run <id> --json
+omniskill loop summary <source> --run <id> --json
 ```
 
 The `<source>` argument should use the existing workflow source resolver where
@@ -45,12 +45,12 @@ agent-facing way to operate a loop.
 
 In scope:
 
-- add `getsuperpower loop` with `start`, `status`, `log`, `advance`, and
+- add `omniskill loop` with `start`, `status`, `log`, `advance`, and
   `summary` subcommands;
 - route the CLI command through the existing reusable loop runtime instead of
   duplicating loop logic;
 - update runtime action commands and error/help text so they point to
-  `getsuperpower loop ...`;
+  `omniskill loop ...`;
 - update the grilled-product-dev entry skill and docs to use the CLI command;
 - keep `node loop.mjs` compatibility for installed/runtime portability unless
   a later proposal removes it.
@@ -76,6 +76,6 @@ Out of scope:
 
 1. Require `<source>` on every loop subcommand.
 2. Use subcommand-first order:
-   `getsuperpower loop <start|status|log|advance|summary> <source>`.
+   `omniskill loop <start|status|log|advance|summary> <source>`.
 3. Defer installed workflow-name lookup from
-   `~/.getsuperpower/workflows/<name>.json` to a later proposal.
+   `~/.omniskill/workflows/<name>.json` to a later proposal.

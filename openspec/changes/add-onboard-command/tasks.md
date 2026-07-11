@@ -42,7 +42,7 @@
 
 ## 5. Verify And Archive
 
-- [x] Run focused Bun tests for GetSuperpower command registration and onboard
+- [x] Run focused Bun tests for Omniskill command registration and onboard
       flow behavior.
 - [x] Run CLI smoke checks against a scratch directory under `work/`.
 - [x] Run `rtk bun run check`.
