@@ -1,3 +1,3 @@
 export * from "./plugins";
-export * from "./runtimes/getsuperpower";
+export * from "./runtimes/omniskill";
 export * from "./skills";

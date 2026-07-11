@@ -6,14 +6,14 @@ Update the landing page header GitHub link so it shows the repository star count
 next to the GitHub icon.
 
 The header should continue to link to
-`https://github.com/0xroylee/getsuperpower`, but it should make the project
+`https://github.com/devos-ing/omni-skills`, but it should make the project
 signal visible without asking visitors to leave the landing page first.
 
 ## Motivation
 
 The landing page already uses the header as a lightweight navigation surface and
 links to the GitHub repository. Showing stars there gives technical visitors a
-quick trust cue while keeping the main hero focused on the GetSuperpower value
+quick trust cue while keeping the main hero focused on the Omniskill value
 proposition.
 
 The change should be small and resilient: a GitHub metadata failure should not
@@ -23,7 +23,7 @@ break the landing page or replace the header with a loading state.
 
 In scope:
 
-- Fetch the GetSuperpower repository star count from GitHub in the landing app.
+- Fetch the Omniskill repository star count from GitHub in the landing app.
 - Pass the star label into the client landing page header.
 - Render the GitHub header link with the GitHub icon and star label.
 - Keep the header accessible on desktop and mobile.
@@ -55,7 +55,7 @@ style label on wider screens, with no layout shift or oversized badge treatment.
 
 ## Acceptance Criteria
 
-- The header GitHub link still targets `https://github.com/0xroylee/getsuperpower`.
+- The header GitHub link still targets `https://github.com/devos-ing/omni-skills`.
 - The header GitHub link shows a star-count label when GitHub metadata is
   available.
 - The landing page still renders a useful GitHub header link when GitHub

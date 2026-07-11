@@ -46,7 +46,7 @@ Out of scope:
 
 - Renaming the individual role skills such as `ceo`, `cto`, or
   `product-manager`.
-- Adding a live subagent runtime to the GetSuperpower CLI.
+- Adding a live subagent runtime to the Omniskill CLI.
 - Changing external Skills CLI bootstrap behavior.
 - Removing historical OpenSpec records that mention `startup-team`.
 - Publishing a release, pushing a branch, or opening a pull request.
@@ -72,7 +72,7 @@ Out of scope:
 
 Use `startup-goal` as the canonical public workflow alias and entry skill:
 
-- Install: `npx getsuperpower@latest install startup-goal`
+- Install: `npx omniskill@latest install startup-goal`
 - Invoke: `$startup-goal help me launch this product from idea to shipped v1`
 - Source path: `examples/workflows/startup-goal`
 
@@ -97,7 +97,7 @@ The entry skill should make role execution explicit:
   dependency, lock, validate, remove, and invocation examples.
 - Landing registry content labels the primary role workflow as Startup Goal,
   links to `examples/workflows/startup-goal`, and exposes
-  `npx getsuperpower@latest install startup-goal`.
+  `npx omniskill@latest install startup-goal`.
 - Tests no longer assert current public `startup-team` commands except in
   historical OpenSpec fixtures or explicitly historical text.
 - The startup-goal entry skill instructs agents to call separate subagents with

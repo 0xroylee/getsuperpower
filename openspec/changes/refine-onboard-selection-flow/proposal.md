@@ -2,12 +2,12 @@
 
 ## Summary
 
-Change `getsuperpower onboard` from sequential yes/no setup prompts into a
+Change `omniskill onboard` from sequential yes/no setup prompts into a
 logo-first onboarding flow with one interactive checklist.
 
 The command should:
 
-1. Print the GetSuperpower logo/banner first.
+1. Print the Omniskill logo/banner first.
 2. Show the target workspace.
 3. Ask the user what they want to install or set up using a space-select
    multi-select prompt.
@@ -33,7 +33,7 @@ A checklist-style onboard flow lets users decide up front what they want:
 
 In scope:
 
-- Print the GetSuperpower logo/banner before the onboard checklist.
+- Print the Omniskill logo/banner before the onboard checklist.
 - Replace the current sequential RTK/CodeGraph confirmations with a multi-select
   prompt.
 - Add a global skills section with at least `pony-trail`.
@@ -59,10 +59,10 @@ Out of scope:
 When a user runs:
 
 ```bash
-getsuperpower onboard
+omniskill onboard
 ```
 
-the CLI should print the normal GetSuperpower brand signal first, then show a
+the CLI should print the normal Omniskill brand signal first, then show a
 single checklist similar to:
 
 ```text
@@ -81,7 +81,7 @@ provided by the prompt library.
 
 ## Acceptance Criteria
 
-- `getsuperpower onboard` prints the GetSuperpower logo/banner before prompting.
+- `omniskill onboard` prints the Omniskill logo/banner before prompting.
 - The onboard flow asks one multi-select question for setup choices.
 - The multi-select includes `pony-trail`, RTK, and CodeGraph.
 - Selected `pony-trail` installs through the existing skill installer path for
@@ -100,7 +100,7 @@ provided by the prompt library.
 
 - Should `pony-trail` install to all supported agent targets by default, or
   follow the existing `codex,claude,cursor` default used by workflow installs?
-- Should the checklist include the GetSuperpower authoring skill
+- Should the checklist include the Omniskill authoring skill
   `creating-bundle-skills` now, or keep v1 to `pony-trail`, RTK, and CodeGraph?
 - Should RTK stay guidance-only when missing, or should selecting RTK attempt an
   executable install command in a future change?

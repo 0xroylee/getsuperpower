@@ -12,7 +12,7 @@ link.
 
 ## Motivation
 
-The current landing page has workflow cards that describe each GetSuperpower,
+The current landing page has workflow cards that describe each Omniskill,
 but the "View workflow" affordance does not behave like a page-level detail
 action. The previous in-page panel direction makes the card action easy to miss
 and keeps workflow details secondary to the landing section layout.
@@ -41,7 +41,7 @@ Out of scope:
 
 - Server-side APIs, registry browsing, or hosted workflow data.
 - Fetching workflow manifests dynamically from GitHub.
-- Changing GetSuperpower CLI behavior or workflow bundle validation.
+- Changing Omniskill CLI behavior or workflow bundle validation.
 - Replacing the existing global "How it works" section.
 - Rewriting the landing app visual direction.
 - Publishing or deploying the landing app.
@@ -64,7 +64,7 @@ Use the existing data-driven landing structure:
   click target.
 
 The v1 should stay static and local to `landing/`; no runtime dependency on the
-root CLI or generated `.getsuperpower/` records is needed.
+root CLI or generated `.omniskill/` records is needed.
 
 ## Acceptance Criteria
 
@@ -73,7 +73,7 @@ root CLI or generated `.getsuperpower/` records is needed.
 - The detail view includes the workflow name, callable entry skill, ordered
   workflow steps, install command, and a GitHub source link.
 - The GitHub source link points to the matching workflow folder under
-  `https://github.com/0xroylee/getsuperpower`.
+  `https://github.com/devos-ing/omni-skills`.
 - Unknown workflow slugs render the Next not-found path instead of an empty
   detail page.
 - The workflow search remains usable and filtered cards continue to link to the

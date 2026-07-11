@@ -20,11 +20,11 @@ import {
   type WorkflowInstallSkillArtifact,
   workflowLockFileName,
   writeWorkflowLockFile,
-} from "../src/runtimes/getsuperpower/workflow-bundles";
+} from "../src/runtimes/omniskill/workflow-bundles";
 
 describe("workflow bundles", () => {
-  test("exports workflow bundle helpers from the GetSuperpower runtime namespace", async () => {
-    const runtime = await import("../src/runtimes/getsuperpower/workflow-bundles");
+  test("exports workflow bundle helpers from the Omniskill runtime namespace", async () => {
+    const runtime = await import("../src/runtimes/omniskill/workflow-bundles");
 
     expect(typeof runtime.loadWorkflowBundle).toBe("function");
     expect(typeof runtime.getPreparedWorkflowSkillInstallDependencies).toBe("function");
@@ -32,10 +32,10 @@ describe("workflow bundles", () => {
 
   test("rejects bare sources that are not valid workflow aliases", async () => {
     await expect(loadWorkflowBundle("ProductDev")).rejects.toThrow(
-      "Unsupported Omniskills source: ProductDev",
+      "Unsupported Omniskill source: ProductDev",
     );
     await expect(loadWorkflowBundle("product_dev")).rejects.toThrow(
-      "Unsupported Omniskills source: product_dev",
+      "Unsupported Omniskill source: product_dev",
     );
   });
 
@@ -215,6 +215,7 @@ describe("workflow bundles", () => {
       "engineering-manager",
       "founding-engineer",
       "qa-lead",
+      "web-design",
       "startup-goal",
       "haaland",
     ];
@@ -231,6 +232,32 @@ describe("workflow bundles", () => {
       );
       expect(bundle.manifest.skills.map((skill) => skill.source)).not.toContain("pony-trail");
     }
+  });
+
+  test("web design workflow uses Emil Kowalski design and animation reviews", async () => {
+    const workflowDir = join(import.meta.dir, "..", "examples", "workflows", "web-design");
+    const bundle = await loadWorkflowBundle(workflowDir);
+    const skill = await readFile(join(workflowDir, "skills", "web-design", "SKILL.md"), "utf8");
+
+    expect(bundle.manifest.skills).toEqual([
+      { source: "./skills/web-design", entry: true },
+      { source: "emilkowalski:emil-design-eng", repo: "emilkowalski/skills" },
+      { source: "emilkowalski:animation-vocabulary", repo: "emilkowalski/skills" },
+      { source: "emilkowalski:apple-design", repo: "emilkowalski/skills" },
+      { source: "emilkowalski:review-animations", repo: "emilkowalski/skills" },
+    ]);
+    expect(bundle.manifest.steps.map((step) => [step.id, step.skill, step.gate ?? null])).toEqual([
+      ["design-brief", "./skills/web-design", "human_approval"],
+      ["motion-vocabulary", "emilkowalski:animation-vocabulary", null],
+      ["craft-review", "emilkowalski:emil-design-eng", null],
+      ["animation-review", "emilkowalski:review-animations", null],
+    ]);
+    expect(skill).toContain("## Required Companion Skills");
+    expect(skill).toContain("emilkowalski:emil-design-eng");
+    expect(skill).toContain("emilkowalski:review-animations");
+    expect(skill).toContain("Before | After | Why");
+    expect(skill).toContain("**Approve** or **Block**");
+    expect(skill).toContain("If a companion skill is unavailable");
   });
 
   test("startup goal entry skill dispatches role subagents and combines results", async () => {
@@ -256,6 +283,7 @@ describe("workflow bundles", () => {
       ["route", "./skills/startup-goal", "human_approval"],
       ["strategy", "./skills/ceo", "human_approval"],
       ["product", "./skills/product-manager", null],
+      ["design", "./skills/web-design", null],
       ["technology", "./skills/cto", null],
       ["delivery", "./skills/engineering-manager", null],
       ["implementation", "./skills/founding-engineer", null],
@@ -263,6 +291,15 @@ describe("workflow bundles", () => {
     ]);
     expect(bundle.manifest.steps[0]?.instruction).toContain(
       "Interview the user one question at a time",
+    );
+    expect(bundle.manifest.skills).toEqual(
+      expect.arrayContaining([
+        { source: "./skills/web-design" },
+        { source: "emilkowalski:emil-design-eng", repo: "emilkowalski/skills" },
+        { source: "emilkowalski:animation-vocabulary", repo: "emilkowalski/skills" },
+        { source: "emilkowalski:apple-design", repo: "emilkowalski/skills" },
+        { source: "emilkowalski:review-animations", repo: "emilkowalski/skills" },
+      ]),
     );
     expect(skill).toContain("name: startup-goal");
     expect(skill).toContain("approved requirement brief");
@@ -288,6 +325,9 @@ describe("workflow bundles", () => {
     expect(skill).toContain("Wait for all dispatched role subagents to finish");
     expect(skill).toContain("Combine the role outputs into one owner-facing decision log");
     expect(skill).toContain("Recommend the next action from the combined result");
+    expect(skill).toContain("web-design");
+    expect(skill).toContain("customer-facing web interface");
+    expect(skill).toContain("backend-only");
   });
 
   test("startup goal bundled role skills define role-specific operating modes", async () => {
@@ -323,6 +363,10 @@ describe("workflow bundles", () => {
       {
         role: "qa-lead",
         phrases: ["Restate the user-facing behavior", "Separate verified facts"],
+      },
+      {
+        role: "web-design",
+        phrases: ["Before | After | Why", "**Approve** or **Block**"],
       },
     ];
 
@@ -752,14 +796,14 @@ describe("workflow bundles", () => {
     );
     expect(bundle.manifest.skills.map((skill) => skill.source)).toContain("./skills/custom-review");
     await expect(readFile(scaffold.readmePath, "utf8")).resolves.toContain(
-      "An Omniskills workflow that composes reusable agent skills.",
+      "An Omniskill workflow that composes reusable agent skills.",
     );
     await expect(
       readFile(join(scaffold.bundleDir, "skills", "release-review", "SKILL.md"), "utf8"),
-    ).resolves.toContain("This is the entry skill for the release-review Omniskills workflow.");
+    ).resolves.toContain("This is the entry skill for the release-review Omniskill workflow.");
     await expect(
       readFile(join(scaffold.bundleDir, "skills", "custom-review", "SKILL.md"), "utf8"),
-    ).resolves.toContain("Review this Omniskills workflow from the author perspective.");
+    ).resolves.toContain("Review this Omniskill workflow from the author perspective.");
   });
 
   test("stores workflow install artifact metadata in installed records", async () => {
@@ -886,7 +930,7 @@ describe("workflow bundles", () => {
           homeDir: rootDir,
           workflowName: "missing-workflow",
         }),
-      ).rejects.toThrow("Omniskills workflow is not installed: missing-workflow");
+      ).rejects.toThrow("Omniskill workflow is not installed: missing-workflow");
     } finally {
       await rm(rootDir, { recursive: true, force: true });
     }
@@ -930,7 +974,7 @@ describe("workflow bundles", () => {
 
   test("infers legacy removal artifacts and skips unmappable legacy sources", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "workflow-remove-legacy-"));
-    const workflowDir = join(rootDir, ".getsuperpower", "workflows");
+    const workflowDir = join(rootDir, ".omniskill", "workflows");
 
     try {
       await mkdir(workflowDir, { recursive: true });
@@ -1066,7 +1110,7 @@ describe("workflow bundles", () => {
         "utf8",
       ),
     ).resolves.toContain(
-      "This is the entry skill for the development-design-delivery Omniskills workflow.",
+      "This is the entry skill for the development-design-delivery Omniskill workflow.",
     );
   });
 
@@ -1114,7 +1158,7 @@ describe("workflow bundles", () => {
         ),
         "utf8",
       ),
-    ).resolves.toContain("This is the entry skill for the openspec-delivery Omniskills workflow.");
+    ).resolves.toContain("This is the entry skill for the openspec-delivery Omniskill workflow.");
   });
 
   test("loads a workflow bundle from a public git URL", async () => {
@@ -1180,7 +1224,7 @@ describe("workflow bundles", () => {
     const tempDir = await mkdtemp(join(tmpdir(), "workflow-bundle-alias-"));
     const source = "openspec-superpowers";
     const canonicalUrl =
-      "https://github.com/0xroylee/getsuperpower.git#examples/workflows/openspec-superpowers";
+      "https://github.com/devos-ing/omni-skills.git#examples/workflows/openspec-superpowers";
     const commands: WorkflowGitCommand[] = [];
     let checkoutDir = "";
 
@@ -1238,7 +1282,7 @@ describe("workflow bundles", () => {
       "clone",
       "--depth",
       "1",
-      "https://github.com/0xroylee/getsuperpower.git",
+      "https://github.com/devos-ing/omni-skills.git",
       checkoutDir,
     ]);
     expect(bundle.manifest.name).toBe("openspec-delivery");
@@ -1379,9 +1423,9 @@ describe("workflow bundles", () => {
     expect(bundle.source).toHaveProperty("commit");
     expect(getWorkflowSkillInstallSources(bundle)[0]).toContain("file-entry");
     await bundle.cleanup?.();
-    expect(
-      (await readdir(tempDir)).filter((entry) => entry.startsWith("getsuperpower-git-")),
-    ).toEqual([]);
+    expect((await readdir(tempDir)).filter((entry) => entry.startsWith("omniskill-git-"))).toEqual(
+      [],
+    );
     await rm(rootDir, { recursive: true, force: true });
   });
 
@@ -1420,7 +1464,7 @@ describe("workflow bundles", () => {
           return { stdout: "abc123\n", stderr: "", exitCode: 0 };
         },
       }),
-    ).rejects.toThrow("No Omniskills workflow manifest was found");
+    ).rejects.toThrow("No Omniskill workflow manifest was found");
 
     await expect(stat(checkoutDir)).rejects.toThrow();
     await rm(tempDir, { recursive: true, force: true });
@@ -1443,7 +1487,7 @@ describe("workflow bundles", () => {
         },
       }),
     ).rejects.toThrow(
-      "Omniskills workflow alias not found: missing-workflow\nChecked: https://github.com/0xroylee/getsuperpower.git#examples/workflows/missing-workflow",
+      "Omniskill workflow alias not found: missing-workflow\nChecked: https://github.com/devos-ing/omni-skills.git#examples/workflows/missing-workflow",
     );
 
     await expect(stat(checkoutDir)).rejects.toThrow();
@@ -1517,8 +1561,8 @@ describe("workflow bundles", () => {
         readFile(join(preparedEntry?.source ?? "", "workflow.json"), "utf8"),
       ).resolves.toContain('"name": "looped-workflow"');
       const generatedRunner = await readFile(join(preparedEntry?.source ?? "", "loop.mjs"), "utf8");
-      expect(generatedRunner).toContain("GETSUPERPOWER_BIN");
-      expect(generatedRunner).toContain("omniskills");
+      expect(generatedRunner).toContain("OMNISKILL_BIN");
+      expect(generatedRunner).toContain("omniskill");
       expect(generatedRunner).toContain("workflow.json");
       await expect(
         readFile(join(preparedEntry?.source ?? "", "loop.metadata.json"), "utf8"),
@@ -1546,7 +1590,7 @@ describe("workflow bundles", () => {
     }
   });
 
-  test("installs and lists workflow bundles under .getsuperpower", async () => {
+  test("installs and lists workflow bundles under .omniskill", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "workflow-bundle-install-"));
     const bundle = await loadWorkflowBundle("examples/workflows/release-review");
 
@@ -1555,9 +1599,7 @@ describe("workflow bundles", () => {
       bundle,
     });
 
-    expect(installed.path).toBe(
-      join(rootDir, ".getsuperpower", "workflows", "release-review.json"),
-    );
+    expect(installed.path).toBe(join(rootDir, ".omniskill", "workflows", "release-review.json"));
     const installedFile = JSON.parse(await readFile(installed.path, "utf8"));
     expect(installedFile.name).toBe("release-review");
     expect(installedFile.steps).toHaveLength(4);

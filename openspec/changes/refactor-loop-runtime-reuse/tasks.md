@@ -7,7 +7,7 @@
 - [x] Decide where the shared Node runtime asset should live.
 - [x] Decide whether install copies the shared runtime asset automatically or
       declares it in manifest metadata.
-- [x] Decide whether a `getsuperpower loop` adapter belongs in v1 or should be
+- [x] Decide whether a `omniskill loop` adapter belongs in v1 or should be
       deferred.
 - [x] Decide whether the active internal `ponytrail` runtime namespace should
       be renamed as part of this refactor.
@@ -33,7 +33,7 @@
       entrypoint.
 - [x] Extract the generic runtime behavior behind the shared entrypoint.
 - [x] Move active runtime modules from `src/runtimes/ponytrail/` to
-      `src/runtimes/getsuperpower/` and update imports.
+      `src/runtimes/omniskill/` and update imports.
 - [x] Add a failing Node wrapper smoke test for the thin example `loop.mjs`.
 - [x] Reduce the example `loop.mjs` to the thin wrapper.
 - [x] Add a failing install-preparation test for copied shared runtime assets.
@@ -48,7 +48,7 @@
       Evidence: `rtk bun test tests/workflow-bundles.test.ts
       tests/loop-runtime.test.ts tests/cli.test.ts`.
 - [x] Run Node smoke checks against the example workflow loop.
-      Evidence: `rtk env HOME=/private/tmp/getsuperpower-loop-smoke-20260706-1409
+      Evidence: `rtk env HOME=/private/tmp/omniskill-loop-smoke-20260706-1409
       node examples/workflows/grilled-product-dev/loop.mjs start --run
       plan-smoke --json` and matching `status --run plan-smoke --json`.
 - [x] Run CLI validate/deps smoke checks for the example workflow.

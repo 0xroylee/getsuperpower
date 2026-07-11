@@ -60,7 +60,7 @@ In scope:
 - Update install preparation so any shared runtime asset needed by the thin
   wrapper is copied into the installed entry skill destination.
 - Rename the active internal runtime module namespace from
-  `src/runtimes/ponytrail/` to `src/runtimes/getsuperpower/`, and update source
+  `src/runtimes/ponytrail/` to `src/runtimes/omniskill/`, and update source
   imports, tests, and docs that point at the old runtime path.
 - Add focused tests for the reusable runtime seam, the thin example wrapper, and
   install-time copied runtime files.
@@ -73,7 +73,7 @@ Out of scope:
 - Changing the v1 command names.
 - Turning the loop into an autonomous agent executor.
 - Adding automatic phase execution.
-- Requiring `getsuperpower` to be globally installed for an installed skill's
+- Requiring `omniskill` to be globally installed for an installed skill's
   `loop.mjs` to work.
 - Adding a new npm dependency.
 - Rewriting unrelated workflow-bundle install behavior.
@@ -84,8 +84,8 @@ Out of scope:
 
 Use a reusable runtime module plus a thin workflow wrapper.
 
-The shared runtime should live in the renamed GetSuperpower runtime namespace,
-for example `src/runtimes/getsuperpower/workflow-loop-runtime.mjs`, and own the
+The shared runtime should live in the renamed Omniskill runtime namespace,
+for example `src/runtimes/omniskill/workflow-loop-runtime.mjs`, and own the
 generic behavior:
 
 - parse loop CLI arguments;
@@ -120,13 +120,13 @@ During source validation and install:
   - copied shared runtime asset, such as `loop-runtime.mjs`.
 
 This keeps installed skills Node-portable and avoids a hard dependency on a
-global `getsuperpower` command. A future `getsuperpower loop ...` command can be
+global `omniskill` command. A future `omniskill loop ...` command can be
 implemented as another adapter over the same runtime, but it should not be the
 only execution path for installed workflows.
 
 As part of the same refactor, the existing `src/runtimes/ponytrail/` folder
-should move to `src/runtimes/getsuperpower/`. Active code and docs should stop
-teaching new contributors that the GetSuperpower workflow runtime lives under
+should move to `src/runtimes/omniskill/`. Active code and docs should stop
+teaching new contributors that the Omniskill workflow runtime lives under
 the old Ponytrail name.
 
 ## Acceptance Criteria
@@ -144,7 +144,7 @@ the old Ponytrail name.
   `node loop.mjs ...` to run outside the source repo.
 - Non-looped workflows install exactly as before.
 - Existing loop metadata remains generated automatically from `workflow.json`.
-- Active runtime imports use `src/runtimes/getsuperpower/` instead of
+- Active runtime imports use `src/runtimes/omniskill/` instead of
   `src/runtimes/ponytrail/`.
 - Tests cover the reusable runtime directly and the workflow wrapper through
   Node.
@@ -155,9 +155,9 @@ the old Ponytrail name.
 
 - The shared runtime asset will live as a checked-in Node-compatible `.mjs`
   file.
-- GetSuperpower will copy the standard `loop-runtime.mjs` asset automatically
+- Omniskill will copy the standard `loop-runtime.mjs` asset automatically
   when `workflow.json` declares `loop`.
-- V1 will not add a `getsuperpower loop` adapter. The stable command remains
+- V1 will not add a `omniskill loop` adapter. The stable command remains
   `node loop.mjs ...`.
 - The active internal runtime namespace will move from `src/runtimes/ponytrail/`
-  to `src/runtimes/getsuperpower/`.
+  to `src/runtimes/omniskill/`.

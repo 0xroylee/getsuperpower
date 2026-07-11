@@ -2,9 +2,9 @@
 
 ## Summary
 
-Create a repo-root `landing/` app for the GetSuperpower marketing surface,
+Create a repo-root `landing/` app for the Omniskill marketing surface,
 adapted from the Figma/Vite export at
-`/Users/roy/Downloads/Create GetSuperpower Workflows/`.
+`/Users/roy/Downloads/Create Omniskill Workflows/`.
 
 The landing app should use Next.js 16 and Tailwind CSS, preserve the current
 workflow-bundle story, and stay separate from the Bun CLI package so website
@@ -35,7 +35,7 @@ In scope:
 
 Out of scope:
 
-- Changing GetSuperpower CLI behavior.
+- Changing Omniskill CLI behavior.
 - Moving the Bun CLI package into a monorepo package layout.
 - Adding hosted deployment configuration.
 - Adding analytics, auth, registry browsing, or backend APIs.
@@ -76,7 +76,7 @@ Next.js conventions:
 
 - `landing/` contains a runnable Next.js 16 app.
 - The landing app uses Tailwind CSS for page styling.
-- The page renders GetSuperpower as the first-viewport product signal.
+- The page renders Omniskill as the first-viewport product signal.
 - The page includes the workflow cards and install/create/validate command
   examples from the downloaded export, updated to the current root-first CLI
   story.
@@ -93,5 +93,5 @@ Next.js conventions:
   convention?
 - Should the first pass keep the dark visual direction from the export, or do
   you want a brighter public marketing look before implementation?
-- Should the landing page link to `0xroylee/getsuperpower` or the current
+- Should the landing page link to `devos-ing/omni-skills` or the current
   repository remote if those differ?

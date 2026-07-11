@@ -1,4 +1,4 @@
-# Real Engineering Omniskills Workflow
+# Real Engineering Omniskill Workflow
 
 This example combines:
 
@@ -7,7 +7,7 @@ This example combines:
 - Superpowers brainstorming and writing-plans
 - Matt Pocock engineering skills
 
-`omniskills install` automatically uses the Skills CLI to fetch missing
+`omniskill install` automatically uses the Skills CLI to fetch missing
 `mattpocock:*` dependencies. If that automatic bootstrap fails, run the same
 package install through the CLI and retry:
 
@@ -15,7 +15,7 @@ package install through the CLI and retry:
 bun run dev -- skills install mattpocock/skills
 ```
 
-Validate this Omniskills workflow from the repo root:
+Validate this Omniskill workflow from the repo root:
 
 ```bash
 bun run dev -- validate examples/workflows/real-engineering

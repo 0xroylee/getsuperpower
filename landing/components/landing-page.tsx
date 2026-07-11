@@ -50,7 +50,7 @@ export function LandingPage({ githubStarsLabel = "Stars" }: LandingPageProps) {
   }, [query]);
 
   const active = commands[activeCommand] ?? commands[0];
-  const heroInstallCommand = commands[0]?.command ?? "npx omniskills@latest install startup-goal";
+  const heroInstallCommand = commands[0]?.command ?? "npx omniskill@latest install startup-goal";
 
   function copyCommand(command: (typeof commands)[number], index: number) {
     setActiveCommand(index);
@@ -68,7 +68,7 @@ export function LandingPage({ githubStarsLabel = "Stars" }: LandingPageProps) {
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-500">
             <Zap size={14} />
           </span>
-          <span className="text-sm font-medium text-white/90">Omniskills</span>
+          <span className="text-sm font-medium text-white/90">Omniskill</span>
         </a>
         <div className="flex items-center gap-5 text-sm text-white/50">
           <a href="#workflows" className="transition hover:text-white/80">
@@ -101,7 +101,7 @@ export function LandingPage({ githubStarsLabel = "Stars" }: LandingPageProps) {
           Install the workflow.
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-white/48">
-          Omniskills is a many-skill bank for AI agents. Install one workflow skill tree, call one
+          Omniskill is a many-skill bank for AI agents. Install one workflow skill tree, call one
           entry skill with a goal, and give your agent the roles, playbooks, and verification habits
           that 3x your ability.
         </p>
@@ -175,7 +175,7 @@ export function LandingPage({ githubStarsLabel = "Stars" }: LandingPageProps) {
           </p>
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_28rem] lg:items-end">
             <div>
-              <h2 className="text-3xl font-medium text-white/90">Pick an Omniskills workflow</h2>
+              <h2 className="text-3xl font-medium text-white/90">Pick an Omniskill workflow</h2>
               <p className="mt-3 max-w-xl text-sm leading-6 text-white/42">
                 Browse installable workflow bundles, then open a detail route for the role map,
                 skill tree, and copyable install command.
@@ -247,9 +247,9 @@ export function LandingPage({ githubStarsLabel = "Stars" }: LandingPageProps) {
             <p className="mb-8 text-sm leading-6 text-white/45">
               Install by alias, public git URL, or local path. The CLI validates the workflow
               manifest, bootstraps missing external skills from workflow metadata, and records
-              installed Omniskills workflows under{" "}
-              <code className="text-white/65">~/.getsuperpower/workflows/</code> by default.
-              Loop-enabled workflows use <code className="text-white/65">omniskills loop</code> for
+              installed Omniskill workflows under{" "}
+              <code className="text-white/65">~/.omniskill/workflows/</code> by default.
+              Loop-enabled workflows use <code className="text-white/65">omniskill loop</code> for
               resumable, action-only state.
             </p>
             <div className="space-y-2">
@@ -346,7 +346,7 @@ export function LandingPage({ githubStarsLabel = "Stars" }: LandingPageProps) {
             Author your own workflow
           </div>
           <h2 className="mb-3 text-3xl font-medium text-white/90">
-            Package your workflow as an Omniskills workflow
+            Package your workflow as an Omniskill workflow
           </h2>
           <p className="mx-auto mb-8 max-w-xl text-sm leading-6 text-white/45">
             Scaffold a bundle, define the entry skill, list sub-skills in workflow.json, validate,
@@ -354,11 +354,11 @@ export function LandingPage({ githubStarsLabel = "Stars" }: LandingPageProps) {
           </p>
           <div className="mx-auto grid max-w-3xl gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
             <TerminalBlock
-              copyText="npx omniskills@latest init my-workflow"
+              copyText="npx omniskill@latest init my-workflow"
               lines={[
                 {
                   prefix: "$",
-                  text: "npx omniskills@latest init my-workflow",
+                  text: "npx omniskill@latest init my-workflow",
                 },
               ]}
             />
@@ -379,7 +379,7 @@ export function LandingPage({ githubStarsLabel = "Stars" }: LandingPageProps) {
             <span className="flex h-5 w-5 items-center justify-center rounded bg-violet-500">
               <Zap size={10} className="text-white" />
             </span>
-            Omniskills
+            Omniskill
           </div>
           <div className="flex items-center gap-6 text-xs text-white/30">
             <a href={githubUrl} className="transition hover:text-white/60">

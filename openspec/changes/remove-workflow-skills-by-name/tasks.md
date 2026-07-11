@@ -4,8 +4,8 @@
 
 - [x] Create OpenSpec proposal, spec delta, and task checklist.
 - [x] Review `proposal.md` scope with the human owner.
-- [x] Confirm the public command spelling: `getsuperpower remove <workflow-name>`.
-- [x] Confirm the compatibility alias: `getsuperpower workflow remove <workflow-name>`.
+- [x] Confirm the public command spelling: `omniskill remove <workflow-name>`.
+- [x] Confirm the compatibility alias: `omniskill workflow remove <workflow-name>`.
 - [x] Confirm the safety behavior for shared artifacts and legacy records.
 
 ## 2. Brainstorm Design

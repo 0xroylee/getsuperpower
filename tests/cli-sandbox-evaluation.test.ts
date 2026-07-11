@@ -9,7 +9,7 @@ import {
 
 describe("CLI sandbox evaluation", () => {
   test("runs before and after workflow checks in isolated sandboxes", async () => {
-    const sandboxRoot = await mkdtemp(join(tmpdir(), "getsuperpower-cli-eval-test-"));
+    const sandboxRoot = await mkdtemp(join(tmpdir(), "omniskill-cli-eval-test-"));
 
     try {
       const report = await runCliSandboxEvaluation({
@@ -73,7 +73,7 @@ describe("CLI sandbox evaluation", () => {
   });
 
   test("renders performance accuracy and token spend matrices", async () => {
-    const sandboxRoot = await mkdtemp(join(tmpdir(), "getsuperpower-cli-eval-render-"));
+    const sandboxRoot = await mkdtemp(join(tmpdir(), "omniskill-cli-eval-render-"));
 
     try {
       const report = await runCliSandboxEvaluation({
@@ -82,7 +82,7 @@ describe("CLI sandbox evaluation", () => {
       });
       const markdown = renderCliSandboxEvaluation(report);
 
-      expect(markdown).toContain("# Omniskills CLI Sandbox Evaluation");
+      expect(markdown).toContain("# Omniskill CLI Sandbox Evaluation");
       expect(markdown).toContain("## Performance Matrix");
       expect(markdown).toContain("## Accuracy Matrix");
       expect(markdown).toContain("## Token Spend Matrix");

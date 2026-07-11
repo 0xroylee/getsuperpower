@@ -2,8 +2,8 @@
 
 ## Summary
 
-Update the GetSuperpower landing page to use the current downloaded reference
-folder at `/Users/roy/Downloads/Create GetSuperpower Workflows/` as the design
+Update the Omniskill landing page to use the current downloaded reference
+folder at `/Users/roy/Downloads/Create Omniskill Workflows/` as the design
 source for the workflow browsing experience.
 
 The refactor should keep the existing isolated Next.js landing app and the
@@ -16,10 +16,10 @@ contract based on the reference rather than only the original app-port notes.
 
 ## Motivation
 
-The current landing page already explains GetSuperpower, shows the simulated
+The current landing page already explains Omniskill, shows the simulated
 workflow run, and links workflow cards to detail pages. The downloaded
 reference pushes the workflow area further toward a real registry experience:
-visitors can compare workflows quickly and understand that GetSuperpower bundles
+visitors can compare workflows quickly and understand that Omniskill bundles
 are installable assets rather than static marketing cards.
 
 That comparison surface is now the clearest gap between the reference and the
@@ -49,7 +49,7 @@ Out of scope:
   React Router dependency stack.
 - Fetching live workflow registry metrics.
 - Showing fake local activity, rank, or install-count data as product evidence.
-- Changing GetSuperpower CLI behavior.
+- Changing Omniskill CLI behavior.
 - Replacing workflow detail routes with React Router.
 - Advertising paused Pony Trail history, revert, or prehook features as active
   product capabilities.

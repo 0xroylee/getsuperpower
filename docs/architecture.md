@@ -1,6 +1,6 @@
-# Omniskills Architecture
+# Omniskill Architecture
 
-This repository now focuses on Omniskills workflow skills. The older Ponyrace
+This repository now focuses on Omniskill workflow skills. The older Ponyrace
 requirement-review runtime has been removed from source.
 
 ## Source Map
@@ -11,7 +11,7 @@ src/
   plugins/
     skill-installer.ts
   runtimes/
-    getsuperpower/
+    omniskill/
       instruction-context.ts
       snapshots.ts
       workflow-bundles.ts
@@ -22,18 +22,18 @@ src/
 
 `src/cli.ts` is a thin Commander shell. It owns command registration, option
 parsing, and output formatting. It delegates bundle behavior to
-`src/getsuperpower.ts` and skill installation to `src/plugins/skill-installer.ts`.
+`src/omniskill.ts` and skill installation to `src/plugins/skill-installer.ts`.
 
 Primary commands:
 
-- `omniskills init <name>`
-- `omniskills validate <source>`
-- `omniskills lock <source>`
-- `omniskills deps <source>`
-- `omniskills install <source>`
-- `omniskills list`
-- `omniskills remove <workflow-name>`
-- `omniskills loop <start|status|log|advance|summary> <source>`
+- `omniskill init <name>`
+- `omniskill validate <source>`
+- `omniskill lock <source>`
+- `omniskill deps <source>`
+- `omniskill install <source>`
+- `omniskill list`
+- `omniskill remove <workflow-name>`
+- `omniskill loop <start|status|log|advance|summary> <source>`
 - `skills install [source]`
 - `skills update [source]`
 
@@ -46,14 +46,14 @@ Compatibility aliases:
 - `workflow list`
 - `workflow remove`
 
-## Omniskills Runtime
+## Omniskill Runtime
 
-`src/runtimes/getsuperpower/workflow-bundles.ts` owns the bundle contract:
+`src/runtimes/omniskill/workflow-bundles.ts` owns the bundle contract:
 
 - parse and validate `workflow.json`
 - parse and validate optional `workflow.lock.json`
 - generate deterministic skill fingerprints for local and external skill
-  sources through `omniskills lock <source>`
+  sources through `omniskill lock <source>`
 - validate optional loop metadata: `loop`, one `skills[].entry`, and
   `steps[].instruction`
 - reject duplicate step ids
@@ -62,13 +62,13 @@ Compatibility aliases:
 - list skill dependency sources plus optional Skills CLI repository metadata
 - prepare looped workflow entry skill installs with copied `workflow.json`,
   generated `loop.mjs`, and generated `loop.metadata.json`
-- install normalized global records under `~/.getsuperpower/workflows/` with
+- install normalized global records under `~/.omniskill/workflows/` with
   exact skill artifact metadata for later removal
-- list installed Omniskills workflows
+- list installed Omniskill workflows
 - plan and execute removal of installed workflow skill artifacts while
   preserving artifacts referenced by other workflow records
 
-The runtime folder retains the legacy `getsuperpower` name. Older Pony Trail history,
+The runtime folder uses the current `omniskill` name. Older Pony Trail history,
 revert, and prehook behavior remains paused and is not exposed by the public
 CLI.
 
@@ -91,33 +91,33 @@ directory multiple times.
 
 Supported sources include bundled skills, local skill directories, Superpowers
 plugin-cache skills, Matt Pocock installed skills, and external packages routed
-through the Skills CLI by `src/getsuperpower.ts`. Workflow manifests can keep
+through the Skills CLI by `src/omniskill.ts`. Workflow manifests can keep
 the original step skill name in `skills[].source` and declare the installable
 Skills CLI package in `skills[].repo`.
 
 ## Paused Pony Trail Runtime
 
-`src/runtimes/getsuperpower/snapshots.ts` and
-`src/runtimes/getsuperpower/instruction-context.ts` remain in the source tree for
-future or legacy use, but the public Omniskills CLI does not expose history,
+`src/runtimes/omniskill/snapshots.ts` and
+`src/runtimes/omniskill/instruction-context.ts` remain in the source tree for
+future or legacy use, but the public Omniskill CLI does not expose history,
 revert, or prehook commands while Pony Trail is paused.
 
 Skill install and workflow install commands do not write snapshot history during
 this pause. Installed workflow records live under
-`~/.getsuperpower/workflows/`; project-local records are only written when a
+`~/.omniskill/workflows/`; project-local records are only written when a
 caller passes `--dir`. Optional looped workflows may write per-run state under
-`~/.getsuperpower/runs/<workflow>/<run-id>/` through `omniskills loop` or the
+`~/.omniskill/runs/<workflow>/<run-id>/` through `omniskill loop` or the
 compatibility `loop.mjs` wrapper.
 
 ## Bundle Layout
 
 ```text
-my-omniskills-workflow/
+my-omniskill-workflow/
   workflow.json
   workflow.lock.json
   README.md
   skills/
-    my-omniskills-workflow/
+    my-omniskill-workflow/
       SKILL.md
     optional-local-skill/
       SKILL.md
@@ -126,7 +126,7 @@ my-omniskills-workflow/
 `skills/<name>/SKILL.md` is the callable entry skill. Its required sub-skills
 should stay aligned with `workflow.json`.
 
-`workflow.lock.json` is generated by `omniskills lock <source>`. It records
+`workflow.lock.json` is generated by `omniskill lock <source>`. It records
 deterministic hashes for local skill files and stable fingerprints for external
 skill sources so reviewers can see when a workflow's skill tree changed. Missing
 lock files remain valid for compatibility, but checked-in public workflows

@@ -1,6 +1,6 @@
-# Omniskills Landing
+# Omniskill Landing
 
-This folder contains the isolated Next.js landing app for Omniskills.
+This folder contains the isolated Next.js landing app for Omniskill.
 
 ## Run Locally
 

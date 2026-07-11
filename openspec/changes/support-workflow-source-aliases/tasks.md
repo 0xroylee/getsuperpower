@@ -37,7 +37,7 @@
 
 ## 5. Verify And Archive
 
-- [x] Run focused Bun tests for workflow bundles and GetSuperpower commands.
+- [x] Run focused Bun tests for workflow bundles and Omniskill commands.
 - [x] Run CLI smoke checks against a scratch directory under `work/`.
 - [x] Run `rtk bun run check`.
 - [x] Record Ponytrail post-change evidence.

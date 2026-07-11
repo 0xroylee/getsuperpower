@@ -12,11 +12,11 @@ import {
   success,
 } from "./cli-theme";
 import {
-  configureGetSuperpowerCommand,
-  type GetSuperpowerExternalSkillDependencyInstaller,
+  configureOmniskillCommand,
   getSkillsCliPackageForSource,
   installExternalSkillDependencyWithSkillsCli,
-} from "./getsuperpower";
+  type OmniskillExternalSkillDependencyInstaller,
+} from "./omniskill";
 import { installAgentSkill, parseSkillInstallAgents, type SkillInstallResult } from "./plugins";
 
 type SkillChangeOperation = "install" | "update";
@@ -32,7 +32,7 @@ interface CommanderVersionInternals {
 
 export interface BuildProgramOptions {
   cwd?: string;
-  installExternalSkillDependency?: GetSuperpowerExternalSkillDependencyInstaller;
+  installExternalSkillDependency?: OmniskillExternalSkillDependencyInstaller;
 }
 
 export function buildProgram(options: BuildProgramOptions = {}): Command {
@@ -42,8 +42,8 @@ export function buildProgram(options: BuildProgramOptions = {}): Command {
   const program = new Command();
 
   program
-    .name("omniskills")
-    .description("Install, author, and inspect Omniskills skill trees.")
+    .name("omniskill")
+    .description("Install, author, and inspect Omniskill skill trees.")
     .version(CLI_VERSION)
     .option("-v", "output the version number");
   program.configureHelp({
@@ -60,7 +60,7 @@ export function buildProgram(options: BuildProgramOptions = {}): Command {
     outputVersionAndExit(program, CLI_VERSION);
   });
 
-  configureGetSuperpowerCommand(program, {
+  configureOmniskillCommand(program, {
     rootDir,
     installSkill,
     printSkillInstallResult,
@@ -97,7 +97,7 @@ function outputVersionAndExit(program: Command, version: string): never {
 function configureSkillInstallCommand(
   command: Command,
   rootDir: string,
-  installExternalSkillDependency: GetSuperpowerExternalSkillDependencyInstaller,
+  installExternalSkillDependency: OmniskillExternalSkillDependencyInstaller,
 ): Command {
   return configureSkillChangeCommand(
     command,
@@ -111,7 +111,7 @@ function configureSkillChangeCommand(
   command: Command,
   rootDir: string,
   operation: SkillChangeOperation,
-  installExternalSkillDependency?: GetSuperpowerExternalSkillDependencyInstaller,
+  installExternalSkillDependency?: OmniskillExternalSkillDependencyInstaller,
 ): Command {
   return command
     .argument(
@@ -194,7 +194,7 @@ interface InstallExternalSkillsPackageInput {
   packageName: string;
   homeDir: string;
   dryRun: boolean;
-  installExternalSkillDependency: GetSuperpowerExternalSkillDependencyInstaller;
+  installExternalSkillDependency: OmniskillExternalSkillDependencyInstaller;
 }
 
 interface InstallExternalSkillsPackageResult {
@@ -332,7 +332,7 @@ function printExternalSkillsPackageInstallResult(result: InstallExternalSkillsPa
 
   if (!result.dryRun) {
     console.log("");
-    console.log(success("Welcome to Omniskills."));
+    console.log(success("Welcome to Omniskill."));
     console.log("Restart your agent IDE so it loads the latest skills.");
   }
 }
@@ -343,7 +343,7 @@ function printPostSkillChangeWelcome(result: SkillInstallResult): void {
   }
 
   console.log("");
-  console.log(success("Welcome to Omniskills."));
+  console.log(success("Welcome to Omniskill."));
   console.log("Restart your agent IDE so it loads the latest skills.");
 }
 
