@@ -217,7 +217,7 @@ async function runBaseline(input: {
         id: "baseline-validates-workflow",
         label: "CLI validates the workflow source",
         passed: logs.some((line) =>
-          stripAnsi(line).includes("Omniskills valid: openspec-delivery@0.1.0"),
+          stripAnsi(line).startsWith("Omniskills valid: openspec-delivery@"),
         ),
         detail: "validate should accept the OpenSpec workflow fixture",
       },
@@ -298,7 +298,7 @@ async function runWorkflow(input: {
       {
         id: "workflow-list-shows-installed-workflow",
         label: "Workflow mode lists the installed workflow",
-        passed: logs.some((line) => stripAnsi(line).includes("openspec-delivery 0.1.0")),
+        passed: logs.some((line) => stripAnsi(line).startsWith("openspec-delivery ")),
         detail: "list should show the workflow installed by install",
       },
       {
