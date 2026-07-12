@@ -7,8 +7,8 @@ Allow Omniskill source commands to accept a public workflow alias such as
 repository path:
 
 ```bash
-npx omniskill@latest install openspec-superpowers
-npx omniskill@latest install 'https://github.com/devos-ing/omni-skills.git#examples/workflows/openspec-superpowers'
+npx omniskill@latest@latest install openspec-superpowers
+npx omniskill@latest@latest install 'https://github.com/devos-ing/omni-skills.git#examples/workflows/openspec-superpowers'
 ```
 
 These two commands should resolve to the same workflow bundle. Existing public
@@ -72,8 +72,8 @@ the canonical path it checked.
 
 ## Acceptance Criteria
 
-- `npx omniskill@latest install openspec-superpowers` installs the same
-  workflow as `npx omniskill@latest install 'https://github.com/devos-ing/omni-skills.git#examples/workflows/openspec-superpowers'`.
+- `npx omniskill@latest@latest install openspec-superpowers` installs the same
+  workflow as `npx omniskill@latest@latest install 'https://github.com/devos-ing/omni-skills.git#examples/workflows/openspec-superpowers'`.
 - `validate` and `deps` accept the same alias source form because they
   share the workflow source loader.
 - Explicit public git URLs still work exactly as they do today.

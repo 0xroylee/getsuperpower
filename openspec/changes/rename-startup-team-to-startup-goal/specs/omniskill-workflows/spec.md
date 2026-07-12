@@ -10,7 +10,7 @@ Omniskill SHALL expose the startup role workflow under the canonical
 #### Scenario: user installs the startup goal workflow by alias
 
 - **WHEN** a user reads current public installation guidance
-- **THEN** the guidance shows `npx omniskill@latest install startup-goal`
+- **THEN** the guidance shows `npx omniskill@latest@latest install startup-goal`
 - **AND** it does not present `startup-team` as the current public alias
 
 #### Scenario: author validates the checked-in startup role workflow
@@ -61,6 +61,6 @@ role workflow.
 - **WHEN** a visitor reaches the landing workflow registry
 - **THEN** the registry includes Startup Goal
 - **AND** the entry skill is `startup-goal`
-- **AND** the install command is `npx omniskill@latest install startup-goal`
+- **AND** the install command is `npx omniskill@latest@latest install startup-goal`
 - **AND** the source link points to `examples/workflows/startup-goal`
 - **AND** the registry still includes the individual startup role workflows

@@ -13,7 +13,7 @@ Vocabulary:
 Command note:
 
 - In a cloned Omniskills repo, use `bun run dev -- <command>`.
-- In another project, use `npx omniskill <command>`.
+- In another project, use `npx omniskill@latest <command>`.
 
 ## Recommended: Call The Authoring Skill
 
@@ -21,7 +21,7 @@ Start here when you want an agent to help create the workflow and skills set.
 Install the bundled authoring skill:
 
 ```bash
-npx omniskill skills install creating-bundle-skills
+npx omniskill@latest skills install creating-bundle-skills
 ```
 
 Restart your agent app so it reloads the skill, then call it directly:
@@ -46,7 +46,7 @@ entry skill, local role skills, dependency choices, gates, or handoff contracts,
 install and invoke the narrower prompt-writing helper:
 
 ```bash
-npx omniskill skills install writing-workflow-skills
+npx omniskill@latest skills install writing-workflow-skills
 ```
 
 Use the rest of this guide as the checklist for what that skill should create.
@@ -331,13 +331,13 @@ git@github.com:devos-ing/omni-skills.git
 Checked-in examples under `examples/workflows` can be installed by folder alias:
 
 ```bash
-npx omniskill install support-triage
+npx omniskill@latest install support-triage
 ```
 
 That alias resolves to:
 
 ```bash
-npx omniskill install 'https://github.com/devos-ing/omni-skills.git#examples/workflows/support-triage'
+npx omniskill@latest install 'https://github.com/devos-ing/omni-skills.git#examples/workflows/support-triage'
 ```
 
 If you have write access:
@@ -356,14 +356,14 @@ Users can also install a workflow directly from a public git repository when
 the repository root contains `workflow.json`:
 
 ```bash
-npx omniskill install https://github.com/acme/support-triage.git
+npx omniskill@latest install https://github.com/acme/support-triage.git
 ```
 
 If the workflow lives in a subdirectory, add the workflow path as a URL
 fragment:
 
 ```bash
-npx omniskill install 'https://github.com/acme/workflows.git#examples/workflows/support-triage'
+npx omniskill@latest install 'https://github.com/acme/workflows.git#examples/workflows/support-triage'
 ```
 
 Before opening the pull request, run:

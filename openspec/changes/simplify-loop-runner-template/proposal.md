@@ -84,7 +84,7 @@ Out of scope:
 - executing workflow phases automatically;
 - removing `loop.metadata.json`;
 - resolving installed workflow names without a source path;
-- requiring network fallback such as `npx omniskill` from generated runners.
+- requiring network fallback such as `npx omniskill@latest` from generated runners.
 
 ## Recommended Design
 

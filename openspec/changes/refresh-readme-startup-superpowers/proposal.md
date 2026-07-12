@@ -37,8 +37,8 @@ In scope:
 - Use the provided screenshot as README material, copied into a stable repo
   asset path.
 - Remove README references to the old diagram assets as primary content.
-- Keep the real public command style: `npx omniskill@latest ...`.
-- Lead with `npx omniskill@latest install startup-team`.
+- Keep the real public command style: `npx omniskill@latest@latest ...`.
+- Lead with `npx omniskill@latest@latest install startup-team`.
 - Include a goal/loop example for startup-team or a loop-capable workflow using
   the current `omniskill loop` command surface.
 - Explain that Omniskill bundles compose Matt Pocock skills, Superpowers,
@@ -70,7 +70,7 @@ Out of scope:
    - Call one entry skill.
    - Let startup roles and process skills carry complex work forward.
 4. Quick start:
-   - `npx omniskill@latest install startup-team`
+   - `npx omniskill@latest@latest install startup-team`
    - example invocation for `$startup-team`
 5. Goal loop:
    - show `omniskill loop start ...`
@@ -89,7 +89,7 @@ Out of scope:
 
 - `README.md` starts with the new product positioning around "Power your
   ability."
-- `README.md` shows `npx omniskill@latest install startup-team` near the
+- `README.md` shows `npx omniskill@latest@latest install startup-team` near the
   top.
 - `README.md` describes starting a company with startup role workflows.
 - `README.md` explains goal loops as action-only, resumable workflow state that

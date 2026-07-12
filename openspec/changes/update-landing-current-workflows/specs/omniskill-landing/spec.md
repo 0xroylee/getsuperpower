@@ -11,7 +11,7 @@ The landing page SHALL teach the current root-first Omniskill install flow.
 - **WHEN** a visitor opens the landing page install section
 - **THEN** the page shows alias-first install commands for checked-in example
   workflows
-- **AND** the page still presents `npx omniskill@latest` as the public
+- **AND** the page still presents `npx omniskill@latest@latest` as the public
   launcher
 - **AND** the page includes commands for listing, authoring, validating,
   inspecting workflow dependencies, locking skill fingerprints, removing

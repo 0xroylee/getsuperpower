@@ -53,20 +53,20 @@ describe("landing app source contract", () => {
     expect(content).toContain("Founding Engineer");
     expect(content).toContain("QA Lead");
     expect(content).toContain("avatarSeed");
-    expect(content).toContain("npx omniskill install startup-goal");
-    expect(content).toContain("npx omniskill install ceo");
-    expect(content).toContain("npx omniskill install cto");
-    expect(content).toContain("npx omniskill install product-manager");
-    expect(content).toContain("npx omniskill install engineering-manager");
-    expect(content).toContain("npx omniskill install founding-engineer");
-    expect(content).toContain("npx omniskill install qa-lead");
-    expect(content).toContain("npx omniskill deps startup-goal");
-    expect(content).toContain("npx omniskill lock examples/workflows/startup-goal");
-    expect(content).toContain("npx omniskill remove startup-goal");
-    expect(content).not.toContain("npx omniskill install startup-team");
-    expect(content).toContain("npx omniskill loop status grilled-product-dev --latest --json");
-    expect(content).toContain("npx omniskill validate");
-    expect(content).not.toContain("npx omniskill omniskill");
+    expect(content).toContain("npx omniskill@latest install startup-goal");
+    expect(content).toContain("npx omniskill@latest install ceo");
+    expect(content).toContain("npx omniskill@latest install cto");
+    expect(content).toContain("npx omniskill@latest install product-manager");
+    expect(content).toContain("npx omniskill@latest install engineering-manager");
+    expect(content).toContain("npx omniskill@latest install founding-engineer");
+    expect(content).toContain("npx omniskill@latest install qa-lead");
+    expect(content).toContain("npx omniskill@latest deps startup-goal");
+    expect(content).toContain("npx omniskill@latest lock examples/workflows/startup-goal");
+    expect(content).toContain("npx omniskill@latest remove startup-goal");
+    expect(content).not.toContain("npx omniskill@latest install startup-team");
+    expect(content).toContain("npx omniskill@latest loop status grilled-product-dev --latest --json");
+    expect(content).toContain("npx omniskill@latest validate");
+    expect(content).not.toContain("npx omniskill@latest omniskill");
   });
 
   test("leads with the power-your-ability positioning", () => {
@@ -77,7 +77,7 @@ describe("landing app source contract", () => {
     expect(page).toContain("Install the workflow.");
     expect(page).toContain("many-skill bank");
     expect(page).toContain("3x your ability");
-    expect(page).toContain("npx omniskill install startup-goal");
+    expect(page).toContain("npx omniskill@latest install startup-goal");
     expect(page).toContain("Workflow in motion");
     expect(page).toContain("See startup-goal coordinate the work.");
     expect(page).not.toContain("How it works + Agent run demo");
@@ -218,8 +218,8 @@ describe("landing app source contract", () => {
     expect(content).toContain(`\${githubUrl}/tree/main/examples/workflows/startup-goal`);
     expect(content).toContain(`\${githubUrl}/tree/main/examples/workflows/cto`);
     expect(content).toContain(`\${githubUrl}/tree/main/examples/workflows/haaland`);
-    expect(content).toContain("npx omniskill install startup-goal");
-    expect(content).toContain("npx omniskill install haaland");
+    expect(content).toContain("npx omniskill@latest install startup-goal");
+    expect(content).toContain("npx omniskill@latest install haaland");
     expect(content).toContain("Create one profile-icon meme concept");
     expect(content).not.toContain("Generate meme angles");
     expect(content).toContain('label: "Implementation"');
@@ -297,7 +297,7 @@ describe("landing app source contract", () => {
     const content = readLandingFile("lib/landing-content.ts");
     const page = readLandingFile("components/landing-page.tsx");
 
-    expect(content).toContain("npx omniskill loop status grilled-product-dev --latest --json");
+    expect(content).toContain("npx omniskill@latest loop status grilled-product-dev --latest --json");
     expect(content).toContain("resumable, action-only workflow state");
     expect(page).toContain("Watch a real startup situation");
     expect(content).not.toContain("executes tools");

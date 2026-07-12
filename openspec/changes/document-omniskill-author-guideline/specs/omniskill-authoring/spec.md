@@ -11,7 +11,7 @@ skills set.
 #### Scenario: new author starts from the guide
 
 - **WHEN** an author reads the Omniskill author guide
-- **THEN** the guide shows `npx omniskill skills install creating-bundle-skills`
+- **THEN** the guide shows `npx omniskill@latest skills install creating-bundle-skills`
 - **AND** the guide shows a copyable `$creating-bundle-skills ...` prompt
 - **AND** the guide explains what files the skill should help create
 

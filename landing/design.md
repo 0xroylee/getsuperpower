@@ -151,11 +151,11 @@ workflow comparison.
 
 Use the current root-first Omniskills command surface:
 
-- `npx omniskill install ...`
-- `npx omniskill list`
-- `npx omniskill init my-workflow`
-- `npx omniskill validate my-workflow`
-- `npx omniskill deps ...`
+- `npx omniskill@latest install ...`
+- `npx omniskill@latest list`
+- `npx omniskill@latest init my-workflow`
+- `npx omniskill@latest validate my-workflow`
+- `npx omniskill@latest deps ...`
 
 Do not advertise removed nested Omniskills subcommands. Workflow entries
 should name the callable entry skill and important sub-skills in plain

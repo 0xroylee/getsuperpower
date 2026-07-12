@@ -24,7 +24,7 @@ The README SHALL explain the current startup role catalog.
 #### Scenario: reader scans the quick start
 
 - **WHEN** a reader scans the quick start section
-- **THEN** the README shows `npx omniskill@latest install startup-team`
+- **THEN** the README shows `npx omniskill@latest@latest install startup-team`
 - **AND** it explains that the startup team bundle includes CEO, CTO, Product
   Manager, Engineering Manager, Founding Engineer, and QA Lead workflows
 - **AND** it shows the individual role aliases

@@ -26,7 +26,7 @@ playbooks, and verification habits that 3x your ability.
 Primary command preview:
 
 ```bash
-npx omniskill install startup-goal
+npx omniskill@latest install startup-goal
 ```
 
 Primary action: Browse workflows.
@@ -156,7 +156,7 @@ Search placeholder: Search workflows, skills, tags...
 - install:
 
 ```bash
-npx omniskill install startup-goal
+npx omniskill@latest install startup-goal
 ```
 
 Description: Move a startup goal through the core operating roles: CEO, CTO,
@@ -213,7 +213,7 @@ Ordered skill path:
 - install:
 
 ```bash
-npx omniskill install ceo
+npx omniskill@latest install ceo
 ```
 
 Description: Founder-level strategy for direction, hard tradeoffs,
@@ -245,7 +245,7 @@ Ordered skill path:
 - install:
 
 ```bash
-npx omniskill install cto
+npx omniskill@latest install cto
 ```
 
 Description: Technical leadership for architecture, domain model, platform
@@ -283,7 +283,7 @@ Ordered skill path:
 - install:
 
 ```bash
-npx omniskill install product-manager
+npx omniskill@latest install product-manager
 ```
 
 Description: Product discovery, PRDs, acceptance criteria, roadmap tradeoffs,
@@ -321,7 +321,7 @@ Ordered skill path:
 - install:
 
 ```bash
-npx omniskill install engineering-manager
+npx omniskill@latest install engineering-manager
 ```
 
 Description: Delivery sequencing, execution risk, quality gates, blocker
@@ -359,7 +359,7 @@ Ordered skill path:
 - install:
 
 ```bash
-npx omniskill install founding-engineer
+npx omniskill@latest install founding-engineer
 ```
 
 Description: Implementation lane for the smallest correct change: tests,
@@ -400,7 +400,7 @@ Ordered skill path:
 - install:
 
 ```bash
-npx omniskill install qa-lead
+npx omniskill@latest install qa-lead
 ```
 
 Description: Release-risk lens for acceptance checks, regression focus,
@@ -435,7 +435,7 @@ Ordered skill path:
 - install:
 
 ```bash
-npx omniskill install haaland
+npx omniskill@latest install haaland
 ```
 
 Description: A one-shot JTS meme workflow for a football-finisher caption,
@@ -465,49 +465,49 @@ action-only state.
 ### Install Startup Goal
 
 ```bash
-npx omniskill install startup-goal
+npx omniskill@latest install startup-goal
 ```
 
 ### Inspect Startup Goal deps
 
 ```bash
-npx omniskill deps startup-goal
+npx omniskill@latest deps startup-goal
 ```
 
 ### Lock skill fingerprints
 
 ```bash
-npx omniskill lock examples/workflows/startup-goal
+npx omniskill@latest lock examples/workflows/startup-goal
 ```
 
 ### Check loop status
 
 ```bash
-npx omniskill loop status grilled-product-dev --latest --json
+npx omniskill@latest loop status grilled-product-dev --latest --json
 ```
 
 ### Create your own workflow
 
 ```bash
-npx omniskill init my-workflow
+npx omniskill@latest init my-workflow
 ```
 
 ### Validate before sharing
 
 ```bash
-npx omniskill validate my-workflow
+npx omniskill@latest validate my-workflow
 ```
 
 ### List installed Omniskills workflows
 
 ```bash
-npx omniskill list
+npx omniskill@latest list
 ```
 
 ### Remove installed workflow
 
 ```bash
-npx omniskill remove startup-goal
+npx omniskill@latest remove startup-goal
 ```
 
 Then invoke in your agent:
@@ -536,7 +536,7 @@ aligned.
 Command:
 
 ```bash
-npx omniskill init my-workflow
+npx omniskill@latest init my-workflow
 ```
 
 Author guide:

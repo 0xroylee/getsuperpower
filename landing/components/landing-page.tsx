@@ -37,7 +37,7 @@ export function LandingPage({ githubStarsLabel = "Stars" }: LandingPageProps) {
   }, [query]);
 
   const active = commands[activeCommand] ?? commands[0];
-  const heroInstallCommand = commands[0]?.command ?? "npx omniskill install startup-goal";
+  const heroInstallCommand = commands[0]?.command ?? "npx omniskill@latest install startup-goal";
 
   function copyCommand(command: (typeof commands)[number], index: number) {
     setActiveCommand(index);
@@ -304,8 +304,8 @@ export function LandingPage({ githubStarsLabel = "Stars" }: LandingPageProps) {
           </div>
           <div className="space-y-3">
             <TerminalBlock
-              copyText="npx omniskill init my-workflow"
-              lines={[{ prefix: "$", text: "npx omniskill init my-workflow" }]}
+              copyText="npx omniskill@latest init my-workflow"
+              lines={[{ prefix: "$", text: "npx omniskill@latest init my-workflow" }]}
             />
             <a
               href={`${githubUrl}/blob/main/docs/workflow-author-guide.md`}

@@ -49,16 +49,16 @@ describe("README source contract", () => {
     ];
 
     for (const alias of roleAliases) {
-      expect(readme).toContain(`npx omniskill install ${alias}`);
+      expect(readme).toContain(`npx omniskill@latest install ${alias}`);
     }
 
     expect(readme).toContain(
       "$startup-goal I have an AI bookkeeping idea; help me choose the wedge and ship a v1 in two weeks",
     );
     expect(readme).toContain(
-      "npx omniskill install 'https://github.com/devos-ing/omni-skills.git#examples/workflows/startup-goal'",
+      "npx omniskill@latest install 'https://github.com/devos-ing/omni-skills.git#examples/workflows/startup-goal'",
     );
-    expect(readme).not.toContain("npx omniskill install startup-team");
+    expect(readme).not.toContain("npx omniskill@latest install startup-team");
     expect(readme).not.toContain(
       "$startup-team help me launch this product from idea to shipped v1",
     );
@@ -74,10 +74,10 @@ describe("README source contract", () => {
     expect(readme).toContain("action-only");
     expect(readme).toContain("next suggested action");
     expect(readme).toContain("until the goal is done");
-    expect(readme).toContain("npx omniskill loop start grilled-product-dev --json");
-    expect(readme).toContain("npx omniskill loop status grilled-product-dev --latest --json");
+    expect(readme).toContain("npx omniskill@latest loop start grilled-product-dev --json");
+    expect(readme).toContain("npx omniskill@latest loop status grilled-product-dev --latest --json");
     expect(readme).toContain(
-      "npx omniskill loop advance grilled-product-dev --run <run-id> --json",
+      "npx omniskill@latest loop advance grilled-product-dev --run <run-id> --json",
     );
     expect(readme).toContain("does not silently execute tools or shell commands");
     expect(readme).not.toMatch(
@@ -118,13 +118,13 @@ describe("README source contract", () => {
     expect(readme).toContain("[English](README.md)");
     expect(readme).toContain("繁體中文");
     expect(readme).toContain("Power your ability.");
-    expect(readme).toContain("npx omniskill install startup-goal");
-    expect(readme).toContain("npx omniskill install ceo");
-    expect(readme).toContain("npx omniskill install qa-lead");
+    expect(readme).toContain("npx omniskill@latest install startup-goal");
+    expect(readme).toContain("npx omniskill@latest install ceo");
+    expect(readme).toContain("npx omniskill@latest install qa-lead");
     expect(readme).toContain(
       "$startup-goal I have an AI bookkeeping idea; help me choose the wedge and ship a v1 in two weeks",
     );
-    expect(readme).toContain("npx omniskill loop start grilled-product-dev --json");
+    expect(readme).toContain("npx omniskill@latest loop start grilled-product-dev --json");
     expect(readme).toContain("workflow.json");
     expect(readme).toContain("$creating-bundle-skills");
     expect(readme).toContain("examples/workflows/startup-goal");

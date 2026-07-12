@@ -16,7 +16,7 @@ Start with Startup Goal when you want to move a company-building goal through ma
 Install the full startup goal workflow:
 
 ```bash
-npx omniskill install startup-goal
+npx omniskill@latest install startup-goal
 ```
 
 Then ask your agent to run the entry skill with a goal:
@@ -28,19 +28,19 @@ $startup-goal I have an AI bookkeeping idea; help me choose the wedge and ship a
 The alias points to the checked-in workflow bundle:
 
 ```bash
-npx omniskill install 'https://github.com/devos-ing/omni-skills.git#examples/workflows/startup-goal'
+npx omniskill@latest install 'https://github.com/devos-ing/omni-skills.git#examples/workflows/startup-goal'
 ```
 
 Install individual startup roles when you want one specialist workflow:
 
 ```bash
-npx omniskill install ceo
-npx omniskill install cto
-npx omniskill install product-manager
-npx omniskill install web-design
-npx omniskill install engineering-manager
-npx omniskill install founding-engineer
-npx omniskill install qa-lead
+npx omniskill@latest install ceo
+npx omniskill@latest install cto
+npx omniskill@latest install product-manager
+npx omniskill@latest install web-design
+npx omniskill@latest install engineering-manager
+npx omniskill@latest install founding-engineer
+npx omniskill@latest install qa-lead
 ```
 
 Restart your agent after installing skills so it reloads the new entry skills.
@@ -84,9 +84,9 @@ by default.
 Try the loop-capable product-development workflow:
 
 ```bash
-npx omniskill loop start grilled-product-dev --json
-npx omniskill loop status grilled-product-dev --latest --json
-npx omniskill loop advance grilled-product-dev --run <run-id> --json
+npx omniskill@latest loop start grilled-product-dev --json
+npx omniskill@latest loop status grilled-product-dev --latest --json
+npx omniskill@latest loop advance grilled-product-dev --run <run-id> --json
 ```
 
 That shape is useful for complex work: clarify the goal, move one action
@@ -120,27 +120,27 @@ If automatic bootstrap fails, run the package install through Omniskills and
 retry:
 
 ```bash
-npx omniskill skills install mattpocock/skills
+npx omniskill@latest skills install mattpocock/skills
 ```
 
 ## Command Reference
 
 ```bash
-npx omniskill install <alias-or-path-or-git-url>
-npx omniskill list
-npx omniskill deps <source>
-npx omniskill lock <source>
-npx omniskill loop <start|status|log|advance|summary> <source>
-npx omniskill remove <workflow-name>
-npx omniskill onboard
-npx omniskill init <name>
-npx omniskill validate <source>
-npx omniskill skills install
-npx omniskill skills update
+npx omniskill@latest install <alias-or-path-or-git-url>
+npx omniskill@latest list
+npx omniskill@latest deps <source>
+npx omniskill@latest lock <source>
+npx omniskill@latest loop <start|status|log|advance|summary> <source>
+npx omniskill@latest remove <workflow-name>
+npx omniskill@latest onboard
+npx omniskill@latest init <name>
+npx omniskill@latest validate <source>
+npx omniskill@latest skills install
+npx omniskill@latest skills update
 ```
 
-Run `npx omniskill --help` or
-`npx omniskill <command> --help` for detailed usage.
+Run `npx omniskill@latest --help` or
+`npx omniskill@latest <command> --help` for detailed usage.
 
 The older `bundle` command remains a compatibility alias for `init`, `validate`,
 and `lock`. The older `workflow` command remains a compatibility alias for
@@ -154,7 +154,7 @@ if you want to author and share a workflow bundle.
 Create a new Omniskills workflow:
 
 ```bash
-npx omniskill init release-review
+npx omniskill@latest init release-review
 ```
 
 This creates:
@@ -176,7 +176,7 @@ users to call one skill that coordinates many sub-skills.
 Install the authoring helper if you want an agent to help design bundle skills:
 
 ```bash
-npx omniskill skills install creating-bundle-skills
+npx omniskill@latest skills install creating-bundle-skills
 ```
 
 Then ask your agent to use:
@@ -188,8 +188,8 @@ $creating-bundle-skills create an Omniskills workflow for release review
 Validate before sharing:
 
 ```bash
-npx omniskill validate ./release-review
-npx omniskill deps ./release-review
+npx omniskill@latest validate ./release-review
+npx omniskill@latest deps ./release-review
 ```
 
 The full guide is in [`docs/workflow-author-guide.md`](docs/workflow-author-guide.md).
