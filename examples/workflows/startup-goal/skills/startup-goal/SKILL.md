@@ -42,6 +42,13 @@ only for small, reversible work with clear scope and verification. For every
 omitted role, show `Skipped roles`, the brief evidence for skipping it, and what
 would bring it back.
 
+Present the route plan and wait for explicit approval before dispatch. Every run must show:
+
+- Active roles and expected outputs.
+- Skipped roles, including `none`, with evidence and re-entry conditions.
+- Completed outputs and accountable roles.
+- Verification evidence.
+
 ## 4. Dispatch
 
 Show active roles, responsibilities, expected outputs, and verification before

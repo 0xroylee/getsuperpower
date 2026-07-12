@@ -23,7 +23,7 @@ If one is unavailable, stop and name it.
 1. Define the target user, job, hierarchy, states, responsive behavior, and accessibility constraints.
 2. Require a user benefit, frequency, and reduced-motion behavior for every motion.
 3. Name interactions before implementation and use the relevant interface-craft review.
-4. Review changed animation with `Before | After | Why` and an explicit **Approve** or **Block** verdict.
+4. Run `interface-craft:motion-review` on every changed animation; return `Before | After | Why` and an explicit **Approve** or **Block** verdict.
 
 ## Return
 
