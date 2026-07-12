@@ -61,7 +61,7 @@ Replace the existing test named `"defines workflow detail metadata for in-page d
       `\${githubUrl}/tree/main/examples/workflows/development-design-delivery`,
     );
     expect(content).toContain(
-      "npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/openspec-superpowers'",
+      "npx omniskill install 'https://github.com/0xroylee/omniskill.git#examples/workflows/openspec-superpowers'",
     );
     expect(content).toContain('label: "Proposal"');
     expect(content).toContain('skill: "opsx-handoff-review"');
@@ -184,28 +184,28 @@ For OpenSpec Delivery:
 
 ```ts
     installCommand:
-      "npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/openspec-superpowers'",
+      "npx omniskill install 'https://github.com/0xroylee/omniskill.git#examples/workflows/openspec-superpowers'",
 ```
 
 For Release Review:
 
 ```ts
     installCommand:
-      "npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/release-review'",
+      "npx omniskill install 'https://github.com/0xroylee/omniskill.git#examples/workflows/release-review'",
 ```
 
 For Real Engineering:
 
 ```ts
     installCommand:
-      "npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/real-engineering'",
+      "npx omniskill install 'https://github.com/0xroylee/omniskill.git#examples/workflows/real-engineering'",
 ```
 
 For Development Design Delivery:
 
 ```ts
     installCommand:
-      "npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/development-design-delivery'",
+      "npx omniskill install 'https://github.com/0xroylee/omniskill.git#examples/workflows/development-design-delivery'",
 ```
 
 - [ ] **Step 3: Run the focused test**
@@ -617,7 +617,7 @@ Expected: post snapshot command prints JSON with `files` and the same `snapshot_
 Run:
 
 ```bash
-rtk git add openspec/changes/show-workflow-diagrams-on-landing/tasks.md .getsuperpower/snapshots.jsonl .getsuperpower/sessions/landing-workflow-detail-route/tree.md
+rtk git add openspec/changes/show-workflow-diagrams-on-landing/tasks.md .omniskills/snapshots.jsonl .omniskills/sessions/landing-workflow-detail-route/tree.md
 rtk git commit -m "docs: record workflow detail route verification"
 ```
 

@@ -28,7 +28,7 @@ If any required sub-skill is unavailable, stop and tell the user which
 dependency is missing. For missing `mattpocock:*` skills, tell the user to run:
 
 ```bash
-omniskills skills install mattpocock/skills
+omniskill skills install mattpocock/skills
 ```
 
 ## Flow

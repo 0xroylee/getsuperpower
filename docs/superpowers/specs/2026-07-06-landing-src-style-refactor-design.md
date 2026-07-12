@@ -2,9 +2,9 @@
 
 ## Purpose
 
-Refactor the GetSuperpower landing experience so the homepage and workflow detail
+Refactor the Omniskills landing experience so the homepage and workflow detail
 routes use the visual style from the downloaded reference app at
-`/Users/roy/Downloads/Create GetSuperpower Workflows/src/`.
+`/Users/roy/Downloads/Create Omniskills Workflows/src/`.
 
 The implementation should port the reference design language into the existing
 Next landing app. It should not transplant the reference app wholesale.
@@ -52,7 +52,7 @@ The homepage should mirror the style and structure of the reference
 `src/app/pages/Home.tsx`:
 
 - ambient dark background with subtle violet, sky, and emerald glows,
-- compact nav with gradient GetSuperpower mark and GitHub link,
+- compact nav with gradient Omniskills mark and GitHub link,
 - hero badge, large gradient headline, command chip, and browse CTA,
 - agent badges,
 - how-it-works section with two-column flow diagram plus explanatory rows,

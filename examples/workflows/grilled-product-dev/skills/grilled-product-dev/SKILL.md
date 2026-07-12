@@ -18,13 +18,13 @@ file copied next to this skill as the loop `<source>` when running from an
 installed skill directory.
 
 1. Start or resume a run:
-   - New run: `omniskills loop start <source> --json`
-   - Existing run: `omniskills loop status <source> --latest --json`
-2. Before every phase, run `omniskills loop status <source> --run <run-id> --json`.
+   - New run: `omniskill loop start <source> --json`
+   - Existing run: `omniskill loop status <source> --latest --json`
+2. Before every phase, run `omniskill loop status <source> --run <run-id> --json`.
 3. Follow the returned `actions` and the exact phase `instruction`.
 4. After phase work, log a structured event, for example:
-   `omniskills loop log <source> --run <run-id> --type phase_result --message "..."`
-5. When the human gate is satisfied, run `omniskills loop advance <source> --run <run-id> --json`.
+   `omniskill loop log <source> --run <run-id> --type phase_result --message "..."`
+5. When the human gate is satisfied, run `omniskill loop advance <source> --run <run-id> --json`.
 6. Repeat status, phase work, log, and advance until the workflow is complete.
 
 The installed entry skill also gets a generated `loop.mjs` compatibility

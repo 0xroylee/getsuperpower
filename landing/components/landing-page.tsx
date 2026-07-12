@@ -37,7 +37,7 @@ export function LandingPage({ githubStarsLabel = "Stars" }: LandingPageProps) {
   }, [query]);
 
   const active = commands[activeCommand] ?? commands[0];
-  const heroInstallCommand = commands[0]?.command ?? "npx omniskills@latest install startup-goal";
+  const heroInstallCommand = commands[0]?.command ?? "npx omniskill install startup-goal";
 
   function copyCommand(command: (typeof commands)[number], index: number) {
     setActiveCommand(index);
@@ -210,9 +210,9 @@ export function LandingPage({ githubStarsLabel = "Stars" }: LandingPageProps) {
               Install by alias, public git URL, or local path. The CLI validates the workflow
               manifest, bootstraps missing external skills from workflow metadata, and records
               installed Omniskills workflows under{" "}
-              <code className="font-medium text-[var(--ink)]">~/.getsuperpower/workflows/</code> by
+              <code className="font-medium text-[var(--ink)]">~/.omniskills/workflows/</code> by
               default. Loop-enabled workflows use{" "}
-              <code className="font-medium text-[var(--ink)]">omniskills loop</code> for resumable,
+              <code className="font-medium text-[var(--ink)]">omniskill loop</code> for resumable,
               action-only state.
             </p>
             <div className="border-t border-[var(--rule)]">
@@ -304,8 +304,8 @@ export function LandingPage({ githubStarsLabel = "Stars" }: LandingPageProps) {
           </div>
           <div className="space-y-3">
             <TerminalBlock
-              copyText="npx omniskills@latest init my-workflow"
-              lines={[{ prefix: "$", text: "npx omniskills@latest init my-workflow" }]}
+              copyText="npx omniskill init my-workflow"
+              lines={[{ prefix: "$", text: "npx omniskill init my-workflow" }]}
             />
             <a
               href={`${githubUrl}/blob/main/docs/workflow-author-guide.md`}

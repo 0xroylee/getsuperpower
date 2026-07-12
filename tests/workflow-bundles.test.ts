@@ -1027,7 +1027,7 @@ describe("workflow bundles", () => {
 
   test("infers legacy removal artifacts and skips unmappable legacy sources", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "workflow-remove-legacy-"));
-    const workflowDir = join(rootDir, ".getsuperpower", "workflows");
+    const workflowDir = join(rootDir, ".omniskills", "workflows");
 
     try {
       await mkdir(workflowDir, { recursive: true });
@@ -1614,9 +1614,8 @@ describe("workflow bundles", () => {
         readFile(join(preparedEntry?.source ?? "", "workflow.json"), "utf8"),
       ).resolves.toContain('"name": "looped-workflow"');
       const generatedRunner = await readFile(join(preparedEntry?.source ?? "", "loop.mjs"), "utf8");
-      expect(generatedRunner).toContain("OMNISKILLS_BIN");
-      expect(generatedRunner).toContain("GETSUPERPOWER_BIN");
-      expect(generatedRunner).toContain("omniskills");
+      expect(generatedRunner).toContain("process.env.OMNISKILL_BIN");
+      expect(generatedRunner).toContain("omniskill");
       expect(generatedRunner).toContain("workflow.json");
       await expect(
         readFile(join(preparedEntry?.source ?? "", "loop.metadata.json"), "utf8"),
@@ -1644,7 +1643,7 @@ describe("workflow bundles", () => {
     }
   });
 
-  test("installs and lists workflow bundles under .getsuperpower", async () => {
+  test("installs and lists workflow bundles under .omniskills", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "workflow-bundle-install-"));
     const bundle = await loadWorkflowBundle("examples/workflows/release-review");
 
@@ -1653,9 +1652,7 @@ describe("workflow bundles", () => {
       bundle,
     });
 
-    expect(installed.path).toBe(
-      join(rootDir, ".getsuperpower", "workflows", "release-review.json"),
-    );
+    expect(installed.path).toBe(join(rootDir, ".omniskills", "workflows", "release-review.json"));
     const installedFile = JSON.parse(await readFile(installed.path, "utf8"));
     expect(installedFile.name).toBe("release-review");
     expect(installedFile.steps).toHaveLength(4);

@@ -9,16 +9,14 @@ tree, call one entry skill with a goal, and give your agent the right roles,
 playbooks, and verification habits for the problem in front of it. The point is
 simple: 3x your ability without manually juggling every specialist skill.
 
-Start with Startup Goal when you want to move a company-building goal through many role workflows instead of manually juggling every skill: CEO, CTO, Product Manager, Engineering Manager, Founding Engineer, and QA Lead.
-
-<img src="/assets/omniskill.jpg" alt="Omniskills" width="640" />
+Start with Startup Goal when you want to move a company-building goal through many role workflows instead of manually juggling every skill: CEO, CTO, Product Manager, Web Design, Engineering Manager, Founding Engineer, and QA Lead.
 
 ## Quick Start
 
 Install the full startup goal workflow:
 
 ```bash
-npx omniskills@latest install startup-goal
+npx omniskill install startup-goal
 ```
 
 Then ask your agent to run the entry skill with a goal:
@@ -30,18 +28,19 @@ $startup-goal I have an AI bookkeeping idea; help me choose the wedge and ship a
 The alias points to the checked-in workflow bundle:
 
 ```bash
-npx omniskills@latest install 'https://github.com/devos-ing/omni-skills.git#examples/workflows/startup-goal'
+npx omniskill install 'https://github.com/devos-ing/omni-skills.git#examples/workflows/startup-goal'
 ```
 
 Install individual startup roles when you want one specialist workflow:
 
 ```bash
-npx omniskills@latest install ceo
-npx omniskills@latest install cto
-npx omniskills@latest install product-manager
-npx omniskills@latest install engineering-manager
-npx omniskills@latest install founding-engineer
-npx omniskills@latest install qa-lead
+npx omniskill install ceo
+npx omniskill install cto
+npx omniskill install product-manager
+npx omniskill install web-design
+npx omniskill install engineering-manager
+npx omniskill install founding-engineer
+npx omniskill install qa-lead
 ```
 
 Restart your agent after installing skills so it reloads the new entry skills.
@@ -57,17 +56,19 @@ copy the install command.
 
 | Omniskills workflow | Entry skill | What it helps with |
 | --- | --- | --- |
-| Startup Goal | `$startup-goal` | Route a company-building goal through strategy, product, architecture, delivery, implementation, and QA role subagents. |
+| Startup Goal | `$startup-goal` | Route a company-building goal through strategy, product, interface design, architecture, delivery, implementation, and QA role subagents. |
 | CEO | `$ceo` | Direction, hard tradeoffs, fundraising/customer framing, and company decisions. |
 | CTO | `$cto` | Architecture, domain model, platform direction, and engineering risk. |
 | Product Manager | `$product-manager` | Product discovery, PRDs, acceptance criteria, roadmap tradeoffs, and issue slicing. |
+| Web Design | `$web-design` | Implementable interface direction, responsive interaction states, and rigorous animation review. |
 | Engineering Manager | `$engineering-manager` | Delivery sequencing, execution risk, quality gates, blocker triage, and engineering process. |
 | Founding Engineer | `$founding-engineer` | The smallest correct implementation change: tests, debugging, review, and verification. |
 | QA Lead | `$qa-lead` | Release-risk review, acceptance checks, regression focus, reproduction gaps, and verification evidence. |
 
-Each workflow is still just files you can inspect: a `workflow.json`, README,
-and local skills. The power comes from installing the skill tree once and then
-calling the entry skill that knows which companion skills to use.
+Each workflow is still just files you can inspect: a `workflow.json`, optional
+`workflow.lock.json`, README, and local skills. The power comes from installing
+the skill tree once and then calling the entry skill that knows which companion
+skills to use.
 
 ## Goal Loops
 
@@ -77,13 +78,15 @@ a run, `loop status` shows where it is, and `loop advance` returns the next sugg
 
 The runtime is action-only. It records state and returns the next suggested action;
 it does not silently execute tools or shell commands for the agent.
+Loop run state is stored under `~/.omniskills/runs/<workflow-name>/<run-id>/`
+by default.
 
 Try the loop-capable product-development workflow:
 
 ```bash
-npx omniskills@latest loop start grilled-product-dev --json
-npx omniskills@latest loop status grilled-product-dev --latest --json
-npx omniskills@latest loop advance grilled-product-dev --run <run-id> --json
+npx omniskill loop start grilled-product-dev --json
+npx omniskill loop status grilled-product-dev --latest --json
+npx omniskill loop advance grilled-product-dev --run <run-id> --json
 ```
 
 That shape is useful for complex work: clarify the goal, move one action
@@ -97,11 +100,17 @@ skill packs:
 - Matt Pocock skills for TDD, review, design pressure-testing, domain modeling,
   PRDs, and issue slicing.
 - Superpowers skills for brainstorming, planning, execution, and verification.
-- Ponytrail evidence for file-change rationale, verification, and rollback
-  context in workflows that declare `pony-trail`.
+- Interface Craft skills for design engineering and motion. The canonical
+  identifiers are `interface-craft:design-engineering`,
+  `interface-craft:motion-vocabulary`,
+  `interface-craft:fluid-interface-design`, and
+  `interface-craft:motion-review`; they install from `emilkowalski/skills`.
+  The older `emilkowalski:*` identifiers are compatibility aliases only.
+- Pony Trail history, revert, and prehook features are paused. Public workflow
+  installs do not create Pony Trail snapshots.
 - More workflow packs are coming.
 
-`omniskills install` uses each workflow skill's `repo` metadata to fetch
+`omniskill install` uses each workflow skill's `repo` metadata to fetch
 missing external skills through the Skills CLI. For example,
 `{ "source": "superpowers:brainstorming", "repo": "obra/superpowers" }`
 keeps the original skill name in `source` and installs it with
@@ -111,28 +120,31 @@ If automatic bootstrap fails, run the package install through Omniskills and
 retry:
 
 ```bash
-npx omniskills@latest skills install mattpocock/skills
+npx omniskill skills install mattpocock/skills
 ```
 
 ## Command Reference
 
 ```bash
-npx omniskills@latest install <alias-or-path-or-git-url>
-npx omniskills@latest list
-npx omniskills@latest deps <source>
-npx omniskills@latest lock <source>
-npx omniskills@latest loop <start|status|log|advance|summary> <source>
-npx omniskills@latest remove <workflow-name>
-npx omniskills@latest init <name>
-npx omniskills@latest validate <source>
-npx omniskills@latest skills install
-npx omniskills@latest skills update
+npx omniskill install <alias-or-path-or-git-url>
+npx omniskill list
+npx omniskill deps <source>
+npx omniskill lock <source>
+npx omniskill loop <start|status|log|advance|summary> <source>
+npx omniskill remove <workflow-name>
+npx omniskill onboard
+npx omniskill init <name>
+npx omniskill validate <source>
+npx omniskill skills install
+npx omniskill skills update
 ```
 
-Run `npx omniskills@latest --help` or
-`npx omniskills@latest <command> --help` for detailed usage.
+Run `npx omniskill --help` or
+`npx omniskill <command> --help` for detailed usage.
 
-The older `bundle` and `workflow` commands still work as compatibility aliases.
+The older `bundle` command remains a compatibility alias for `init`, `validate`,
+and `lock`. The older `workflow` command remains a compatibility alias for
+`install`, `list`, and `remove`.
 
 ## Create Your Own
 
@@ -142,7 +154,7 @@ if you want to author and share a workflow bundle.
 Create a new Omniskills workflow:
 
 ```bash
-npx omniskills@latest init release-review
+npx omniskill init release-review
 ```
 
 This creates:
@@ -164,7 +176,7 @@ users to call one skill that coordinates many sub-skills.
 Install the authoring helper if you want an agent to help design bundle skills:
 
 ```bash
-npx omniskills@latest skills install creating-bundle-skills
+npx omniskill skills install creating-bundle-skills
 ```
 
 Then ask your agent to use:
@@ -176,8 +188,8 @@ $creating-bundle-skills create an Omniskills workflow for release review
 Validate before sharing:
 
 ```bash
-npx omniskills@latest validate ./release-review
-npx omniskills@latest deps ./release-review
+npx omniskill validate ./release-review
+npx omniskill deps ./release-review
 ```
 
 The full guide is in [`docs/workflow-author-guide.md`](docs/workflow-author-guide.md).
@@ -186,10 +198,11 @@ The full guide is in [`docs/workflow-author-guide.md`](docs/workflow-author-guid
 
 | Example | Use it for | Notes |
 | --- | --- | --- |
-| `examples/workflows/startup-goal` | Install a realistic startup operating bench around one goal. | Includes `$startup-goal`, `$ceo`, `$cto`, `$product-manager`, `$engineering-manager`, `$founding-engineer`, and `$qa-lead`. |
+| `examples/workflows/startup-goal` | Install a realistic startup operating bench around one goal. | Includes `$startup-goal`, `$ceo`, `$cto`, `$product-manager`, `$web-design`, `$engineering-manager`, `$founding-engineer`, and `$qa-lead`. |
 | `examples/workflows/ceo` | Company direction, strategy, tradeoffs, and decision mapping. | Uses Matt Pocock decision and grilling skills. |
 | `examples/workflows/cto` | Architecture, domain model, technical risk, and review. | Uses Matt Pocock architecture/review skills. |
 | `examples/workflows/product-manager` | Discovery, PRD, issue slicing, and product planning. | Uses Superpowers plus Matt Pocock PRD/issue skills. |
+| `examples/workflows/web-design` | Interface direction, responsive interaction states, and animation review. | Uses the canonical Interface Craft skill identifiers. |
 | `examples/workflows/engineering-manager` | Delivery sequencing, quality gates, and execution risk. | Uses planning, TDD, diagnosing, and review skills. |
 | `examples/workflows/founding-engineer` | Implementation, tests, debugging, review, and final verification. | Uses `$implement` as the implementation role. |
 | `examples/workflows/qa-lead` | Acceptance checks, regression focus, and release verification. | Uses review, diagnosing, and verification skills. |
@@ -198,21 +211,20 @@ The full guide is in [`docs/workflow-author-guide.md`](docs/workflow-author-guid
 | `examples/workflows/development-design-delivery` | Compatibility/demo workflow for product-minded engineering. | Richer composition example with Ponytrail evidence. |
 | `examples/workflows/real-engineering` | Compatibility/demo workflow combining RTK, Ponytrail, Superpowers, and Matt Pocock skills. | Fetches Matt Pocock skills if missing. |
 | `examples/workflows/release-review` | Compatibility/demo workflow for release-risk review. | Good minimal example. |
+| `examples/workflows/haaland` | Curated playful Haaland/JTS meme workflow. | Generates one meme from its bundled profile asset. |
 
 ## Installed Files
 
 By default, the CLI writes installed workflow records under your home directory:
 
 ```text
-~/
-.getsuperpower/
-  workflows/
+~/.omniskills/workflows/
 ```
 
 Use `--dir <project>` when you intentionally want a project-local workflow
 record.
 
-Keep project-local `.getsuperpower/` folders out of git unless you
+Keep project-local `.omniskills/` folders out of git unless you
 intentionally want to share installed workflow records.
 
 ## Local Development
@@ -221,6 +233,8 @@ intentionally want to share installed workflow records.
 bun install
 bun run build
 bun test
+bun run typecheck
+bun run coverage
 bun run check
 bun scripts/smoke-public-git-install.ts
 ```

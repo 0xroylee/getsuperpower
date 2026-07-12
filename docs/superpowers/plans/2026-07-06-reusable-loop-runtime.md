@@ -2,28 +2,28 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Extract the generic loop runtime out of workflow-local `loop.mjs`, rename the active runtime namespace from `ponytrail` to `getsuperpower`, and keep installed looped workflows runnable with plain Node.
+**Goal:** Extract the generic loop runtime out of workflow-local `loop.mjs`, rename the active runtime namespace from `ponytrail` to `omniskill`, and keep installed looped workflows runnable with plain Node.
 
-**Architecture:** Active runtime modules move from `src/runtimes/ponytrail/` to `src/runtimes/getsuperpower/`. A checked-in Node ESM asset at `src/runtimes/getsuperpower/workflow-loop-runtime.mjs` owns command/state/event behavior; workflow `loop.mjs` files become thin wrappers; install preparation copies the shared runtime asset beside the wrapper as `loop-runtime.mjs`.
+**Architecture:** Active runtime modules move from `src/runtimes/ponytrail/` to `src/runtimes/omniskill/`. A checked-in Node ESM asset at `src/runtimes/omniskill/workflow-loop-runtime.mjs` owns command/state/event behavior; workflow `loop.mjs` files become thin wrappers; install preparation copies the shared runtime asset beside the wrapper as `loop-runtime.mjs`.
 
-**Tech Stack:** Bun tests, TypeScript runtime modules, Node ESM `.mjs` runtime asset, Commander CLI wiring through `src/getsuperpower.ts`, Zod manifest validation.
+**Tech Stack:** Bun tests, TypeScript runtime modules, Node ESM `.mjs` runtime asset, Commander CLI wiring through `src/omniskill.ts`, Zod manifest validation.
 
 ---
 
 ## File Structure
 
-- Move: `src/runtimes/ponytrail/index.ts` -> `src/runtimes/getsuperpower/index.ts`
-- Move: `src/runtimes/ponytrail/workflow-bundles.ts` -> `src/runtimes/getsuperpower/workflow-bundles.ts`
-- Move: `src/runtimes/ponytrail/instruction-context.ts` -> `src/runtimes/getsuperpower/instruction-context.ts`
-- Move: `src/runtimes/ponytrail/snapshots.ts` -> `src/runtimes/getsuperpower/snapshots.ts`
-- Create: `src/runtimes/getsuperpower/workflow-loop-runtime.mjs`
+- Move: `src/runtimes/ponytrail/index.ts` -> `src/runtimes/omniskill/index.ts`
+- Move: `src/runtimes/ponytrail/workflow-bundles.ts` -> `src/runtimes/omniskill/workflow-bundles.ts`
+- Move: `src/runtimes/ponytrail/instruction-context.ts` -> `src/runtimes/omniskill/instruction-context.ts`
+- Move: `src/runtimes/ponytrail/snapshots.ts` -> `src/runtimes/omniskill/snapshots.ts`
+- Create: `src/runtimes/omniskill/workflow-loop-runtime.mjs`
 - Modify: `src/index.ts`
-- Modify: `src/getsuperpower.ts`
+- Modify: `src/omniskill.ts`
 - Modify: `examples/workflows/grilled-product-dev/loop.mjs`
 - Modify: `tests/workflow-bundles.test.ts`
 - Modify: `tests/loop-runtime.test.ts`
 - Modify: `tests/cli.test.ts`
-- Modify: `tests/getsuperpower.test.ts`
+- Modify: `tests/omniskill.test.ts`
 - Modify: `tests/instruction-context.test.ts`
 - Modify: `tests/snapshots.test.ts`
 - Modify: `docs/architecture.md`
@@ -34,11 +34,11 @@
 
 Use these seams for TDD. Do not test private helper internals directly.
 
-- Runtime command seam: `runWorkflowLoopCli(input)` exported from `src/runtimes/getsuperpower/workflow-loop-runtime.mjs`.
+- Runtime command seam: `runWorkflowLoopCli(input)` exported from `src/runtimes/omniskill/workflow-loop-runtime.mjs`.
 - Workflow wrapper seam: `node examples/workflows/grilled-product-dev/loop.mjs ...`.
 - Install preparation seam: `getPreparedWorkflowSkillInstallDependencies({ bundle })`.
-- CLI install seam: `getsuperpower install <workflow> --home <dir> --agents codex`.
-- Runtime namespace seam: imports from `../src/runtimes/getsuperpower/...`.
+- CLI install seam: `omniskill install <workflow> --home <dir> --agents codex`.
+- Runtime namespace seam: imports from `../src/runtimes/omniskill/...`.
 
 ### Task 1: Rename Active Runtime Namespace
 
@@ -48,9 +48,9 @@ Use these seams for TDD. Do not test private helper internals directly.
 - Move: `src/runtimes/ponytrail/instruction-context.ts`
 - Move: `src/runtimes/ponytrail/snapshots.ts`
 - Modify: `src/index.ts`
-- Modify: `src/getsuperpower.ts`
+- Modify: `src/omniskill.ts`
 - Modify: `tests/workflow-bundles.test.ts`
-- Modify: `tests/getsuperpower.test.ts`
+- Modify: `tests/omniskill.test.ts`
 - Modify: `tests/instruction-context.test.ts`
 - Modify: `tests/snapshots.test.ts`
 
@@ -59,8 +59,8 @@ Use these seams for TDD. Do not test private helper internals directly.
 Add this test to `tests/workflow-bundles.test.ts` near the top-level `describe` block. It proves the new namespace is importable before touching implementation imports.
 
 ```ts
-test("exports workflow bundle helpers from the GetSuperpower runtime namespace", async () => {
-  const runtime = await import("../src/runtimes/getsuperpower/workflow-bundles");
+test("exports workflow bundle helpers from the Omniskills runtime namespace", async () => {
+  const runtime = await import("../src/runtimes/omniskill/workflow-bundles");
 
   expect(typeof runtime.loadWorkflowBundle).toBe("function");
   expect(typeof runtime.getPreparedWorkflowSkillInstallDependencies).toBe("function");
@@ -75,48 +75,48 @@ Run:
 rtk bun test tests/workflow-bundles.test.ts --test-name-pattern "exports workflow bundle helpers"
 ```
 
-Expected: FAIL because `../src/runtimes/getsuperpower/workflow-bundles` does not exist yet.
+Expected: FAIL because `../src/runtimes/omniskill/workflow-bundles` does not exist yet.
 
 - [ ] **Step 3: Move the runtime folder**
 
 Run the move from the worktree root:
 
 ```bash
-rtk mv src/runtimes/ponytrail src/runtimes/getsuperpower
+rtk mv src/runtimes/ponytrail src/runtimes/omniskill
 ```
 
 Then update `src/index.ts`:
 
 ```ts
 export * from "./plugins";
-export * from "./runtimes/getsuperpower";
+export * from "./runtimes/omniskill";
 export * from "./skills";
 ```
 
-Update the import in `src/getsuperpower.ts`:
+Update the import in `src/omniskill.ts`:
 
 ```ts
-} from "./runtimes/getsuperpower";
+} from "./runtimes/omniskill";
 ```
 
 Update test imports:
 
 ```ts
-} from "../src/runtimes/getsuperpower/workflow-bundles";
+} from "../src/runtimes/omniskill/workflow-bundles";
 ```
 
 ```ts
-} from "../src/runtimes/getsuperpower/instruction-context";
+} from "../src/runtimes/omniskill/instruction-context";
 ```
 
 ```ts
-} from "../src/runtimes/getsuperpower/snapshots";
+} from "../src/runtimes/omniskill/snapshots";
 ```
 
-Update `tests/getsuperpower.test.ts` type imports:
+Update `tests/omniskill.test.ts` type imports:
 
 ```ts
-import type { WorkflowGitCommand } from "../src/runtimes/getsuperpower/workflow-bundles";
+import type { WorkflowGitCommand } from "../src/runtimes/omniskill/workflow-bundles";
 ```
 
 - [ ] **Step 4: Run namespace tests**
@@ -124,7 +124,7 @@ import type { WorkflowGitCommand } from "../src/runtimes/getsuperpower/workflow-
 Run:
 
 ```bash
-rtk bun test tests/workflow-bundles.test.ts tests/getsuperpower.test.ts tests/instruction-context.test.ts tests/snapshots.test.ts
+rtk bun test tests/workflow-bundles.test.ts tests/omniskill.test.ts tests/instruction-context.test.ts tests/snapshots.test.ts
 ```
 
 Expected: PASS.
@@ -132,15 +132,15 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-rtk git add src/index.ts src/getsuperpower.ts src/runtimes/getsuperpower tests/workflow-bundles.test.ts tests/getsuperpower.test.ts tests/instruction-context.test.ts tests/snapshots.test.ts
+rtk git add src/index.ts src/omniskill.ts src/runtimes/omniskill tests/workflow-bundles.test.ts tests/omniskill.test.ts tests/instruction-context.test.ts tests/snapshots.test.ts
 rtk git add -u src/runtimes/ponytrail
-rtk git commit -m "refactor: rename getsuperpower runtime namespace"
+rtk git commit -m "refactor: rename omniskill runtime namespace"
 ```
 
 ### Task 2: Add A Reusable Runtime Entry Point
 
 **Files:**
-- Create: `src/runtimes/getsuperpower/workflow-loop-runtime.mjs`
+- Create: `src/runtimes/omniskill/workflow-loop-runtime.mjs`
 - Modify: `tests/loop-runtime.test.ts`
 
 - [ ] **Step 1: Write the failing direct-runtime test**
@@ -152,7 +152,7 @@ const runtimeModule = join(
   repoRoot,
   "src",
   "runtimes",
-  "getsuperpower",
+  "omniskill",
   "workflow-loop-runtime.mjs",
 );
 const workflowJson = join(
@@ -188,7 +188,7 @@ test("runWorkflowLoopCli manages run state through the reusable runtime", async 
     expect(payload.runId).toBe("direct");
     expect(payload.step.id).toBe("grill");
     await expect(
-      stat(join(homeDir, ".getsuperpower", "runs", "grilled-product-dev", "direct", "state.json")),
+      stat(join(homeDir, ".omniskills", "runs", "grilled-product-dev", "direct", "state.json")),
     ).resolves.toBeTruthy();
   } finally {
     await rm(homeDir, { recursive: true, force: true });
@@ -214,7 +214,7 @@ Expected: FAIL because `workflow-loop-runtime.mjs` does not exist.
 
 - [ ] **Step 3: Create the reusable runtime asset**
 
-Create `src/runtimes/getsuperpower/workflow-loop-runtime.mjs` by moving the generic logic from the current `examples/workflows/grilled-product-dev/loop.mjs`.
+Create `src/runtimes/omniskill/workflow-loop-runtime.mjs` by moving the generic logic from the current `examples/workflows/grilled-product-dev/loop.mjs`.
 
 Use this public entrypoint at the top:
 
@@ -258,7 +258,7 @@ export async function runWorkflowLoopCli(input = {}) {
       manifestPath,
       workflowDir: dirname(manifestPath),
       workflowName: manifest.name,
-      runsRoot: join(input.homeDir ?? homedir(), ".getsuperpower", "runs", manifest.name),
+      runsRoot: join(input.homeDir ?? homedir(), ".omniskills", "runs", manifest.name),
       json: parsed.options.json === true,
       cwd: input.cwd ?? process.cwd(),
       stdout,
@@ -348,7 +348,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-rtk git add src/runtimes/getsuperpower/workflow-loop-runtime.mjs tests/loop-runtime.test.ts
+rtk git add src/runtimes/omniskill/workflow-loop-runtime.mjs tests/loop-runtime.test.ts
 rtk git commit -m "feat: add reusable workflow loop runtime"
 ```
 
@@ -412,7 +412,7 @@ examples/workflows/grilled-product-dev/loop-runtime.mjs
 must match:
 
 ```text
-src/runtimes/getsuperpower/workflow-loop-runtime.mjs
+src/runtimes/omniskill/workflow-loop-runtime.mjs
 ```
 
 The implementation can use `cp` for the initial copy, but future edits should keep the shared source as the canonical asset.
@@ -437,7 +437,7 @@ rtk git commit -m "refactor: thin grilled workflow loop wrapper"
 ### Task 4: Copy The Shared Runtime During Install Preparation
 
 **Files:**
-- Modify: `src/runtimes/getsuperpower/workflow-bundles.ts`
+- Modify: `src/runtimes/omniskill/workflow-bundles.ts`
 - Modify: `tests/workflow-bundles.test.ts`
 - Modify: `tests/cli.test.ts`
 
@@ -447,7 +447,7 @@ Add this assertion to the existing `tests/workflow-bundles.test.ts` test that co
 
 ```ts
 const runtimeSource = await readFile(
-  join(import.meta.dir, "..", "src", "runtimes", "getsuperpower", "workflow-loop-runtime.mjs"),
+  join(import.meta.dir, "..", "src", "runtimes", "omniskill", "workflow-loop-runtime.mjs"),
   "utf8",
 );
 await expect(readFile(join(preparedEntry.source, "loop-runtime.mjs"), "utf8")).resolves.toBe(
@@ -467,7 +467,7 @@ expect(preparedEntry).toBeDefined();
 
 - [ ] **Step 2: Write the failing CLI install assertion**
 
-In `tests/cli.test.ts`, inside `getsuperpower install copies loop runtime files into the installed entry skill`, add:
+In `tests/cli.test.ts`, inside `omniskill install copies loop runtime files into the installed entry skill`, add:
 
 ```ts
 await expect(readFile(join(installedSkillDir, "loop-runtime.mjs"), "utf8")).resolves.toContain(
@@ -487,7 +487,7 @@ Expected: FAIL because `loop-runtime.mjs` is not copied yet.
 
 - [ ] **Step 4: Update install preparation**
 
-In `src/runtimes/getsuperpower/workflow-bundles.ts`, add imports:
+In `src/runtimes/omniskill/workflow-bundles.ts`, add imports:
 
 ```ts
 import { fileURLToPath } from "node:url";
@@ -527,7 +527,7 @@ Expected: PASS.
 - [ ] **Step 6: Commit**
 
 ```bash
-rtk git add src/runtimes/getsuperpower/workflow-bundles.ts tests/workflow-bundles.test.ts tests/cli.test.ts
+rtk git add src/runtimes/omniskill/workflow-bundles.ts tests/workflow-bundles.test.ts tests/cli.test.ts
 rtk git commit -m "feat: copy loop runtime asset during install"
 ```
 
@@ -601,7 +601,7 @@ src/
   plugins/
     skill-installer.ts
   runtimes/
-    getsuperpower/
+    omniskill/
       instruction-context.ts
       snapshots.ts
       workflow-bundles.ts
@@ -617,13 +617,13 @@ src/runtimes/ponytrail/
 with:
 
 ```text
-src/runtimes/getsuperpower/
+src/runtimes/omniskill/
 ```
 
 Replace the compatibility sentence with:
 
 ```md
-The runtime folder uses the GetSuperpower name. Older Pony Trail history,
+The runtime folder uses the Omniskills name. Older Pony Trail history,
 revert, and prehook behavior remains paused and is not exposed by the public
 CLI.
 ```
@@ -636,7 +636,7 @@ In `docs/workflow-author-guide.md`, update the optional loop runtime section to 
 
 ```md
 Looped workflow `loop.mjs` files should be thin wrappers around the shared
-runtime. GetSuperpower copies the shared `loop-runtime.mjs` asset into the
+runtime. Omniskills copies the shared `loop-runtime.mjs` asset into the
 installed entry skill automatically when `workflow.json` declares `loop`.
 ```
 
@@ -662,7 +662,7 @@ In `openspec/changes/refactor-loop-runtime-reuse/tasks.md`, mark these after imp
 
 ```md
 - [x] Move active runtime modules from `src/runtimes/ponytrail/` to
-      `src/runtimes/getsuperpower/` and update imports.
+      `src/runtimes/omniskill/` and update imports.
 - [x] Update author documentation.
 ```
 
@@ -712,7 +712,7 @@ node examples/workflows/grilled-product-dev/loop.mjs status --run plan-smoke --j
 
 Expected:
 
-- validate prints `GetSuperpower valid: grilled-product-dev@0.1.0`;
+- validate prints `Omniskills valid: grilled-product-dev@0.1.0`;
 - deps prints the workflow dependencies;
 - loop start returns JSON with `runId: "plan-smoke"` and step `grill`;
 - loop status returns step `grill`.
@@ -762,4 +762,4 @@ rtk git commit -m "chore: record loop runtime verification"
 
 - Spec coverage: covered reusable runtime entrypoint, thin wrapper, installed Node portability, existing command compatibility, non-loop compatibility, and runtime namespace rename.
 - Placeholder scan: no unfinished markers or fill-in steps are intentionally left.
-- Type consistency: source runtime path is consistently `src/runtimes/getsuperpower/`; installed runtime asset is consistently `loop-runtime.mjs`; source runtime asset is consistently `workflow-loop-runtime.mjs`.
+- Type consistency: source runtime path is consistently `src/runtimes/omniskill/`; installed runtime asset is consistently `loop-runtime.mjs`; source runtime asset is consistently `workflow-loop-runtime.mjs`.

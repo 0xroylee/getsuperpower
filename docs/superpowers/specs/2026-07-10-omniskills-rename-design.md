@@ -1,13 +1,13 @@
 # Omniskills Rename Design
 
-**Goal:** Rename the public GetSuperpower product and canonical CLI command to
-Omniskills without breaking existing `getsuperpower` shell usage.
+**Goal:** Rename the public Omniskills product and canonical CLI command to
+Omniskills without breaking existing `omniskill` shell usage.
 
 ## Chosen approach
 
 Omniskills becomes the canonical identity. The published package metadata and
-primary executable use lowercase `omniskills`; public prose uses the displayed
-name **Omniskills**. `getsuperpower` remains a compatibility executable that
+primary executable use lowercase `omniskill`; public prose uses the displayed
+name **Omniskills**. `omniskill` remains a compatibility executable that
 invokes the same program.
 
 This avoids a breaking command migration while giving all new installation,
@@ -15,21 +15,21 @@ help, and documentation examples one consistent name.
 
 ## Public surface
 
-- Set the package name to `omniskills`.
-- Publish both `omniskills` and `getsuperpower` executable entries, with
-  `omniskills` documented as the canonical command.
+- Set the package name to `omniskill`.
+- Publish both `omniskill` and `omniskill` executable entries, with
+  `omniskill` documented as the canonical command.
 - Update Commander metadata, help text, banners, success and error messages,
-  and generated loop command suggestions to use Omniskills and `omniskills`.
+  and generated loop command suggestions to use Omniskills and `omniskill`.
 - Update active README, documentation, landing-page content and metadata,
   examples, supported scripts, diagrams, and tests that describe the product
   or invoke its public command.
-- Add regression coverage that asserts `omniskills` is canonical and the
-  `getsuperpower` executable remains in package metadata.
+- Add regression coverage that asserts `omniskill` is canonical and the
+  `omniskill` executable remains in package metadata.
 
 ## Compatibility boundaries
 
 - Do not rename internal TypeScript modules, runtime folders, environment
-  variables, or `.getsuperpower` state. Existing installed workflow records
+  variables, or `.omniskills` state. Existing installed workflow records
   and generated runners therefore remain readable and usable.
 - Keep the `superpowers:` dependency namespace unchanged; it refers to an
   external skill source rather than this product.

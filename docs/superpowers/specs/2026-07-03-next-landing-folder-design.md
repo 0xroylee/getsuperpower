@@ -3,10 +3,10 @@
 ## Goal
 
 Create an isolated `landing/` app that ports the downloaded "Create
-GetSuperpower Workflows" Vite export into a Next.js 16 App Router application
+Omniskills Workflows" Vite export into a Next.js 16 App Router application
 styled with Tailwind CSS.
 
-The app is a public product surface for GetSuperpower workflow bundles. It must
+The app is a public product surface for Omniskills workflow bundles. It must
 not change the root Bun CLI package, CLI command semantics, or workflow-bundle
 runtime.
 
@@ -14,14 +14,14 @@ runtime.
 
 - Package manager: Bun.
 - Visual direction: keep the downloaded export's dark, technical direction.
-- GitHub URL: `https://github.com/0xroylee/getsuperpower`.
+- GitHub URL: `https://github.com/0xroylee/omniskill`.
 - Implementation approach: isolated Next app port in `landing/`.
 
 ## Architecture
 
 `landing/` is a separate Next.js application with its own `package.json`,
 dependencies, lockfile, config, and checks. The root package remains the
-GetSuperpower CLI package.
+Omniskills CLI package.
 
 The app uses the App Router:
 
@@ -99,16 +99,16 @@ mobile. Text must wrap cleanly inside command blocks and cards.
 
 ## Content Rules
 
-Commands must teach the root-first GetSuperpower CLI surface:
+Commands must teach the root-first Omniskills CLI surface:
 
 ```bash
-npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/openspec-superpowers'
-npx getsuperpower@latest list
-npx getsuperpower@latest init my-workflow
-npx getsuperpower@latest validate my-workflow
+npx omniskill install 'https://github.com/0xroylee/omniskill.git#examples/workflows/openspec-superpowers'
+npx omniskill list
+npx omniskill init my-workflow
+npx omniskill validate my-workflow
 ```
 
-The page must not advertise removed nested `getsuperpower` subcommands, Pony
+The page must not advertise removed nested `omniskill` subcommands, Pony
 Trail history, revert, or prehook commands.
 
 The page should preserve the four workflow examples from the export:
@@ -149,7 +149,7 @@ exists, then make it pass after the port. The check should assert that
 `landing/app/page.tsx` or the rendered output contains the expected product
 signals:
 
-- `GetSuperpower`;
+- `Omniskills`;
 - `OpenSpec Delivery`;
 - `Release Review`;
 - `Real Engineering`;
@@ -192,7 +192,7 @@ command examples before completion.
 - Placeholder scan: no placeholder markers or unspecified implementation
   sections remain.
 - Consistency check: the design matches the approved isolated Next app port,
-  Bun package manager, dark visual direction, and GetSuperpower GitHub URL.
+  Bun package manager, dark visual direction, and Omniskills GitHub URL.
 - Scope check: this is a single static landing app, not a deployment, analytics,
   backend, or CLI change.
 - Ambiguity check: dependency scope, file boundaries, command content, and

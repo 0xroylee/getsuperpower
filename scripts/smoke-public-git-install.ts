@@ -82,7 +82,7 @@ async function main(): Promise<void> {
     },
   );
 
-  const workflowDir = join(projectDir, ".getsuperpower", "workflows");
+  const workflowDir = join(projectDir, ".omniskills", "workflows");
   const workflowFiles = (await readdir(workflowDir)).filter((file) => file.endsWith(".json"));
   if (workflowFiles.length === 0) {
     throw new Error(`No workflow records were written under ${workflowDir}`);

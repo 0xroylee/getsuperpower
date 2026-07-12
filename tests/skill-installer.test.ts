@@ -294,7 +294,7 @@ describe("skill installer", () => {
       await expect(
         resolveInstallSkillSource("superpowers:brainstorming", { homeDir }),
       ).rejects.toThrow(
-        "Superpowers brainstorming skill not found. Install or enable the Superpowers plugin, then run: omniskills skills install superpowers:brainstorming --agents codex,claude,cursor,copilot,opencode --home ~",
+        "Superpowers brainstorming skill not found. Install or enable the Superpowers plugin, then run: omniskill skills install superpowers:brainstorming --agents codex,claude,cursor,copilot,opencode --home ~",
       );
     } finally {
       await rm(homeDir, { recursive: true, force: true });
@@ -308,7 +308,7 @@ describe("skill installer", () => {
       await expect(
         resolveInstallSkillSource("superpowers:writing-plans", { homeDir }),
       ).rejects.toThrow(
-        "Superpowers writing-plans skill not found. Install or enable the Superpowers plugin, then run: omniskills skills install superpowers:writing-plans --agents codex,claude,cursor,copilot,opencode --home ~",
+        "Superpowers writing-plans skill not found. Install or enable the Superpowers plugin, then run: omniskill skills install superpowers:writing-plans --agents codex,claude,cursor,copilot,opencode --home ~",
       );
     } finally {
       await rm(homeDir, { recursive: true, force: true });
@@ -431,7 +431,7 @@ describe("skill installer", () => {
 
     try {
       await expect(resolveInstallSkillSource("mattpocock:tdd", { homeDir })).rejects.toThrow(
-        `Matt Pocock tdd skill not found under ${homeDir}. Install or refresh Matt Pocock skills with: omniskills skills install mattpocock/skills. Then retry this command. /setup-matt-pocock-skills configures repo metadata after the skills are installed; it does not install tdd.`,
+        `Matt Pocock tdd skill not found under ${homeDir}. Install or refresh Matt Pocock skills with: omniskill skills install mattpocock/skills. Then retry this command. /setup-matt-pocock-skills configures repo metadata after the skills are installed; it does not install tdd.`,
       );
     } finally {
       await rm(homeDir, { recursive: true, force: true });

@@ -8,22 +8,22 @@
 
 ## Summary
 
-GetSuperpower looped workflows should keep `node loop.mjs ...` as a compatibility
+Omniskills looped workflows should keep `node loop.mjs ...` as a compatibility
 command while moving generic loop machinery into a shared runtime. The approved
 runtime design uses a checked-in Node ESM runtime asset, a thin workflow-local
 wrapper, automatic install-time runtime copying, and an internal runtime
-namespace rename from `ponytrail` to `getsuperpower`.
+namespace rename from `ponytrail` to `omniskill`.
 
 ## Approved Decisions
 
 - Use a checked-in Node-compatible ESM runtime asset.
-- Put active runtime modules under `src/runtimes/getsuperpower/`.
+- Put active runtime modules under `src/runtimes/omniskill/`.
 - Add the shared loop runtime at
-  `src/runtimes/getsuperpower/workflow-loop-runtime.mjs`.
+  `src/runtimes/omniskill/workflow-loop-runtime.mjs`.
 - Keep workflow-local `loop.mjs` files as thin wrappers.
 - Automatically copy `loop-runtime.mjs` into installed entry skills whenever
   `workflow.json` declares `loop`.
-- Add a later `getsuperpower loop ...` CLI adapter when workflow use proves the
+- Add a later `omniskill loop ...` CLI adapter when workflow use proves the
   need.
 - Keep `node loop.mjs <start|status|log|advance|summary>` as a compatibility
   contract.
@@ -35,7 +35,7 @@ namespace rename from `ponytrail` to `getsuperpower`.
 The runtime source layout becomes:
 
 ```text
-src/runtimes/getsuperpower/
+src/runtimes/omniskill/
   index.ts
   workflow-bundles.ts
   instruction-context.ts
@@ -69,7 +69,7 @@ await runWorkflowLoopCli({
 });
 ```
 
-`src/runtimes/getsuperpower/workflow-bundles.ts` keeps manifest validation and
+`src/runtimes/omniskill/workflow-bundles.ts` keeps manifest validation and
 install preparation. When a workflow declares `loop`, it prepares the entry
 skill by copying `workflow.json`, the workflow wrapper `loop.mjs`, generated
 `loop.metadata.json`, and the shared `loop-runtime.mjs` asset.
@@ -87,7 +87,7 @@ The wrapper passes CLI args and the local `workflow.json` URL to
 global state under:
 
 ```text
-~/.getsuperpower/runs/<workflow>/<run-id>/
+~/.omniskills/runs/<workflow>/<run-id>/
 ```
 
 Each run directory contains:
@@ -109,7 +109,7 @@ installed-entry-skill/
 
 This keeps installed loop scripts runnable with plain Node and without a source
 repo checkout, Bun, TypeScript transpilation, or a globally installed
-`getsuperpower` CLI.
+`omniskill` CLI.
 
 ## Error Handling
 
@@ -136,7 +136,7 @@ The implementation should use TDD at these public seams:
   `workflow.json`, `loop.mjs`, `loop.metadata.json`, and `loop-runtime.mjs`;
 - compatibility tests proving non-loop workflows do not receive loop runtime
   files;
-- import/path tests and docs updates for `src/runtimes/getsuperpower/`.
+- import/path tests and docs updates for `src/runtimes/omniskill/`.
 
 Final verification should include:
 

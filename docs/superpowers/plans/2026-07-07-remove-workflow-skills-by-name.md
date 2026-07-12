@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add `getsuperpower remove <workflow-name>` and `getsuperpower workflow remove <workflow-name>` so users can remove skills installed by a named workflow without deleting shared artifacts.
+**Goal:** Add `omniskill remove <workflow-name>` and `omniskill workflow remove <workflow-name>` so users can remove skills installed by a named workflow without deleting shared artifacts.
 
-**Architecture:** Keep command wiring in `src/getsuperpower.ts`, exact artifact knowledge in `src/plugins/skill-installer.ts`, and workflow record/removal planning in `src/runtimes/getsuperpower/workflow-bundles.ts`. Install records persist exact artifact paths; remove builds a plan from those paths, protects artifacts referenced by other workflow records, supports legacy inference, then deletes only safe paths and the named record.
+**Architecture:** Keep command wiring in `src/omniskill.ts`, exact artifact knowledge in `src/plugins/skill-installer.ts`, and workflow record/removal planning in `src/runtimes/omniskill/workflow-bundles.ts`. Install records persist exact artifact paths; remove builds a plan from those paths, protects artifacts referenced by other workflow records, supports legacy inference, then deletes only safe paths and the named record.
 
-**Tech Stack:** Bun tests, TypeScript, Commander, Zod, Node `fs/promises`, existing GetSuperpower runtime/plugin seams.
+**Tech Stack:** Bun tests, TypeScript, Commander, Zod, Node `fs/promises`, existing Omniskills runtime/plugin seams.
 
 ---
 
@@ -14,10 +14,10 @@
 
 - Modify `src/plugins/skill-installer.ts`: expose `artifactPaths` on each target result so callers can persist mirrors such as `.codex/skills`.
 - Modify `tests/skill-installer.test.ts`: cover primary plus mirror artifact paths for Codex and shared destinations.
-- Modify `src/runtimes/getsuperpower/workflow-bundles.ts`: add installed-record schemas, install artifact types, load/remove planning helpers, legacy inference, and deletion execution.
+- Modify `src/runtimes/omniskill/workflow-bundles.ts`: add installed-record schemas, install artifact types, load/remove planning helpers, legacy inference, and deletion execution.
 - Modify `tests/workflow-bundles.test.ts`: cover install record metadata, remove planning, shared artifact protection, missing workflow errors, and legacy fallback.
-- Modify `src/getsuperpower.ts`: collect install artifacts, pass them into `installWorkflowBundle`, configure root and compatibility remove commands, print remove plans, and prompt or accept `--yes`.
-- Modify `tests/getsuperpower.test.ts`: cover command registration, install artifact metadata persistence through command flow, dry-run, confirmed remove, missing workflow, shared artifact preservation, and `workflow remove`.
+- Modify `src/omniskill.ts`: collect install artifacts, pass them into `installWorkflowBundle`, configure root and compatibility remove commands, print remove plans, and prompt or accept `--yes`.
+- Modify `tests/omniskill.test.ts`: cover command registration, install artifact metadata persistence through command flow, dry-run, confirmed remove, missing workflow, shared artifact preservation, and `workflow remove`.
 - Modify `tests/cli.test.ts`: cover root command registration/help surface.
 - Modify `docs/architecture.md`: document `remove` and the workflow install artifact metadata.
 - Modify `openspec/changes/remove-workflow-skills-by-name/tasks.md`: mark implementation and verification tasks as they complete.
@@ -26,7 +26,7 @@
 
 - `installAgentSkill()` is the public plugin seam for artifact path metadata.
 - `installWorkflowBundle()`, `createWorkflowRemovalPlan()`, and `executeWorkflowRemovalPlan()` are the runtime seams for record behavior.
-- `configureGetSuperpowerCommand()` is the command seam for root and compatibility remove behavior.
+- `configureOmniskillsCommand()` is the command seam for root and compatibility remove behavior.
 - `buildProgram()` is the top-level CLI seam for help and command registration.
 
 ### Task 1: Expose Installer Artifact Paths
@@ -161,10 +161,10 @@ rtk git commit -m "feat: expose skill install artifact paths"
 ### Task 2: Persist Workflow Install Artifact Metadata
 
 **Files:**
-- Modify: `src/runtimes/getsuperpower/workflow-bundles.ts`
-- Modify: `src/getsuperpower.ts`
+- Modify: `src/runtimes/omniskill/workflow-bundles.ts`
+- Modify: `src/omniskill.ts`
 - Test: `tests/workflow-bundles.test.ts`
-- Test: `tests/getsuperpower.test.ts`
+- Test: `tests/omniskill.test.ts`
 
 - [ ] **Step 1: Write the failing runtime record test**
 
@@ -216,7 +216,7 @@ Expected: FAIL because `WorkflowInstallSkillArtifact` and the new `installWorkfl
 
 - [ ] **Step 3: Add runtime artifact types and install record support**
 
-In `src/runtimes/getsuperpower/workflow-bundles.ts`, add near `WorkflowSkillInstallDependency`:
+In `src/runtimes/omniskill/workflow-bundles.ts`, add near `WorkflowSkillInstallDependency`:
 
 ```ts
 export interface WorkflowInstallSkillArtifact {
@@ -283,7 +283,7 @@ Expected: PASS.
 
 - [ ] **Step 5: Write the failing command-flow metadata test**
 
-In `tests/getsuperpower.test.ts`, update `fakeSkillInstallResult()` so callers can pass artifact paths:
+In `tests/omniskill.test.ts`, update `fakeSkillInstallResult()` so callers can pass artifact paths:
 
 ```ts
 function fakeSkillInstallResult(input: {
@@ -317,8 +317,8 @@ Add this test after `install writes the workflow record to the global home by de
 
 ```ts
   test("install persists exact skill artifact paths in the workflow record", async () => {
-    const rootDir = await mkdtemp(join(tmpdir(), "getsuperpower-artifacts-root-"));
-    const homeDir = await mkdtemp(join(tmpdir(), "getsuperpower-artifacts-home-"));
+    const rootDir = await mkdtemp(join(tmpdir(), "omniskill-artifacts-root-"));
+    const homeDir = await mkdtemp(join(tmpdir(), "omniskill-artifacts-home-"));
     const bundleDir = join(rootDir, "git-workflow");
     const program = new Command();
     const primary = join(homeDir, ".agents", "skills", "git-entry");
@@ -326,7 +326,7 @@ Add this test after `install writes the workflow record to the global home by de
 
     await writeGitWorkflowFixtureAt(bundleDir);
 
-    configureGetSuperpowerCommand(program, {
+    configureOmniskillsCommand(program, {
       rootDir,
       installSkill: async (input) => ({
         skillInstall: fakeSkillInstallResult({
@@ -344,7 +344,7 @@ Add this test after `install writes the workflow record to the global home by de
     });
 
     const installed = JSON.parse(
-      await readFile(join(homeDir, ".getsuperpower", "workflows", "git-workflow.json"), "utf8"),
+      await readFile(join(homeDir, ".omniskills", "workflows", "git-workflow.json"), "utf8"),
     );
 
     expect(installed.installArtifacts).toEqual([
@@ -367,20 +367,20 @@ Add this test after `install writes the workflow record to the global home by de
 Run:
 
 ```bash
-rtk bun test tests/getsuperpower.test.ts -t "install persists exact skill artifact paths"
+rtk bun test tests/omniskill.test.ts -t "install persists exact skill artifact paths"
 ```
 
-Expected: FAIL because `runGetSuperpowerInstall()` does not pass install artifacts into the workflow record.
+Expected: FAIL because `runOmniskillsInstall()` does not pass install artifacts into the workflow record.
 
 - [ ] **Step 7: Collect and persist command-flow artifacts**
 
-In `src/getsuperpower.ts`, import the runtime type:
+In `src/omniskill.ts`, import the runtime type:
 
 ```ts
   type WorkflowInstallSkillArtifact,
 ```
 
-Inside `runGetSuperpowerInstall()`, before the install loop, add:
+Inside `runOmniskillsInstall()`, before the install loop, add:
 
 ```ts
     const installArtifacts: WorkflowInstallSkillArtifact[] = [];
@@ -413,7 +413,7 @@ Run:
 
 ```bash
 rtk bun test tests/workflow-bundles.test.ts -t "stores workflow install artifact metadata"
-rtk bun test tests/getsuperpower.test.ts -t "install persists exact skill artifact paths"
+rtk bun test tests/omniskill.test.ts -t "install persists exact skill artifact paths"
 ```
 
 Expected: PASS.
@@ -421,14 +421,14 @@ Expected: PASS.
 - [ ] **Step 9: Commit**
 
 ```bash
-rtk git add src/runtimes/getsuperpower/workflow-bundles.ts src/getsuperpower.ts tests/workflow-bundles.test.ts tests/getsuperpower.test.ts
+rtk git add src/runtimes/omniskill/workflow-bundles.ts src/omniskill.ts tests/workflow-bundles.test.ts tests/omniskill.test.ts
 rtk git commit -m "feat: record workflow install artifacts"
 ```
 
 ### Task 3: Add Workflow Removal Planning Helpers
 
 **Files:**
-- Modify: `src/runtimes/getsuperpower/workflow-bundles.ts`
+- Modify: `src/runtimes/omniskill/workflow-bundles.ts`
 - Test: `tests/workflow-bundles.test.ts`
 
 - [ ] **Step 1: Write failing removal helper tests**
@@ -541,7 +541,7 @@ Add these tests near the install/list tests:
           homeDir: rootDir,
           workflowName: "missing-workflow",
         }),
-      ).rejects.toThrow("GetSuperpower is not installed: missing-workflow");
+      ).rejects.toThrow("Omniskills is not installed: missing-workflow");
     } finally {
       await rm(rootDir, { recursive: true, force: true });
     }
@@ -596,7 +596,7 @@ Expected: FAIL because the removal helper exports do not exist.
 
 - [ ] **Step 3: Implement record path, load, plan, and execute helpers**
 
-In `src/runtimes/getsuperpower/workflow-bundles.ts`, add these interfaces near the install artifact type:
+In `src/runtimes/omniskill/workflow-bundles.ts`, add these interfaces near the install artifact type:
 
 ```ts
 export interface WorkflowRemovalArtifact {
@@ -646,7 +646,7 @@ export async function loadInstalledWorkflowBundle(input: {
     return { workflow: JSON.parse(raw) as InstalledWorkflowBundle, path };
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      throw new Error(`GetSuperpower is not installed: ${input.workflowName}`);
+      throw new Error(`Omniskills is not installed: ${input.workflowName}`);
     }
     throw error;
   }
@@ -826,7 +826,7 @@ Add this test:
 ```ts
   test("infers legacy removal artifacts and skips unmappable legacy sources", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "workflow-remove-legacy-"));
-    const workflowDir = join(rootDir, ".getsuperpower", "workflows");
+    const workflowDir = join(rootDir, ".omniskills", "workflows");
 
     try {
       await mkdir(workflowDir, { recursive: true });
@@ -901,20 +901,20 @@ Expected: PASS.
 - [ ] **Step 8: Commit**
 
 ```bash
-rtk git add src/runtimes/getsuperpower/workflow-bundles.ts tests/workflow-bundles.test.ts
+rtk git add src/runtimes/omniskill/workflow-bundles.ts tests/workflow-bundles.test.ts
 rtk git commit -m "feat: plan workflow skill removal"
 ```
 
 ### Task 4: Wire Root And Compatibility Remove Commands
 
 **Files:**
-- Modify: `src/getsuperpower.ts`
-- Modify: `tests/getsuperpower.test.ts`
+- Modify: `src/omniskill.ts`
+- Modify: `tests/omniskill.test.ts`
 - Modify: `tests/cli.test.ts`
 
 - [ ] **Step 1: Write failing command registration tests**
 
-In `tests/getsuperpower.test.ts`, update the registration expectation:
+In `tests/omniskill.test.ts`, update the registration expectation:
 
 ```ts
     expect(program.commands.map((command) => command.name())).toEqual([
@@ -974,15 +974,15 @@ Update the workflow command expectation:
 Run:
 
 ```bash
-rtk bun test tests/getsuperpower.test.ts -t "registers GetSuperpower commands"
-rtk bun test tests/cli.test.ts -t "registers GetSuperpower and skill commands only"
+rtk bun test tests/omniskill.test.ts -t "registers Omniskills commands"
+rtk bun test tests/cli.test.ts -t "registers Omniskills and skill commands only"
 ```
 
 Expected: FAIL because remove commands are not registered.
 
 - [ ] **Step 3: Add remove command types and options**
 
-In `src/getsuperpower.ts`, add imports:
+In `src/omniskill.ts`, add imports:
 
 ```ts
   createWorkflowRemovalPlan,
@@ -993,60 +993,60 @@ In `src/getsuperpower.ts`, add imports:
 Add options and prompt interfaces near install options:
 
 ```ts
-interface GetSuperpowerRemoveCommandOptions {
+interface OmniskillsRemoveCommandOptions {
   dir?: string;
   home: string;
   dryRun: boolean;
   yes: boolean;
 }
 
-export interface GetSuperpowerRemovePromptInput {
+export interface OmniskillsRemovePromptInput {
   workflowName: string;
   artifactsToRemove: number;
   artifactsToKeep: number;
 }
 
-export interface GetSuperpowerRemovePrompt {
-  confirmRemove(input: GetSuperpowerRemovePromptInput): Promise<boolean>;
+export interface OmniskillsRemovePrompt {
+  confirmRemove(input: OmniskillsRemovePromptInput): Promise<boolean>;
 }
 ```
 
-Add `removePrompt?: GetSuperpowerRemovePrompt;` to `ConfigureGetSuperpowerCommandOptions`.
+Add `removePrompt?: OmniskillsRemovePrompt;` to `ConfigureOmniskillsCommandOptions`.
 
 - [ ] **Step 4: Configure root and workflow remove commands**
 
-In `configureGetSuperpowerCommands()`, add `configureRemoveCommand(command, options);` after list.
+In `configureOmniskillsCommands()`, add `configureRemoveCommand(command, options);` after list.
 
-In `configureGetSuperpowerCommand()`, add `configureRemoveCommand(workflowCommand, options);` after list.
+In `configureOmniskillsCommand()`, add `configureRemoveCommand(workflowCommand, options);` after list.
 
 Add this function near `configureListCommand()`:
 
 ```ts
 function configureRemoveCommand(
   command: Command,
-  options: ConfigureGetSuperpowerCommandOptions,
+  options: ConfigureOmniskillsCommandOptions,
 ): void {
   command
     .command("remove")
-    .description("Remove an installed GetSuperpower and its recorded skill artifacts.")
-    .argument("<workflow-name>", "installed GetSuperpower workflow name")
-    .option("--dir <dir>", "override directory with .getsuperpower/workflows")
-    .option("--home <dir>", "home directory with global GetSuperpower records", homedir())
+    .description("Remove an installed Omniskills and its recorded skill artifacts.")
+    .argument("<workflow-name>", "installed Omniskills workflow name")
+    .option("--dir <dir>", "override directory with .omniskills/workflows")
+    .option("--home <dir>", "home directory with global Omniskills records", homedir())
     .option("--dry-run", "print the removal plan without deleting files", false)
     .option("--yes", "remove without prompting for confirmation", false)
-    .action((workflowName: string, commandOptions: GetSuperpowerRemoveCommandOptions) =>
-      runGetSuperpowerRemove(workflowName, commandOptions, options),
+    .action((workflowName: string, commandOptions: OmniskillsRemoveCommandOptions) =>
+      runOmniskillsRemove(workflowName, commandOptions, options),
     );
 }
 ```
 
-Add `runGetSuperpowerRemove()` with the full planned command flow:
+Add `runOmniskillsRemove()` with the full planned command flow:
 
 ```ts
-async function runGetSuperpowerRemove(
+async function runOmniskillsRemove(
   workflowName: string,
-  commandOptions: GetSuperpowerRemoveCommandOptions,
-  options: ConfigureGetSuperpowerCommandOptions,
+  commandOptions: OmniskillsRemoveCommandOptions,
+  options: ConfigureOmniskillsCommandOptions,
 ): Promise<void> {
   const homeDir = resolveHomePath(commandOptions.home);
   const targetDir = commandOptions.dir ? resolvePath(options.rootDir, commandOptions.dir) : homeDir;
@@ -1055,7 +1055,7 @@ async function runGetSuperpowerRemove(
     homeDir,
     workflowName,
   });
-  printGetSuperpowerRemovePlan(plan, commandOptions.dryRun);
+  printOmniskillsRemovePlan(plan, commandOptions.dryRun);
 
   if (commandOptions.dryRun) {
     return;
@@ -1070,12 +1070,12 @@ async function runGetSuperpowerRemove(
       artifactsToKeep: plan.artifactsToKeep.length,
     }));
   if (!approved) {
-    console.log(warning("GetSuperpower remove cancelled."));
+    console.log(warning("Omniskills remove cancelled."));
     return;
   }
 
   await executeWorkflowRemovalPlan(plan);
-  console.log(success(`GetSuperpower removed: ${workflowName}`));
+  console.log(success(`Omniskills removed: ${workflowName}`));
 }
 ```
 
@@ -1084,8 +1084,8 @@ async function runGetSuperpowerRemove(
 Add:
 
 ```ts
-function printGetSuperpowerRemovePlan(plan: WorkflowRemovalPlan, dryRun: boolean): void {
-  console.log(success(`GetSuperpower remove plan: ${plan.workflow.name}`));
+function printOmniskillsRemovePlan(plan: WorkflowRemovalPlan, dryRun: boolean): void {
+  console.log(success(`Omniskills remove plan: ${plan.workflow.name}`));
   console.log(keyValue("Workflow record", plan.workflowRecordPath));
   if (plan.legacy) {
     console.log(warning("Legacy workflow record detected; removal paths are inferred."));
@@ -1116,7 +1116,7 @@ function printGetSuperpowerRemovePlan(plan: WorkflowRemovalPlan, dryRun: boolean
   }
 }
 
-function createDefaultRemovePrompt(): GetSuperpowerRemovePrompt {
+function createDefaultRemovePrompt(): OmniskillsRemovePrompt {
   return {
     confirmRemove: async (input) => {
       if (!process.stdin.isTTY) {
@@ -1130,7 +1130,7 @@ function createDefaultRemovePrompt(): GetSuperpowerRemovePrompt {
       });
 
       if (isCancel(result)) {
-        clackCancel("GetSuperpower remove cancelled");
+        clackCancel("Omniskills remove cancelled");
         return false;
       }
 
@@ -1145,8 +1145,8 @@ function createDefaultRemovePrompt(): GetSuperpowerRemovePrompt {
 Run:
 
 ```bash
-rtk bun test tests/getsuperpower.test.ts -t "registers GetSuperpower commands"
-rtk bun test tests/cli.test.ts -t "registers GetSuperpower and skill commands only"
+rtk bun test tests/omniskill.test.ts -t "registers Omniskills commands"
+rtk bun test tests/cli.test.ts -t "registers Omniskills and skill commands only"
 ```
 
 Expected: PASS.
@@ -1154,24 +1154,24 @@ Expected: PASS.
 - [ ] **Step 7: Commit**
 
 ```bash
-rtk git add src/getsuperpower.ts tests/getsuperpower.test.ts tests/cli.test.ts
+rtk git add src/omniskill.ts tests/omniskill.test.ts tests/cli.test.ts
 rtk git commit -m "feat: register workflow remove commands"
 ```
 
 ### Task 5: Cover Remove Command Behavior
 
 **Files:**
-- Modify: `tests/getsuperpower.test.ts`
-- Modify: `src/getsuperpower.ts` if behavior needs adjustment
+- Modify: `tests/omniskill.test.ts`
+- Modify: `src/omniskill.ts` if behavior needs adjustment
 
 - [ ] **Step 1: Write dry-run and confirmed remove tests**
 
-Add these tests in `tests/getsuperpower.test.ts` near install/list behavior:
+Add these tests in `tests/omniskill.test.ts` near install/list behavior:
 
 ```ts
   test("remove dry-run prints the plan without deleting artifacts or workflow record", async () => {
-    const rootDir = await mkdtemp(join(tmpdir(), "getsuperpower-remove-root-"));
-    const homeDir = await mkdtemp(join(tmpdir(), "getsuperpower-remove-home-"));
+    const rootDir = await mkdtemp(join(tmpdir(), "omniskill-remove-root-"));
+    const homeDir = await mkdtemp(join(tmpdir(), "omniskill-remove-home-"));
     const bundleDir = join(rootDir, "git-workflow");
     const artifactPath = join(homeDir, ".agents", "skills", "git-entry");
     const logs: string[] = [];
@@ -1187,7 +1187,7 @@ Add these tests in `tests/getsuperpower.test.ts` near install/list behavior:
       await mkdir(artifactPath, { recursive: true });
       await writeFile(join(artifactPath, "SKILL.md"), "installed skill");
 
-      configureGetSuperpowerCommand(program, {
+      configureOmniskillsCommand(program, {
         rootDir,
         installSkill: async (input) => ({
           skillInstall: fakeSkillInstallResult({
@@ -1207,11 +1207,11 @@ Add these tests in `tests/getsuperpower.test.ts` near install/list behavior:
         from: "user",
       });
 
-      expect(stripAnsiLines(logs).join("\n")).toContain("GetSuperpower remove plan: git-workflow");
+      expect(stripAnsiLines(logs).join("\n")).toContain("Omniskills remove plan: git-workflow");
       expect(stripAnsiLines(logs).join("\n")).toContain("Artifacts that would be removed:");
       await expect(stat(artifactPath)).resolves.toBeTruthy();
       await expect(
-        stat(join(homeDir, ".getsuperpower", "workflows", "git-workflow.json")),
+        stat(join(homeDir, ".omniskills", "workflows", "git-workflow.json")),
       ).resolves.toBeTruthy();
     } finally {
       console.log = originalLog;
@@ -1221,8 +1221,8 @@ Add these tests in `tests/getsuperpower.test.ts` near install/list behavior:
   });
 
   test("remove confirmed with yes deletes artifacts and workflow record", async () => {
-    const rootDir = await mkdtemp(join(tmpdir(), "getsuperpower-remove-root-"));
-    const homeDir = await mkdtemp(join(tmpdir(), "getsuperpower-remove-home-"));
+    const rootDir = await mkdtemp(join(tmpdir(), "omniskill-remove-root-"));
+    const homeDir = await mkdtemp(join(tmpdir(), "omniskill-remove-home-"));
     const bundleDir = join(rootDir, "git-workflow");
     const artifactPath = join(homeDir, ".agents", "skills", "git-entry");
     const logs: string[] = [];
@@ -1238,7 +1238,7 @@ Add these tests in `tests/getsuperpower.test.ts` near install/list behavior:
       await mkdir(artifactPath, { recursive: true });
       await writeFile(join(artifactPath, "SKILL.md"), "installed skill");
 
-      configureGetSuperpowerCommand(program, {
+      configureOmniskillsCommand(program, {
         rootDir,
         installSkill: async (input) => ({
           skillInstall: fakeSkillInstallResult({
@@ -1258,10 +1258,10 @@ Add these tests in `tests/getsuperpower.test.ts` near install/list behavior:
         from: "user",
       });
 
-      expect(stripAnsiLines(logs)).toContain("GetSuperpower removed: git-workflow");
+      expect(stripAnsiLines(logs)).toContain("Omniskills removed: git-workflow");
       await expect(stat(artifactPath)).rejects.toThrow();
       await expect(
-        stat(join(homeDir, ".getsuperpower", "workflows", "git-workflow.json")),
+        stat(join(homeDir, ".omniskills", "workflows", "git-workflow.json")),
       ).rejects.toThrow();
     } finally {
       console.log = originalLog;
@@ -1277,8 +1277,8 @@ Add:
 
 ```ts
   test("workflow remove behaves like root remove", async () => {
-    const rootDir = await mkdtemp(join(tmpdir(), "getsuperpower-workflow-remove-root-"));
-    const homeDir = await mkdtemp(join(tmpdir(), "getsuperpower-workflow-remove-home-"));
+    const rootDir = await mkdtemp(join(tmpdir(), "omniskill-workflow-remove-root-"));
+    const homeDir = await mkdtemp(join(tmpdir(), "omniskill-workflow-remove-home-"));
     const bundleDir = join(rootDir, "git-workflow");
     const artifactPath = join(homeDir, ".agents", "skills", "git-entry");
     const program = new Command();
@@ -1288,7 +1288,7 @@ Add:
       await mkdir(artifactPath, { recursive: true });
       await writeFile(join(artifactPath, "SKILL.md"), "installed skill");
 
-      configureGetSuperpowerCommand(program, {
+      configureOmniskillsCommand(program, {
         rootDir,
         installSkill: async (input) => ({
           skillInstall: fakeSkillInstallResult({
@@ -1316,12 +1316,12 @@ Add:
   });
 
   test("remove fails clearly when the workflow is not installed", async () => {
-    const rootDir = await mkdtemp(join(tmpdir(), "getsuperpower-remove-missing-"));
-    const homeDir = await mkdtemp(join(tmpdir(), "getsuperpower-remove-missing-home-"));
+    const rootDir = await mkdtemp(join(tmpdir(), "omniskill-remove-missing-"));
+    const homeDir = await mkdtemp(join(tmpdir(), "omniskill-remove-missing-home-"));
     const program = new Command();
 
     try {
-      configureGetSuperpowerCommand(program, {
+      configureOmniskillsCommand(program, {
         rootDir,
         installSkill: async () => {
           throw new Error("install is not exercised by remove missing");
@@ -1331,7 +1331,7 @@ Add:
 
       await expect(
         program.parseAsync(["remove", "missing-workflow", "--home", homeDir], { from: "user" }),
-      ).rejects.toThrow("GetSuperpower is not installed: missing-workflow");
+      ).rejects.toThrow("Omniskills is not installed: missing-workflow");
     } finally {
       await rm(rootDir, { recursive: true, force: true });
       await rm(homeDir, { recursive: true, force: true });
@@ -1339,8 +1339,8 @@ Add:
   });
 
   test("remove keeps artifacts still referenced by another workflow", async () => {
-    const rootDir = await mkdtemp(join(tmpdir(), "getsuperpower-remove-shared-root-"));
-    const homeDir = await mkdtemp(join(tmpdir(), "getsuperpower-remove-shared-home-"));
+    const rootDir = await mkdtemp(join(tmpdir(), "omniskill-remove-shared-root-"));
+    const homeDir = await mkdtemp(join(tmpdir(), "omniskill-remove-shared-home-"));
     const firstBundleDir = join(rootDir, "git-workflow");
     const secondBundleDir = join(rootDir, "ops-workflow");
     const artifactPath = join(homeDir, ".agents", "skills", "git-entry");
@@ -1361,7 +1361,7 @@ Add:
       await mkdir(artifactPath, { recursive: true });
       await writeFile(join(artifactPath, "SKILL.md"), "installed skill");
 
-      configureGetSuperpowerCommand(program, {
+      configureOmniskillsCommand(program, {
         rootDir,
         installSkill: async (input) => ({
           skillInstall: fakeSkillInstallResult({
@@ -1389,10 +1389,10 @@ Add:
       );
       await expect(stat(artifactPath)).resolves.toBeTruthy();
       await expect(
-        stat(join(homeDir, ".getsuperpower", "workflows", "git-workflow.json")),
+        stat(join(homeDir, ".omniskills", "workflows", "git-workflow.json")),
       ).rejects.toThrow();
       await expect(
-        stat(join(homeDir, ".getsuperpower", "workflows", "ops-workflow.json")),
+        stat(join(homeDir, ".omniskills", "workflows", "ops-workflow.json")),
       ).resolves.toBeTruthy();
     } finally {
       console.log = originalLog;
@@ -1407,17 +1407,17 @@ Add:
 Run:
 
 ```bash
-rtk bun test tests/getsuperpower.test.ts -t "remove"
+rtk bun test tests/omniskill.test.ts -t "remove"
 ```
 
 Expected: PASS after small output or prompt adjustments.
 
-- [ ] **Step 4: Run GetSuperpower command tests**
+- [ ] **Step 4: Run Omniskills command tests**
 
 Run:
 
 ```bash
-rtk bun test tests/getsuperpower.test.ts
+rtk bun test tests/omniskill.test.ts
 ```
 
 Expected: PASS.
@@ -1425,7 +1425,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-rtk git add src/getsuperpower.ts tests/getsuperpower.test.ts
+rtk git add src/omniskill.ts tests/omniskill.test.ts
 rtk git commit -m "feat: remove workflow-installed skills"
 ```
 
@@ -1438,10 +1438,10 @@ rtk git commit -m "feat: remove workflow-installed skills"
 
 - [ ] **Step 1: Update architecture docs**
 
-In `docs/architecture.md`, add `getsuperpower remove <workflow-name>` to Primary commands:
+In `docs/architecture.md`, add `omniskill remove <workflow-name>` to Primary commands:
 
 ```md
-- `getsuperpower remove <workflow-name>`
+- `omniskill remove <workflow-name>`
 ```
 
 Add `workflow remove` under Compatibility aliases:
@@ -1450,10 +1450,10 @@ Add `workflow remove` under Compatibility aliases:
 - `workflow remove`
 ```
 
-In the GetSuperpower Runtime section, update the record bullet:
+In the Omniskills Runtime section, update the record bullet:
 
 ```md
-- install normalized global records under `~/.getsuperpower/workflows/` with
+- install normalized global records under `~/.omniskills/workflows/` with
   exact skill artifact metadata for later removal
 - plan and execute removal of installed workflow skill artifacts while
   preserving artifacts referenced by other workflow records
@@ -1484,10 +1484,10 @@ rtk bun run dev -- list --home work/remove-workflow-skills-smoke/home
 
 Expected:
 
-- install succeeds and writes `work/remove-workflow-skills-smoke/home/.getsuperpower/workflows/release-review.json`;
+- install succeeds and writes `work/remove-workflow-skills-smoke/home/.omniskills/workflows/release-review.json`;
 - dry-run prints artifacts that would be removed;
 - confirmed remove deletes the workflow record;
-- list prints `No GetSuperpowers installed.`;
+- list prints `No Omniskillss installed.`;
 - the command does not write to the real home directory.
 
 - [ ] **Step 4: Run the full gate**
@@ -1541,19 +1541,19 @@ In `openspec/changes/remove-workflow-skills-by-name/tasks.md`, mark completed im
 Run a pre snapshot before the checklist update if not already in a matching snapshot:
 
 ```bash
-rtk sh /Users/roy/.agents/skills/pony-trail/scripts/snapshot_change.sh --session-id remove-workflow-skills-command pre --files src/plugins/skill-installer.ts --files src/runtimes/getsuperpower/workflow-bundles.ts --files src/getsuperpower.ts --files tests/skill-installer.test.ts --files tests/workflow-bundles.test.ts --files tests/getsuperpower.test.ts --files tests/cli.test.ts --files docs/architecture.md --files openspec/changes/remove-workflow-skills-by-name/tasks.md --action "record verification" --purpose "Preserve verification evidence for workflow skill removal" --reason "Implementation and verification are complete" --expected "Snapshot captures final implementation state and verification commands" --verify "rtk bun run check" --rollback "Use git revert on implementation commits or restore files from this snapshot"
+rtk sh /Users/roy/.agents/skills/pony-trail/scripts/snapshot_change.sh --session-id remove-workflow-skills-command pre --files src/plugins/skill-installer.ts --files src/runtimes/omniskill/workflow-bundles.ts --files src/omniskill.ts --files tests/skill-installer.test.ts --files tests/workflow-bundles.test.ts --files tests/omniskill.test.ts --files tests/cli.test.ts --files docs/architecture.md --files openspec/changes/remove-workflow-skills-by-name/tasks.md --action "record verification" --purpose "Preserve verification evidence for workflow skill removal" --reason "Implementation and verification are complete" --expected "Snapshot captures final implementation state and verification commands" --verify "rtk bun run check" --rollback "Use git revert on implementation commits or restore files from this snapshot"
 ```
 
 Run the matching post snapshot with the printed snapshot id:
 
 ```bash
-rtk sh /Users/roy/.agents/skills/pony-trail/scripts/snapshot_change.sh --session-id remove-workflow-skills-command post --snapshot-id "<snapshot-id>" --files src/plugins/skill-installer.ts --files src/runtimes/getsuperpower/workflow-bundles.ts --files src/getsuperpower.ts --files tests/skill-installer.test.ts --files tests/workflow-bundles.test.ts --files tests/getsuperpower.test.ts --files tests/cli.test.ts --files docs/architecture.md --files openspec/changes/remove-workflow-skills-by-name/tasks.md --summary "Implemented workflow skill removal by workflow name" --checks "rtk bun test tests/skill-installer.test.ts; rtk bun test tests/workflow-bundles.test.ts; rtk bun test tests/getsuperpower.test.ts; rtk bun test tests/cli.test.ts; rtk openspec validate remove-workflow-skills-by-name --strict; rtk bun run check" --result "pass"
+rtk sh /Users/roy/.agents/skills/pony-trail/scripts/snapshot_change.sh --session-id remove-workflow-skills-command post --snapshot-id "<snapshot-id>" --files src/plugins/skill-installer.ts --files src/runtimes/omniskill/workflow-bundles.ts --files src/omniskill.ts --files tests/skill-installer.test.ts --files tests/workflow-bundles.test.ts --files tests/omniskill.test.ts --files tests/cli.test.ts --files docs/architecture.md --files openspec/changes/remove-workflow-skills-by-name/tasks.md --summary "Implemented workflow skill removal by workflow name" --checks "rtk bun test tests/skill-installer.test.ts; rtk bun test tests/workflow-bundles.test.ts; rtk bun test tests/omniskill.test.ts; rtk bun test tests/cli.test.ts; rtk openspec validate remove-workflow-skills-by-name --strict; rtk bun run check" --result "pass"
 ```
 
 - [ ] **Step 7: Commit verification and checklist**
 
 ```bash
-rtk git add docs/architecture.md openspec/changes/remove-workflow-skills-by-name/tasks.md .getsuperpower/snapshots.jsonl .getsuperpower/sessions/remove-workflow-skills-command/tree.md
+rtk git add docs/architecture.md openspec/changes/remove-workflow-skills-by-name/tasks.md .omniskills/snapshots.jsonl .omniskills/sessions/remove-workflow-skills-command/tree.md
 rtk git commit -m "docs: verify workflow skill removal"
 ```
 
@@ -1561,4 +1561,4 @@ rtk git commit -m "docs: verify workflow skill removal"
 
 - Spec coverage: Tasks 1-6 cover artifact metadata, install record persistence, removal planning, shared artifact protection, legacy fallback, root and compatibility commands, dry-run, missing workflow, docs, smoke checks, OpenSpec validation, and full check.
 - Completion-marker scan: the plan has no unfinished marker words or vague "add tests" steps. Each code task includes exact tests, implementation snippets, commands, and expected outcomes.
-- Type consistency: `WorkflowInstallSkillArtifact`, `WorkflowRemovalPlan`, `artifactPaths`, `createWorkflowRemovalPlan()`, `executeWorkflowRemovalPlan()`, and `GetSuperpowerRemovePrompt` are named consistently across tasks.
+- Type consistency: `WorkflowInstallSkillArtifact`, `WorkflowRemovalPlan`, `artifactPaths`, `createWorkflowRemovalPlan()`, `executeWorkflowRemovalPlan()`, and `OmniskillsRemovePrompt` are named consistently across tasks.
