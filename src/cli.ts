@@ -42,7 +42,7 @@ export function buildProgram(options: BuildProgramOptions = {}): Command {
   const program = new Command();
 
   program
-    .name("omniskills")
+    .name("omniskill")
     .description("Install, author, and inspect Omniskills skill trees.")
     .version(CLI_VERSION)
     .option("-v", "output the version number");

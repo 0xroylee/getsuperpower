@@ -198,12 +198,7 @@ async function runBaseline(input: {
     ],
   });
   const logs = commands.flatMap((command) => command.logs);
-  const workflowRecord = join(
-    input.homeDir,
-    ".getsuperpower",
-    "workflows",
-    "openspec-delivery.json",
-  );
+  const workflowRecord = join(input.homeDir, ".omniskills", "workflows", "openspec-delivery.json");
 
   return buildRun({
     mode: "baseline",
@@ -233,7 +228,7 @@ async function runBaseline(input: {
         id: "baseline-does-not-install",
         label: "Baseline mode leaves the project uninstalled",
         passed: !(await pathExists(workflowRecord)),
-        detail: ".getsuperpower workflow records should not exist before install",
+        detail: ".omniskills workflow records should not exist before install",
       },
       {
         id: "baseline-no-external-side-effects",
@@ -263,12 +258,7 @@ async function runWorkflow(input: {
     ],
   });
   const logs = commands.flatMap((command) => command.logs);
-  const workflowRecord = join(
-    input.homeDir,
-    ".getsuperpower",
-    "workflows",
-    "openspec-delivery.json",
-  );
+  const workflowRecord = join(input.homeDir, ".omniskills", "workflows", "openspec-delivery.json");
   const installedSkillResults = await Promise.all(
     expectedInstalledSkills.map((skill) =>
       pathExists(join(input.homeDir, ".agents", "skills", skill, "SKILL.md")),
@@ -287,7 +277,7 @@ async function runWorkflow(input: {
         id: "workflow-record-written",
         label: "Workflow mode writes the installed workflow record",
         passed: await pathExists(workflowRecord),
-        detail: "global .getsuperpower/workflows/openspec-delivery.json should exist",
+        detail: "global .omniskills/workflows/openspec-delivery.json should exist",
       },
       {
         id: "workflow-installs-skills",

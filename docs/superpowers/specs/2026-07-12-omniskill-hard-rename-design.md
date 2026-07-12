@@ -4,8 +4,8 @@
 
 Make the product brand **Omniskills** while making the npm package, executable,
 and command invocation singular: `omniskill` and `npx omniskill`. Remove every
-GetSuperpower compatibility surface and move runtime state from
-`.getsuperpower` to `.omniskills` without fallback reads or data migration.
+legacy package, binary, environment, and storage compatibility surface. Write
+all new runtime state to `.omniskills` without fallback reads or data migration.
 
 ## Approved Naming Contract
 
@@ -20,21 +20,18 @@ GetSuperpower compatibility surface and move runtime state from
 | Binary override | `OMNISKILL_BIN` |
 | Internal command module/runtime folder | `src/omniskill.ts`, `src/runtimes/omniskill/` |
 
-The following names are removed, not deprecated:
-
-- `getsuperpower` and `GETSUPERPOWER_BIN`
-- `.getsuperpower`
-- the plural `omniskills` npm package, executable, and command invocation
-- compatibility language that tells users to keep using any removed name
+The legacy package, binary, binary override, state directory, and plural command
+invocation are removed rather than deprecated. Documentation must not direct
+users to any removed identifier.
 
 ## Compatibility Boundary
 
 This is an intentional hard break. The runtime will not:
 
 - register old executable aliases;
-- read workflow records, loop state, or snapshots from `.getsuperpower`;
-- migrate `.getsuperpower` data into `.omniskills`;
-- honor `GETSUPERPOWER_BIN` or the plural `OMNISKILLS_BIN` override;
+- read workflow records, loop state, or snapshots from the legacy state root;
+- migrate legacy state into `.omniskills`;
+- honor either removed binary override;
 - document recovery through old commands.
 
 Existing installations must reinstall the singular `omniskill` package. Users
@@ -70,8 +67,8 @@ CLI options that describe an override directory will name `.omniskills` in help
 text. Ignore rules, bundled skill instructions, tests, and architecture docs
 will match the new storage root.
 
-No runtime branch may fall back to `.getsuperpower`. Old data is intentionally
-invisible after the change.
+No runtime branch may fall back to the legacy state root. Old data is
+intentionally invisible after the change.
 
 ## Repository Migration Surface
 
@@ -99,11 +96,10 @@ this migration.
 After release:
 
 - `npx omniskill --help` is the supported entry point;
-- `npx omniskills` and `getsuperpower` fail normally because those package or
-  binary aliases no longer exist;
+- removed package and binary aliases fail normally because they no longer exist;
 - errors and remediation text point only to `npx omniskill` or `omniskill` on
   `PATH`;
-- existing `.getsuperpower` state is not listed, removed, or resumed;
+- existing legacy state is not listed, removed, or resumed;
 - new workflow and loop state is written only under `.omniskills`.
 
 The CLI command set and workflow behavior otherwise remain unchanged.
@@ -119,10 +115,9 @@ Tests must prove:
 5. Generated loop runners use `omniskill` and `OMNISKILL_BIN` only.
 6. Public docs, landing content, examples, and guides use `npx omniskill`.
 7. Runtime, package, documentation, tests, CI, landing, bundled skills, and
-   examples contain no `getsuperpower`, `.getsuperpower`, `GETSUPERPOWER_BIN`,
-   `OMNISKILLS_BIN`, or obsolete `npx omniskills` references. This design spec
-   is the sole repository allowlist because it records the removal decision;
-   Git history and third-party dependency material are outside the scan.
+   examples contain no removed package, binary, environment, state-directory,
+   or plural-command identifiers. Git history and third-party dependency
+   material are outside the scan.
 8. Product prose still uses the approved plural “Omniskills” brand.
 
 Verification will include focused package, CLI, workflow, loop, snapshot,

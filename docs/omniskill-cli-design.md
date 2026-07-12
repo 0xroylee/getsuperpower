@@ -51,7 +51,7 @@ above.
 
 Use the logo in:
 
-- root `omniskills --help`;
+- root `omniskill --help`;
 - no-command root invocation if it shows welcome help.
 
 Do not use the logo in:
@@ -112,17 +112,17 @@ Welcome to Omniskills.
 Install and author workflow skill trees for agent work.
 
 Start:
-  omniskills init release-review
-  omniskills validate ./release-review
-  omniskills install openspec-superpowers
-  omniskills install ./release-review
+  omniskill init release-review
+  omniskill validate ./release-review
+  omniskill install openspec-superpowers
+  omniskill install ./release-review
 
 Inspect:
-  omniskills list
-  omniskills deps ./release-review
+  omniskill list
+  omniskill deps ./release-review
 
 Usage:
-  omniskills [options] [command]
+  omniskill [options] [command]
 
 Commands:
   init
@@ -155,7 +155,7 @@ The first line should use the success helper. Labels such as `Steps:` and
 
 ```text
 Omniskills install plan: release-review@0.1.0
-Workflow records: ~/.getsuperpower
+Workflow records: ~/.omniskills
 Skill home: ~/.agents
 Skills to install:
 - superpowers:brainstorming
@@ -167,7 +167,7 @@ Installing skills...
 Processing 1/4: superpowers:brainstorming
 Installed skill: superpowers-brainstorming
 Omniskills installed: release-review
-Omniskills file: ~/.getsuperpower/workflows/release-review.json
+Omniskills file: ~/.omniskills/workflows/release-review.json
 +---------------------------------------------------------------+
 | OMNISKILLS                                                    |
 | Skill trees for serious agent work.                           |
@@ -175,7 +175,7 @@ Omniskills file: ~/.getsuperpower/workflows/release-review.json
 | Omniskills installed: release-review                          |
 | Version: 0.1.0                                                |
 | Skills installed: 4                                           |
-| Omniskills file: ~/.getsuperpower/workflows/release-review.json |
+| Omniskills file: ~/.omniskills/workflows/release-review.json |
 +---------------------------------------------------------------+
 ```
 
@@ -199,7 +199,7 @@ Keep target rows scan-friendly. Do not introduce decorative bullets.
 
 ```text
 No Omniskills workflows installed.
-Next: omniskills install <path-or-git-url>
+Next: omniskill install <path-or-git-url>
 ```
 
 Empty states should include one useful next command when it is safe and obvious.

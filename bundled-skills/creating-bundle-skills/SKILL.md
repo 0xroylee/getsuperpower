@@ -25,7 +25,7 @@ An entry skill cannot guarantee tool-level function calls in every agent runtime
 4. Add every required sub-skill to `workflow.json` `skills[]`.
 5. Add ordered workflow phases to `workflow.json` `steps[]`; each `steps[].skill` must exactly match a declared `skills[].source`.
 6. Keep the entry skill's required sub-skill list in the same order as `workflow.json` steps.
-7. Run `omniskills validate`, then `omniskills deps`, then a local install smoke test.
+7. Run `omniskill validate`, then `omniskill deps`, then a local install smoke test.
 
 ## Entry Skill Template
 
@@ -85,7 +85,7 @@ Do not add a step for the entry skill. Steps describe the workflow the entry ski
 - Make missing dependencies explicit instead of silently skipping them.
 - Prefer exact skill source names over prose labels.
 - Keep `README.md`, `workflow.json`, and the entry skill aligned.
-- Validate with `omniskills validate <path>` before sharing.
+- Validate with `omniskill validate <path>` before sharing.
 
 ## Common Mistakes
 

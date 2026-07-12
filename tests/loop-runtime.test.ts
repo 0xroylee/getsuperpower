@@ -98,9 +98,8 @@ describe("loop runtime", () => {
       const preparedEntry = prepared.dependencies[0]?.source ?? "";
       const generatedRunnerPath = join(preparedEntry, "loop.mjs");
       const generatedRunner = await readFile(generatedRunnerPath, "utf8");
-      expect(generatedRunner).toContain("OMNISKILLS_BIN");
-      expect(generatedRunner).toContain("GETSUPERPOWER_BIN");
-      expect(generatedRunner).toContain("omniskills");
+      expect(generatedRunner).toContain("process.env.OMNISKILL_BIN");
+      expect(generatedRunner).toContain("omniskill");
       expect(generatedRunner).toContain("workflow.json");
       expect(generatedRunner).not.toContain("function parseArgs");
       await expect(stat(join(preparedEntry, "loop-runtime.mjs"))).rejects.toThrow();
@@ -121,7 +120,7 @@ describe("loop runtime", () => {
       await chmod(shimPath, 0o755);
 
       const forwarded = await runNode([generatedRunnerPath, "status", "--latest", "--json"], {
-        OMNISKILLS_BIN: shimPath,
+        OMNISKILL_BIN: shimPath,
       });
       expect(forwarded.exitCode).toBe(0);
       expect(forwarded.stderr).toBe("");
@@ -133,18 +132,12 @@ describe("loop runtime", () => {
         "--json",
       ]);
 
-      const legacyForwarded = await runNode([generatedRunnerPath, "status", "--latest", "--json"], {
-        GETSUPERPOWER_BIN: shimPath,
-      });
-      expect(legacyForwarded.exitCode).toBe(0);
-      expect(legacyForwarded.stderr).toBe("");
-
       const missingCli = await runNode([generatedRunnerPath, "status", "--latest", "--json"], {
-        OMNISKILLS_BIN: join(tempDir, "missing-omniskills"),
+        OMNISKILL_BIN: join(tempDir, "missing-omniskill"),
       });
       expect(missingCli.exitCode).toBe(1);
       expect(missingCli.stderr).toContain(
-        "Omniskills CLI is required to run loop.mjs. Install or expose omniskills on PATH.",
+        "Omniskills CLI is required to run loop.mjs. Install or expose omniskill on PATH.",
       );
     } finally {
       await prepared.cleanup?.();
@@ -193,9 +186,7 @@ describe("loop runtime", () => {
         description: "Check the phase verification rule before advancing.",
       });
       await expect(
-        stat(
-          join(homeDir, ".getsuperpower", "runs", "grilled-product-dev", "direct", "state.json"),
-        ),
+        stat(join(homeDir, ".omniskills", "runs", "grilled-product-dev", "direct", "state.json")),
       ).resolves.toBeTruthy();
     } finally {
       await rm(homeDir, { recursive: true, force: true });
@@ -209,7 +200,7 @@ describe("loop runtime", () => {
     try {
       const payload = parseJsonOutput(
         await runRuntime(["start", "--run", "prefix", "--json"], homeDir, workflowJson, {
-          commandPrefix: (command: string) => `omniskills loop ${command} ${workflowSource}`,
+          commandPrefix: (command: string) => `omniskill loop ${command} ${workflowSource}`,
         }),
       ) as {
         actions: Array<{ type: string; command?: string }>;
@@ -217,9 +208,9 @@ describe("loop runtime", () => {
 
       const commands = payload.actions.map((action) => action.command).filter(Boolean);
       expect(commands).toContain(
-        `omniskills loop log ${workflowSource} --run prefix --type phase_result --message "..."`,
+        `omniskill loop log ${workflowSource} --run prefix --type phase_result --message "..."`,
       );
-      expect(commands).toContain(`omniskills loop advance ${workflowSource} --run prefix`);
+      expect(commands).toContain(`omniskill loop advance ${workflowSource} --run prefix`);
       expect(commands.join("\n")).not.toContain("node loop.mjs");
     } finally {
       await rm(homeDir, { recursive: true, force: true });
@@ -355,7 +346,7 @@ describe("loop runtime", () => {
         "Current step: complete",
       );
 
-      const runDir = join(homeDir, ".getsuperpower", "runs", "grilled-product-dev", runId);
+      const runDir = join(homeDir, ".omniskills", "runs", "grilled-product-dev", runId);
       const eventTypes = (await readFile(join(runDir, "events.jsonl"), "utf8"))
         .trim()
         .split("\n")

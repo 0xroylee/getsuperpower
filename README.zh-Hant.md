@@ -20,7 +20,7 @@ Engineer、QA Lead。
 安裝完整的 startup goal workflow：
 
 ```bash
-npx omniskills@latest install startup-goal
+npx omniskill install startup-goal
 ```
 
 然後請你的 agent 帶著目標執行 entry skill：
@@ -32,19 +32,19 @@ $startup-goal I have an AI bookkeeping idea; help me choose the wedge and ship a
 這個 alias 會指向 repo 內已提交的 workflow bundle：
 
 ```bash
-npx omniskills@latest install 'https://github.com/devos-ing/omni-skills.git#examples/workflows/startup-goal'
+npx omniskill install 'https://github.com/devos-ing/omni-skills.git#examples/workflows/startup-goal'
 ```
 
 如果你只需要單一 specialist workflow，也可以安裝個別 startup roles：
 
 ```bash
-npx omniskills@latest install ceo
-npx omniskills@latest install cto
-npx omniskills@latest install product-manager
-npx omniskills@latest install web-design
-npx omniskills@latest install engineering-manager
-npx omniskills@latest install founding-engineer
-npx omniskills@latest install qa-lead
+npx omniskill install ceo
+npx omniskill install cto
+npx omniskill install product-manager
+npx omniskill install web-design
+npx omniskill install engineering-manager
+npx omniskill install founding-engineer
+npx omniskill install qa-lead
 ```
 
 安裝 skills 後，請重新啟動你的 agent，讓它重新載入新的 entry skills。
@@ -78,14 +78,14 @@ companion skills 的 entry skill。
 `loop start` 建立 run，`loop status` 顯示狀態，`loop advance` 回傳下一個 suggested action。
 
 runtime 是 action-only。它會記錄狀態並回傳下一個 suggested action；它不會默默替 agent 執行 tools 或 shell commands。
-預設的 loop run state 會存放在 `~/.getsuperpower/runs/<workflow-name>/<run-id>/`。
+預設的 loop run state 會存放在 `~/.omniskills/runs/<workflow-name>/<run-id>/`。
 
 試試 loop-capable product-development workflow：
 
 ```bash
-npx omniskills@latest loop start grilled-product-dev --json
-npx omniskills@latest loop status grilled-product-dev --latest --json
-npx omniskills@latest loop advance grilled-product-dev --run <run-id> --json
+npx omniskill loop start grilled-product-dev --json
+npx omniskill loop status grilled-product-dev --latest --json
+npx omniskill loop advance grilled-product-dev --run <run-id> --json
 ```
 
 這種形狀適合複雜工作：釐清 goal、推進一個 action、驗證 evidence，然後持續 advance 直到 goal 完成。
@@ -103,7 +103,7 @@ Omniskills workflows 可以組合 local skills、bundled skills、external skill
 - Pony Trail 的 history、revert、prehook features 目前暫停。Public workflow installs 不會建立 Pony Trail snapshots。
 - More workflow packs are coming.
 
-`omniskills install` 會使用每個 workflow skill 的 `repo` metadata，透過 Skills CLI 抓取缺少的 external
+`omniskill install` 會使用每個 workflow skill 的 `repo` metadata，透過 Skills CLI 抓取缺少的 external
 skills。例如：
 `{ "source": "superpowers:brainstorming", "repo": "obra/superpowers" }`
 會在 `source` 保留原始 skill name，並用
@@ -112,27 +112,27 @@ skills。例如：
 如果 automatic bootstrap 失敗，請透過 Omniskills 執行 package install，然後重試：
 
 ```bash
-npx omniskills@latest skills install mattpocock/skills
+npx omniskill skills install mattpocock/skills
 ```
 
 ## Command Reference
 
 ```bash
-npx omniskills@latest install <alias-or-path-or-git-url>
-npx omniskills@latest list
-npx omniskills@latest deps <source>
-npx omniskills@latest lock <source>
-npx omniskills@latest loop <start|status|log|advance|summary> <source>
-npx omniskills@latest remove <workflow-name>
-npx omniskills@latest onboard
-npx omniskills@latest init <name>
-npx omniskills@latest validate <source>
-npx omniskills@latest skills install
-npx omniskills@latest skills update
+npx omniskill install <alias-or-path-or-git-url>
+npx omniskill list
+npx omniskill deps <source>
+npx omniskill lock <source>
+npx omniskill loop <start|status|log|advance|summary> <source>
+npx omniskill remove <workflow-name>
+npx omniskill onboard
+npx omniskill init <name>
+npx omniskill validate <source>
+npx omniskill skills install
+npx omniskill skills update
 ```
 
-執行 `npx omniskills@latest --help` 或
-`npx omniskills@latest <command> --help` 查看詳細用法。
+執行 `npx omniskill --help` 或
+`npx omniskill <command> --help` 查看詳細用法。
 
 較舊的 `bundle` command 保留為 `init`、`validate`、`lock` 的 compatibility alias；
 較舊的 `workflow` command 則保留為 `install`、`list`、`remove` 的 compatibility alias。
@@ -144,7 +144,7 @@ npx omniskills@latest skills update
 建立新的 Omniskills workflow：
 
 ```bash
-npx omniskills@latest init release-review
+npx omniskill init release-review
 ```
 
 這會建立：
@@ -165,7 +165,7 @@ release-review/
 如果你希望 agent 協助設計 bundle skills，可以安裝 authoring helper：
 
 ```bash
-npx omniskills@latest skills install creating-bundle-skills
+npx omniskill skills install creating-bundle-skills
 ```
 
 然後要求你的 agent 使用：
@@ -177,8 +177,8 @@ $creating-bundle-skills create an Omniskills workflow for release review
 分享前請先驗證：
 
 ```bash
-npx omniskills@latest validate ./release-review
-npx omniskills@latest deps ./release-review
+npx omniskill validate ./release-review
+npx omniskill deps ./release-review
 ```
 
 完整指南在 [`docs/workflow-author-guide.md`](docs/workflow-author-guide.md)。
@@ -207,12 +207,12 @@ npx omniskills@latest deps ./release-review
 預設情況下，CLI 會將 installed workflow records 寫入 home directory：
 
 ```text
-~/.getsuperpower/workflows/
+~/.omniskills/workflows/
 ```
 
 當你明確需要 project-local workflow record 時，請使用 `--dir <project>`。
 
-除非你明確想分享 installed workflow records，否則請不要把 project-local `.getsuperpower/` folders 加進 git。
+除非你明確想分享 installed workflow records，否則請不要把 project-local `.omniskills/` folders 加進 git。
 
 ## Local Development
 
@@ -234,8 +234,3 @@ bun install
 bun run dev
 bun run build
 ```
-
-## Compatibility
-
-Canonical package 和 CLI binary 的名稱是 `omniskills`；舊的 `getsuperpower`
-binary 保留為 compatibility alias。

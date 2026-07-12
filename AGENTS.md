@@ -27,13 +27,13 @@ Omniskills workflow bundles.
 
 ```text
 Author or user request
-  -> omniskills CLI
+  -> omniskill CLI
   -> workflow manifest validation
   -> optional workflow.lock skill fingerprint validation
   -> skill dependency resolution
   -> Skills CLI bootstrap when needed
   -> agent skill target installs
-  -> .getsuperpower workflow records
+  -> .omniskills workflow records
 ```
 
 ## Module Boundaries
@@ -46,7 +46,7 @@ Author or user request
   lock files, install records, removal plans, and loop metadata.
 - `src/plugins/` is for skill resolution and target writes. Keep
   environment-specific behavior behind small interfaces.
-- Generated `.getsuperpower/` project workspaces are local runtime state. Do not
+- Generated `.omniskills/` project workspaces are local runtime state. Do not
   make source code depend on files generated during smoke tests.
 
 ## Omniskills Rules
@@ -59,7 +59,7 @@ Author or user request
 - If a workflow provides one callable entry skill, that skill must be listed in
   `skills[]`; it does not need a workflow step.
 - Every `steps[].skill` value must exactly match a declared `skills[].source`.
-- `omniskills install` is the only public workflow install command.
+- `omniskill install` is the only public workflow install command.
 - The older `bundle` and `workflow` command surfaces exist only as
   compatibility aliases.
 - Pony Trail history, revert, and prehook features are paused. Do not expose or

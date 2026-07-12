@@ -6,8 +6,8 @@ import { z } from "zod";
 import { runSubprocess } from "../../process";
 
 const workflowFileName = "workflow.json";
-const workflowStoreDir = ".getsuperpower/workflows";
-const canonicalExamplesGitUrl = "https://github.com/0xroylee/getsuperpower.git";
+const workflowStoreDir = ".omniskills/workflows";
+const canonicalExamplesGitUrl = "https://github.com/0xroylee/omniskill.git";
 const canonicalExamplesWorkflowPath = "examples/workflows";
 const workflowAliasPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -153,12 +153,12 @@ export async function loadWorkflowBundle(
     await resolvedSource.cleanup?.();
     if (resolvedSource.alias && resolvedSource.source.kind === "git" && isMissingFileError(error)) {
       throw new Error(
-        `GetSuperpower workflow alias not found: ${resolvedSource.alias}\nChecked: ${resolvedSource.source.url}`,
+        `Omniskills workflow alias not found: ${resolvedSource.alias}\nChecked: ${resolvedSource.source.url}`,
       );
     }
     if (resolvedSource.source.kind === "git" && isMissingFileError(error)) {
       throw new Error(
-        `No GetSuperpower workflow manifest was found at ${manifestPath} from public git source: ${resolvedSource.source.url}`,
+        `No Omniskills workflow manifest was found at ${manifestPath} from public git source: ${resolvedSource.source.url}`,
       );
     }
     throw error;
@@ -182,7 +182,7 @@ export async function createWorkflowBundleScaffold(input: {
   await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
   await writeFile(
     readmePath,
-    `# ${input.name}\n\nA GetSuperpower that composes reusable agent skills.\n`,
+    `# ${input.name}\n\nA Omniskills that composes reusable agent skills.\n`,
   );
   await writeFile(entrySkillPath, createScaffoldEntrySkill(input.name, manifest));
   await writeFile(
@@ -190,12 +190,12 @@ export async function createWorkflowBundleScaffold(input: {
     [
       "---",
       "name: custom-review",
-      'description: "Review this GetSuperpower from the author perspective."',
+      'description: "Review this Omniskills from the author perspective."',
       "---",
       "",
       "# Custom Review",
       "",
-      "Check whether the workflow output matches the GetSuperpower author's stated outcome.",
+      "Check whether the workflow output matches the Omniskills author's stated outcome.",
       "",
     ].join("\n"),
   );
@@ -269,7 +269,7 @@ function createScaffoldManifest(name: string): WorkflowBundleManifest {
     schemaVersion: "0.1",
     name,
     version: "0.1.0",
-    description: `GetSuperpower for ${name}.`,
+    description: `Omniskills for ${name}.`,
     skills: [
       { source: `./skills/${name}` },
       { source: "superpowers:brainstorming", repo: "obra/superpowers" },
@@ -302,12 +302,12 @@ function createScaffoldEntrySkill(name: string, manifest: WorkflowBundleManifest
   return [
     "---",
     `name: ${name}`,
-    `description: "Use when running the ${name} GetSuperpower workflow, bundle skill, skill tree, or orchestrated multi-skill workflow."`,
+    `description: "Use when running the ${name} Omniskills workflow, bundle skill, skill tree, or orchestrated multi-skill workflow."`,
     "---",
     "",
-    `# ${name} GetSuperpower`,
+    `# ${name} Omniskills`,
     "",
-    `This is the entry skill for the ${name} GetSuperpower.`,
+    `This is the entry skill for the ${name} Omniskills.`,
     "",
     "When this skill is used, run the workflow below in order. Load/use every required sub-skill before doing the work for its phase.",
     "",
@@ -330,7 +330,7 @@ function createScaffoldEntrySkill(name: string, manifest: WorkflowBundleManifest
     "## Author Notes",
     "",
     "- Keep this entry skill, `workflow.json`, and `README.md` aligned when adding or removing steps.",
-    "- The entry skill orchestrates through required instructions; GetSuperpower installs and validates the dependency skills.",
+    "- The entry skill orchestrates through required instructions; Omniskills installs and validates the dependency skills.",
     "- Do not silently skip a missing sub-skill.",
     "",
   ].join("\n");
@@ -376,7 +376,7 @@ async function resolveWorkflowBundleSource(
   }
 
   throw new Error(
-    `Unsupported GetSuperpower source: ${source}. Use a local path, workflow.json path, public git URL, or lowercase workflow alias.`,
+    `Unsupported Omniskills source: ${source}. Use a local path, workflow.json path, public git URL, or lowercase workflow alias.`,
   );
 }
 
@@ -388,7 +388,7 @@ function parseWorkflowAliasSource(source: string): GitWorkflowSource | null {
   const url = `${canonicalExamplesGitUrl}#${canonicalExamplesWorkflowPath}/${source}`;
   const gitSource = parseGitWorkflowSource(url);
   if (!gitSource) {
-    throw new Error(`Could not build canonical GetSuperpower workflow alias URL: ${source}`);
+    throw new Error(`Could not build canonical Omniskills workflow alias URL: ${source}`);
   }
 
   return { ...gitSource, alias: source };
@@ -474,7 +474,7 @@ async function cloneGitWorkflowSource(
     tempDir?: string;
   },
 ): Promise<ResolvedWorkflowBundleSource> {
-  const tempRoot = await mkdtemp(join(options.tempDir ?? tmpdir(), "getsuperpower-git-"));
+  const tempRoot = await mkdtemp(join(options.tempDir ?? tmpdir(), "omniskill-git-"));
   const checkoutDir = join(tempRoot, "checkout");
   const cleanup = () => rm(tempRoot, { recursive: true, force: true });
 

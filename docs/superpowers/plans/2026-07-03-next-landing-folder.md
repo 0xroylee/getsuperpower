@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build an isolated `landing/` Next.js 16 + Tailwind CSS app that ports the downloaded GetSuperpower workflow landing page without changing the root CLI package.
+**Goal:** Build an isolated `landing/` Next.js 16 + Tailwind CSS app that ports the downloaded Omniskills workflow landing page without changing the root CLI package.
 
 **Architecture:** The root package remains the Bun CLI. `landing/` is a separate Next App Router app with its own package manifest, Tailwind/PostCSS config, typed content module, reusable presentation components, and source attribution.
 
@@ -117,25 +117,25 @@ describe("landing app source contract", () => {
     expect(pkg.devDependencies?.["@tailwindcss/postcss"]).toBe("4.1.12");
   });
 
-  test("presents GetSuperpower workflow bundles and root-first commands", () => {
+  test("presents Omniskills workflow bundles and root-first commands", () => {
     const page = readLandingFile("app/page.tsx");
     const content = readLandingFile("lib/landing-content.ts");
 
     expect(page).toContain("LandingPage");
-    expect(content).toContain("GetSuperpower");
+    expect(content).toContain("Omniskills");
     expect(content).toContain("OpenSpec Delivery");
     expect(content).toContain("Release Review");
     expect(content).toContain("Real Engineering");
     expect(content).toContain("Development Design Delivery");
-    expect(content).toContain("npx getsuperpower@latest install");
-    expect(content).toContain("npx getsuperpower@latest validate");
-    expect(content).not.toContain("npx getsuperpower@latest getsuperpower");
+    expect(content).toContain("npx omniskill install");
+    expect(content).toContain("npx omniskill validate");
+    expect(content).not.toContain("npx omniskill omniskill");
   });
 
   test("keeps attribution with the landing source", () => {
     const attribution = readLandingFile("ATTRIBUTIONS.md");
 
-    expect(attribution).toContain("Create GetSuperpower Workflows");
+    expect(attribution).toContain("Create Omniskills Workflows");
     expect(attribution).toContain("Figma");
   });
 });
@@ -169,7 +169,7 @@ Expected: FAIL because `landing/package.json` does not exist yet.
 
 ```json
 {
-  "name": "getsuperpower-landing",
+  "name": "omniskill-landing",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -281,10 +281,10 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "GetSuperpower",
+  title: "Omniskills",
   description:
-    "Install a complete AI-agent workflow as one callable GetSuperpower skill.",
-  metadataBase: new URL("https://github.com/0xroylee/getsuperpower"),
+    "Install a complete AI-agent workflow as one callable Omniskills skill.",
+  metadataBase: new URL("https://github.com/0xroylee/omniskill"),
 };
 
 export default function RootLayout({
@@ -303,9 +303,9 @@ export default function RootLayout({
 - [ ] **Step 7: Create `landing/README.md`**
 
 ````markdown
-# GetSuperpower Landing
+# Omniskills Landing
 
-This folder contains the isolated Next.js landing app for GetSuperpower.
+This folder contains the isolated Next.js landing app for Omniskills.
 
 ## Run Locally
 
@@ -331,9 +331,9 @@ dependencies to the repository root package.
 # Attributions
 
 This landing app ports the visual and content direction from the downloaded
-Figma export "Create GetSuperpower Workflows" at:
+Figma export "Create Omniskills Workflows" at:
 
-https://www.figma.com/design/DMQ1Y2sETB8Scq9gwyMiZW/Create-GetSuperpower-Workflows
+https://www.figma.com/design/DMQ1Y2sETB8Scq9gwyMiZW/Create-Omniskills-Workflows
 
 The original export included notes for shadcn/ui and Unsplash assets. This
 Next.js implementation does not copy shadcn/ui source components or Unsplash
@@ -384,7 +384,7 @@ export interface CommandExample {
   command: string;
 }
 
-export const githubUrl = "https://github.com/0xroylee/getsuperpower";
+export const githubUrl = "https://github.com/0xroylee/omniskill";
 
 export const agents = [
   "Claude",
@@ -459,24 +459,24 @@ export const commands: CommandExample[] = [
   {
     label: "Install OpenSpec Delivery",
     command:
-      "npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/openspec-superpowers'",
+      "npx omniskill install 'https://github.com/0xroylee/omniskill.git#examples/workflows/openspec-superpowers'",
   },
   {
     label: "Install Release Review",
     command:
-      "npx getsuperpower@latest install 'https://github.com/0xroylee/getsuperpower.git#examples/workflows/release-review'",
+      "npx omniskill install 'https://github.com/0xroylee/omniskill.git#examples/workflows/release-review'",
   },
   {
-    label: "List installed GetSuperpowers",
-    command: "npx getsuperpower@latest list",
+    label: "List installed Omniskillss",
+    command: "npx omniskill list",
   },
   {
     label: "Create your own workflow",
-    command: "npx getsuperpower@latest init my-workflow",
+    command: "npx omniskill init my-workflow",
   },
   {
     label: "Validate before sharing",
-    command: "npx getsuperpower@latest validate my-workflow",
+    command: "npx omniskill validate my-workflow",
   },
 ];
 
@@ -718,7 +718,7 @@ export function LandingPage() {
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-500">
             <Zap size={14} />
           </span>
-          <span className="text-sm font-medium text-white/90">GetSuperpower</span>
+          <span className="text-sm font-medium text-white/90">Omniskills</span>
         </a>
         <div className="flex items-center gap-5 text-sm text-white/50">
           <a href="#workflows" className="transition hover:text-white/80">Workflows</a>
@@ -742,12 +742,12 @@ export function LandingPage() {
           Whole workflow.
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-white/48">
-          GetSuperpower packages a complete AI-agent workflow as a single callable skill.
+          Omniskills packages a complete AI-agent workflow as a single callable skill.
           Install once, invoke the entry skill, and the agent follows every required sub-skill in order.
         </p>
         <div className="mt-10 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
           <div className="rounded-lg border border-white/10 bg-[#0d0d0d] px-4 py-3 font-mono text-sm text-white/70">
-            <span className="break-words">npx getsuperpower@latest install ...</span>
+            <span className="break-words">npx omniskill install ...</span>
           </div>
           <a
             href="#workflows"
@@ -796,7 +796,7 @@ export function LandingPage() {
       <section id="workflows" className="relative z-10 mx-auto max-w-6xl px-5 py-20">
         <div className="mb-10 text-center">
           <p className="mb-3 text-xs uppercase tracking-[0.22em] text-white/32">Workflow bundles</p>
-          <h2 className="text-3xl font-medium text-white/90">Pick a GetSuperpower</h2>
+          <h2 className="text-3xl font-medium text-white/90">Pick a Omniskills</h2>
           <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-white/42">
             Each workflow is a shareable bundle of skills with one entry point.
           </p>
@@ -833,7 +833,7 @@ export function LandingPage() {
             <h2 className="mb-4 text-3xl font-medium text-white/90">Get up and running fast</h2>
             <p className="mb-8 text-sm leading-6 text-white/45">
               Install from npm, git, or a local path. The CLI handles validation,
-              dependency resolution, and local workflow records under <code className="text-white/65">.getsuperpower/</code>.
+              dependency resolution, and local workflow records under <code className="text-white/65">.omniskills/</code>.
             </p>
             <div className="space-y-2">
               {commands.map((command, index) => (
@@ -881,15 +881,15 @@ export function LandingPage() {
             <Workflow size={12} />
             Author your own workflow
           </div>
-          <h2 className="mb-3 text-3xl font-medium text-white/90">Package your workflow as a GetSuperpower</h2>
+          <h2 className="mb-3 text-3xl font-medium text-white/90">Package your workflow as a Omniskills</h2>
           <p className="mx-auto mb-8 max-w-xl text-sm leading-6 text-white/45">
             Scaffold a bundle, define the entry skill, list sub-skills in workflow.json,
             validate, and share. The authoring guide keeps the skill tree aligned.
           </p>
           <div className="mx-auto grid max-w-3xl gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
             <TerminalBlock
-              copyText="npx getsuperpower@latest init my-workflow"
-              lines={[{ prefix: "$", text: "npx getsuperpower@latest init my-workflow" }]}
+              copyText="npx omniskill init my-workflow"
+              lines={[{ prefix: "$", text: "npx omniskill init my-workflow" }]}
             />
             <a
               href={`${githubUrl}/blob/main/docs/workflow-author-guide.md`}
@@ -908,7 +908,7 @@ export function LandingPage() {
             <span className="flex h-5 w-5 items-center justify-center rounded bg-violet-500">
               <Zap size={10} className="text-white" />
             </span>
-            GetSuperpower
+            Omniskills
           </div>
           <div className="flex items-center gap-6 text-xs text-white/30">
             <a href={githubUrl} className="transition hover:text-white/60">GitHub</a>

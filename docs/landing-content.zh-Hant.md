@@ -24,7 +24,7 @@ tree，帶著 goal 呼叫一個 entry skill，讓 agent 取得能 3x your abilit
 Primary command preview：
 
 ```bash
-npx omniskills@latest install startup-goal
+npx omniskill install startup-goal
 ```
 
 Primary action：Browse workflows。
@@ -119,7 +119,7 @@ Search placeholder：Search workflows, skills, tags...
 - install:
 
 ```bash
-npx omniskills@latest install startup-goal
+npx omniskill install startup-goal
 ```
 
 Description：讓 startup goal 依序經過 core operating roles：CEO、CTO、PM、EM、founding engineer、QA lead。
@@ -139,7 +139,7 @@ Ordered skill path：Route -> `startup-goal`；Strategy -> `ceo`；Product -> `p
 - install:
 
 ```bash
-npx omniskills@latest install ceo
+npx omniskill install ceo
 ```
 
 Description：Founder-level strategy，處理 direction、hard tradeoffs、fundraising/customer framing、company decisions。
@@ -159,7 +159,7 @@ Ordered skill path：Brief -> `ceo`；Decision Map -> `mattpocock:decision-mappi
 - install:
 
 ```bash
-npx omniskills@latest install cto
+npx omniskill install cto
 ```
 
 Description：Technical leadership，處理 architecture、domain model、platform direction、engineering risk。
@@ -179,7 +179,7 @@ Ordered skill path：Brief -> `cto`；Domain -> `mattpocock:domain-modeling`；A
 - install:
 
 ```bash
-npx omniskills@latest install product-manager
+npx omniskill install product-manager
 ```
 
 Description：Product discovery、PRDs、acceptance criteria、roadmap tradeoffs、issue slicing。
@@ -199,7 +199,7 @@ Ordered skill path：Brief -> `product-manager`；Brainstorm -> `superpowers:bra
 - install:
 
 ```bash
-npx omniskills@latest install engineering-manager
+npx omniskill install engineering-manager
 ```
 
 Description：Delivery sequencing、execution risk、quality gates、blocker triage、engineering process。
@@ -219,7 +219,7 @@ Ordered skill path：Brief -> `engineering-manager`；Plan -> `superpowers:writi
 - install:
 
 ```bash
-npx omniskills@latest install founding-engineer
+npx omniskill install founding-engineer
 ```
 
 Description：Implementation lane，聚焦 smallest correct change：tests、debugging、review、verification。
@@ -239,7 +239,7 @@ Ordered skill path：Brief -> `founding-engineer`；Implement -> `implement`；T
 - install:
 
 ```bash
-npx omniskills@latest install qa-lead
+npx omniskill install qa-lead
 ```
 
 Description：Release-risk lens，處理 acceptance checks、regression focus、reproduction gaps、verification evidence。
@@ -259,7 +259,7 @@ Ordered skill path：Brief -> `qa-lead`；Review -> `mattpocock:review`；Debug 
 - install:
 
 ```bash
-npx omniskills@latest install haaland
+npx omniskill install haaland
 ```
 
 Description：一個 one-shot JTS meme workflow，用於 football-finisher caption、parody post concept、original Haaland profile icon asset。
@@ -276,17 +276,17 @@ Heading：Get up and running fast。
 
 Body：可透過 alias、public git URL 或 local path 安裝。CLI 會 validate workflow manifest、從 workflow
 metadata bootstrap missing external skills，並預設把 installed Omniskills workflows 記錄在
-`~/.getsuperpower/workflows/`。Loop-enabled workflows 使用 `omniskills loop` 管理 resumable、action-only state。
+`~/.omniskills/workflows/`。Loop-enabled workflows 使用 `omniskill loop` 管理 resumable、action-only state。
 
 ```bash
-npx omniskills@latest install startup-goal
-npx omniskills@latest deps startup-goal
-npx omniskills@latest lock examples/workflows/startup-goal
-npx omniskills@latest loop status grilled-product-dev --latest --json
-npx omniskills@latest init my-workflow
-npx omniskills@latest validate my-workflow
-npx omniskills@latest list
-npx omniskills@latest remove startup-goal
+npx omniskill install startup-goal
+npx omniskill deps startup-goal
+npx omniskill lock examples/workflows/startup-goal
+npx omniskill loop status grilled-product-dev --latest --json
+npx omniskill init my-workflow
+npx omniskill validate my-workflow
+npx omniskill list
+npx omniskill remove startup-goal
 ```
 
 Then invoke in your agent：
@@ -313,7 +313,7 @@ Body：scaffold a bundle、define the entry skill、在 workflow.json 中列出 
 Command：
 
 ```bash
-npx omniskills@latest init my-workflow
+npx omniskill init my-workflow
 ```
 
 Author guide：

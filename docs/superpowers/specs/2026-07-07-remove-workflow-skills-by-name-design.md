@@ -2,12 +2,12 @@
 
 ## Goal
 
-Add a safe GetSuperpower command that removes the skills installed for a named
+Add a safe Omniskills command that removes the skills installed for a named
 workflow:
 
 ```bash
-getsuperpower remove <workflow-name>
-getsuperpower workflow remove <workflow-name>
+omniskill remove <workflow-name>
+omniskill workflow remove <workflow-name>
 ```
 
 The command should clean up workflow-installed skill artifacts without guessing
@@ -31,20 +31,20 @@ skipped with an explanation.
 Root command:
 
 ```bash
-getsuperpower remove <workflow-name> [--home <dir>] [--dir <dir>] [--dry-run] [--yes]
+omniskill remove <workflow-name> [--home <dir>] [--dir <dir>] [--dry-run] [--yes]
 ```
 
 Compatibility command:
 
 ```bash
-getsuperpower workflow remove <workflow-name> [--home <dir>] [--dir <dir>] [--dry-run] [--yes]
+omniskill workflow remove <workflow-name> [--home <dir>] [--dir <dir>] [--dry-run] [--yes]
 ```
 
 `--home` and `--dir` follow the existing install/list contract:
 
-- default record root is `<home>/.getsuperpower/workflows`;
+- default record root is `<home>/.omniskills/workflows`;
 - `--dir` explicitly switches the record root to
-  `<dir>/.getsuperpower/workflows`;
+  `<dir>/.omniskills/workflows`;
 - skill artifact paths come from the workflow record, not from the record root.
 
 `--dry-run` prints the removal plan and deletes nothing.
@@ -79,10 +79,10 @@ workflow's install metadata as an installed or updated artifact.
 
 ## Runtime Boundaries
 
-`src/getsuperpower.ts` stays the command wiring layer. It should parse options,
+`src/omniskill.ts` stays the command wiring layer. It should parse options,
 print plans, ask for confirmation, and call runtime helpers.
 
-`src/runtimes/getsuperpower/workflow-bundles.ts` owns workflow records:
+`src/runtimes/omniskill/workflow-bundles.ts` owns workflow records:
 
 - write install records with artifact metadata;
 - load one installed workflow by name;
@@ -103,7 +103,7 @@ than spreading filesystem deletion logic through CLI actions.
 
 1. Resolve `homeDir` from `--home`.
 2. Resolve `recordRoot` from `--dir` or `homeDir`.
-3. Load `<recordRoot>/.getsuperpower/workflows/<workflow-name>.json`.
+3. Load `<recordRoot>/.omniskills/workflows/<workflow-name>.json`.
 4. Build a candidate artifact list from the workflow record.
 5. Load every other workflow record in the same record root.
 6. Mark candidate paths as kept when another record references the same path.
@@ -120,7 +120,7 @@ than spreading filesystem deletion logic through CLI actions.
 Missing workflow records fail before any deletion with:
 
 ```text
-GetSuperpower is not installed: <workflow-name>
+Omniskills is not installed: <workflow-name>
 ```
 
 ## Shared Artifact Rules
@@ -157,8 +157,8 @@ skip instead of deriving paths from an unsafe guess.
 Plain output is enough:
 
 ```text
-GetSuperpower remove plan: release-review
-Workflow record: <home>/.getsuperpower/workflows/release-review.json
+Omniskills remove plan: release-review
+Workflow record: <home>/.omniskills/workflows/release-review.json
 Artifacts to remove:
 - <home>/.agents/skills/release-risk-review
 Artifacts kept:
@@ -168,7 +168,7 @@ Artifacts kept:
 Success output should name the removed workflow:
 
 ```text
-GetSuperpower removed: release-review
+Omniskills removed: release-review
 ```
 
 Dry-run output should use "would remove" language and leave the workflow record
@@ -178,7 +178,7 @@ in place.
 
 Use behavior tests at public seams:
 
-- command registration in `tests/getsuperpower.test.ts` and `tests/cli.test.ts`;
+- command registration in `tests/omniskill.test.ts` and `tests/cli.test.ts`;
 - workflow record helpers in `tests/workflow-bundles.test.ts`;
 - artifact metadata from the skill installer in `tests/skill-installer.test.ts`;
 - end-to-end CLI behavior with scratch `rootDir` and `homeDir`.
@@ -201,7 +201,7 @@ Focused checks:
 ```bash
 rtk bun test tests/skill-installer.test.ts
 rtk bun test tests/workflow-bundles.test.ts
-rtk bun test tests/getsuperpower.test.ts
+rtk bun test tests/omniskill.test.ts
 rtk bun test tests/cli.test.ts
 rtk openspec validate remove-workflow-skills-by-name --strict
 ```

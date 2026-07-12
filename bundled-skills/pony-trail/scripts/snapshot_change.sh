@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-DEFAULT_STORE=".getsuperpower"
+DEFAULT_STORE=".omniskills"
 DEFAULT_COPY_LIMIT=1048576
 
 usage() {

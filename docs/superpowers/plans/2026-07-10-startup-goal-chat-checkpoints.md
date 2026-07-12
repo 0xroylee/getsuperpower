@@ -12,7 +12,7 @@
 
 ## File map
 
-- Modify openspec/specs/getsuperpower-landing/spec.md: public landing-demo behavior and acceptance scenarios.
+- Modify openspec/specs/omniskill-landing/spec.md: public landing-demo behavior and acceptance scenarios.
 - Modify tests/landing-app.test.ts: durable source-contract coverage for the three-region workbench and parallel run narrative.
 - Modify landing/components/workflow-run-demo.tsx: local case model, run phase, timer transitions, chat, case rail, and checkpoint rail.
 - Do not create a new runtime module or add a dependency; this remains one focused deterministic demo.
@@ -28,7 +28,7 @@
 ### Task 1: Lock the new public contract and make the landing test fail
 
 **Files:**
-- Modify: openspec/specs/getsuperpower-landing/spec.md:9-57
+- Modify: openspec/specs/omniskill-landing/spec.md:9-57
 - Modify: tests/landing-app.test.ts:334-430
 - Reference: docs/superpowers/specs/2026-07-10-startup-goal-chat-checkpoints-design.md
 
@@ -37,7 +37,7 @@
 Run:
 
 ~~~~bash
-rtk sh /Users/roy/.agents/skills/pony-trail/scripts/snapshot_change.sh --session-id startup-goal-chat-checkpoints-implementation --instruction-context pre --snapshot-id 20260710T090001Z-a11ce001 --files openspec/specs/getsuperpower-landing/spec.md tests/landing-app.test.ts --action edit --purpose "Lock the approved three-region startup-goal demo contract in the spec and focused landing test" --reason "The test must fail against the old two-column sequential demo before implementation begins" --expected "The OpenSpec scenario and source-contract assertions require cases left, chat agents together, and read-only checkpoints right" --verify "Run the focused landing test and confirm it fails on a new demo assertion" --rollback "Restore both files from the pre snapshot or revert their focused diff"
+rtk sh /Users/roy/.agents/skills/pony-trail/scripts/snapshot_change.sh --session-id startup-goal-chat-checkpoints-implementation --instruction-context pre --snapshot-id 20260710T090001Z-a11ce001 --files openspec/specs/omniskill-landing/spec.md tests/landing-app.test.ts --action edit --purpose "Lock the approved three-region startup-goal demo contract in the spec and focused landing test" --reason "The test must fail against the old two-column sequential demo before implementation begins" --expected "The OpenSpec scenario and source-contract assertions require cases left, chat agents together, and read-only checkpoints right" --verify "Run the focused landing test and confirm it fails on a new demo assertion" --rollback "Restore both files from the pre snapshot or revert their focused diff"
 ~~~~
 
 Expected: JSON output with snapshot_id 20260710T090001Z-a11ce001.
@@ -194,7 +194,7 @@ three-column class.
 Run:
 
 ~~~~bash
-rtk sh /Users/roy/.agents/skills/pony-trail/scripts/snapshot_change.sh --session-id startup-goal-chat-checkpoints-implementation post --snapshot-id 20260710T090001Z-a11ce001 --files openspec/specs/getsuperpower-landing/spec.md tests/landing-app.test.ts --summary "Replaced the old external-case and selected-skill contract with the approved parallel chat and checkpoint contract" --checks "rtk bun test tests/landing-app.test.ts failed on the new component contract as expected" --result expected-fail
+rtk sh /Users/roy/.agents/skills/pony-trail/scripts/snapshot_change.sh --session-id startup-goal-chat-checkpoints-implementation post --snapshot-id 20260710T090001Z-a11ce001 --files openspec/specs/omniskill-landing/spec.md tests/landing-app.test.ts --summary "Replaced the old external-case and selected-skill contract with the approved parallel chat and checkpoint contract" --checks "rtk bun test tests/landing-app.test.ts failed on the new component contract as expected" --result expected-fail
 ~~~~
 
 Expected: JSON output for the matching snapshot. Do not commit the red state.
@@ -204,14 +204,14 @@ Expected: JSON output for the matching snapshot. Do not commit the red state.
 **Files:**
 - Modify: landing/components/workflow-run-demo.tsx:20-899
 - Modify: tests/landing-app.test.ts:334-430 only if Biome changes wrapping
-- Modify: openspec/specs/getsuperpower-landing/spec.md:9-65 only if Biome changes wrapping
+- Modify: openspec/specs/omniskill-landing/spec.md:9-65 only if Biome changes wrapping
 
 - [ ] **Step 1: Record the implementation pre-snapshot**
 
 Run:
 
 ~~~~bash
-rtk sh /Users/roy/.agents/skills/pony-trail/scripts/snapshot_change.sh --session-id startup-goal-chat-checkpoints-implementation --instruction-context pre --snapshot-id 20260710T090002Z-a11ce002 --files landing/components/workflow-run-demo.tsx tests/landing-app.test.ts openspec/specs/getsuperpower-landing/spec.md --action edit --purpose "Implement the approved parallel agent chat and read-only checkpoint demo" --reason "The focused source contract is red against the old sequential two-column component" --expected "The component uses one RunPhase and renders cases, chat, and checkpoints without duplicated agent sidebars" --verify "Format the three files, pass the focused landing test, and pass landing typecheck" --rollback "Restore the three files from the pre snapshot or revert the implementation commit"
+rtk sh /Users/roy/.agents/skills/pony-trail/scripts/snapshot_change.sh --session-id startup-goal-chat-checkpoints-implementation --instruction-context pre --snapshot-id 20260710T090002Z-a11ce002 --files landing/components/workflow-run-demo.tsx tests/landing-app.test.ts openspec/specs/omniskill-landing/spec.md --action edit --purpose "Implement the approved parallel agent chat and read-only checkpoint demo" --reason "The focused source contract is red against the old sequential two-column component" --expected "The component uses one RunPhase and renders cases, chat, and checkpoints without duplicated agent sidebars" --verify "Format the three files, pass the focused landing test, and pass landing typecheck" --rollback "Restore the three files from the pre snapshot or revert the implementation commit"
 ~~~~
 
 Expected: JSON output with snapshot_id 20260710T090002Z-a11ce002.
@@ -736,7 +736,7 @@ return (
 Run:
 
 ~~~~bash
-rtk bunx biome format --write landing/components/workflow-run-demo.tsx tests/landing-app.test.ts openspec/specs/getsuperpower-landing/spec.md
+rtk bunx biome format --write landing/components/workflow-run-demo.tsx tests/landing-app.test.ts openspec/specs/omniskill-landing/spec.md
 ~~~~
 
 Expected: Biome formats only the three named files.
@@ -763,7 +763,7 @@ TypeScript complete with exit code 0.
 Run:
 
 ~~~~bash
-rtk sh /Users/roy/.agents/skills/pony-trail/scripts/snapshot_change.sh --session-id startup-goal-chat-checkpoints-implementation post --snapshot-id 20260710T090002Z-a11ce002 --files landing/components/workflow-run-demo.tsx tests/landing-app.test.ts openspec/specs/getsuperpower-landing/spec.md --summary "Implemented the canonical RunPhase, parallel role launch chat, left case rail, and right read-only checkpoint rail" --checks "Focused landing test and landing typecheck passed after Biome formatting" --result pass
+rtk sh /Users/roy/.agents/skills/pony-trail/scripts/snapshot_change.sh --session-id startup-goal-chat-checkpoints-implementation post --snapshot-id 20260710T090002Z-a11ce002 --files landing/components/workflow-run-demo.tsx tests/landing-app.test.ts openspec/specs/omniskill-landing/spec.md --summary "Implemented the canonical RunPhase, parallel role launch chat, left case rail, and right read-only checkpoint rail" --checks "Focused landing test and landing typecheck passed after Biome formatting" --result pass
 ~~~~
 
 Expected: JSON output for the matching snapshot.
@@ -773,7 +773,7 @@ Expected: JSON output for the matching snapshot.
 Run:
 
 ~~~~bash
-rtk git add landing/components/workflow-run-demo.tsx tests/landing-app.test.ts openspec/specs/getsuperpower-landing/spec.md
+rtk git add landing/components/workflow-run-demo.tsx tests/landing-app.test.ts openspec/specs/omniskill-landing/spec.md
 rtk git diff --cached --name-only
 rtk git diff --cached --check
 rtk git commit -m "feat: show startup agents in demo chat"
@@ -787,7 +787,7 @@ errors, and the commit succeeds.
 **Files:**
 - Verify: landing/components/workflow-run-demo.tsx
 - Verify: tests/landing-app.test.ts
-- Verify: openspec/specs/getsuperpower-landing/spec.md
+- Verify: openspec/specs/omniskill-landing/spec.md
 
 - [ ] **Step 1: Run the focused and landing package gates**
 

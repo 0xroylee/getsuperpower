@@ -54,7 +54,7 @@ skills:
 - `mattpocock:tdd`
 - `pony-trail`
 
-`omniskills install` automatically uses the Skills CLI to fetch missing
+`omniskill install` automatically uses the Skills CLI to fetch missing
 `mattpocock:*` dependencies. If that automatic bootstrap fails, run the same
 package install through the CLI and retry:
 

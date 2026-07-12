@@ -8,7 +8,7 @@ import { runSubprocess } from "../../process";
 
 export const workflowFileName = "workflow.json";
 export const workflowLockFileName = "workflow.lock.json";
-const workflowStoreDir = ".getsuperpower/workflows";
+const workflowStoreDir = ".omniskills/workflows";
 const canonicalExamplesGitUrl = "https://github.com/devos-ing/omni-skills.git";
 const canonicalExamplesWorkflowPath = "examples/workflows";
 const workflowAliasPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -631,7 +631,7 @@ function renderGeneratedWorkflowLoopRunner(): string {
     'import { fileURLToPath } from "node:url";',
     "",
     'const workflowJson = fileURLToPath(new URL("./workflow.json", import.meta.url));',
-    'const cliCommand = process.env.OMNISKILLS_BIN ?? process.env.GETSUPERPOWER_BIN ?? "omniskills";',
+    'const cliCommand = process.env.OMNISKILL_BIN ?? "omniskill";',
     "const [command, ...args] = process.argv.slice(2);",
     "",
     "if (!command) {",
@@ -644,7 +644,7 @@ function renderGeneratedWorkflowLoopRunner(): string {
     "",
     "  if (result.error) {",
     '    if (result.error.code === "ENOENT") {',
-    '      console.error("Omniskills CLI is required to run loop.mjs. Install or expose omniskills on PATH.");',
+    '      console.error("Omniskills CLI is required to run loop.mjs. Install or expose omniskill on PATH.");',
     "      process.exitCode = 1;",
     "    } else {",
     "      console.error(result.error.message);",
@@ -654,7 +654,7 @@ function renderGeneratedWorkflowLoopRunner(): string {
     "    process.exitCode = result.status;",
     "  } else {",
     "    if (result.signal) {",
-    '      console.error("omniskills terminated by signal " + result.signal);',
+    '      console.error("omniskill terminated by signal " + result.signal);',
     "    }",
     "    process.exitCode = 1;",
     "  }",

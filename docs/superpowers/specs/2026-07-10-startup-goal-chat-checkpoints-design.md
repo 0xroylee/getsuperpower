@@ -230,7 +230,7 @@ checkpoint drift.
 
 ## Test-first delivery
 
-1. Update openspec/specs/getsuperpower-landing/spec.md to describe the
+1. Update openspec/specs/omniskill-landing/spec.md to describe the
    three-region layout, parallel launch, chat source links, and read-only
    checkpoints. Remove the duplicated old selected-skill scenario.
 2. Update tests/landing-app.test.ts so it rejects Run calls, Selected skill,
@@ -262,7 +262,7 @@ checkpoint drift.
 ## Expected files
 
 - docs/superpowers/specs/2026-07-10-startup-goal-chat-checkpoints-design.md
-- openspec/specs/getsuperpower-landing/spec.md
+- openspec/specs/omniskill-landing/spec.md
 - tests/landing-app.test.ts
 - landing/components/workflow-run-demo.tsx
 

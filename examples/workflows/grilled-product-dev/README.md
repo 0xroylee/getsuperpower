@@ -31,8 +31,8 @@ the agent still performs the work and decides whether the evidence is good
 enough to advance.
 
 The generated runner is written into the installed entry skill during
-`omniskills install`. Loop state lives under
-`~/.getsuperpower/runs/grilled-product-dev/<run-id>/`, and the runtime only
+`omniskill install`. Loop state lives under
+`~/.omniskills/runs/grilled-product-dev/<run-id>/`, and the runtime only
 returns suggested actions. It never executes tools or shell commands for the
 agent.
 
@@ -51,7 +51,7 @@ This Omniskills workflow combines one Matt Pocock skill with two Superpowers ski
 - `superpowers:brainstorming`
 - `superpowers:writing-plans`
 
-`omniskills install` automatically uses the Skills CLI to fetch missing
+`omniskill install` automatically uses the Skills CLI to fetch missing
 `mattpocock:*` dependencies. If that automatic bootstrap fails, install the
 Matt Pocock skills package and retry:
 
@@ -87,7 +87,7 @@ bun run dev -- loop status examples/workflows/grilled-product-dev --latest --jso
 ```
 
 The installed `loop.mjs` remains runnable with plain Node for compatibility, but
-agents should use `omniskills loop ...`.
+agents should use `omniskill loop ...`.
 
 Restart the agent app after install so the `$grilled-product-dev` entry skill
 and its sub-skills are available.

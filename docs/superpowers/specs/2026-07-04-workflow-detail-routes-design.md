@@ -12,7 +12,7 @@ detail page instead of opening an in-page selected-workflow panel.
   selected-workflow preview after cards become links.
 - Back link target: `/#workflows`.
 - Data source: local static workflow content in `landing/lib/landing-content.ts`.
-- Runtime scope: no CLI, registry, GitHub fetch, or generated `.getsuperpower/`
+- Runtime scope: no CLI, registry, GitHub fetch, or generated `.omniskills/`
   reads.
 
 ## Architecture
@@ -81,7 +81,7 @@ detail selection.
 The install command can be derived from the workflow source URL:
 
 ```text
-npx getsuperpower@latest install '<git-source>'
+npx omniskill install '<git-source>'
 ```
 
 If deriving from `sourceUrl` makes the conversion from GitHub tree URL to git

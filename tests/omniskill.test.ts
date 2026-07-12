@@ -208,7 +208,7 @@ describe("omniskill command module", () => {
     expect(skillInstalls).toEqual([join(checkoutDir, "skills", "git-entry")]);
     expect(printedSkills).toEqual(["git-entry"]);
     const installed = JSON.parse(
-      await readFile(join(rootDir, ".getsuperpower", "workflows", "git-workflow.json"), "utf8"),
+      await readFile(join(rootDir, ".omniskills", "workflows", "git-workflow.json"), "utf8"),
     );
     expect(installed.source).toEqual({ kind: "git", url: source, commit: "abc123" });
     await expect(stat(checkoutDir)).rejects.toThrow();
@@ -234,9 +234,8 @@ describe("omniskill command module", () => {
           '"loop"',
         );
         const generatedRunner = await readFile(join(input.source, "loop.mjs"), "utf8");
-        expect(generatedRunner).toContain("OMNISKILLS_BIN");
-        expect(generatedRunner).toContain("GETSUPERPOWER_BIN");
-        expect(generatedRunner).toContain("omniskills");
+        expect(generatedRunner).toContain("process.env.OMNISKILL_BIN");
+        expect(generatedRunner).toContain("omniskill");
         expect(generatedRunner).toContain("workflow.json");
         await expect(readFile(join(input.source, "loop.metadata.json"), "utf8")).resolves.toContain(
           '"workflow": "git-workflow"',
@@ -294,10 +293,10 @@ describe("omniskill command module", () => {
 
     expect(skillInstalls).toEqual([join(bundleDir, "skills", "git-entry")]);
     await expect(
-      stat(join(homeDir, ".getsuperpower", "workflows", "git-workflow.json")),
+      stat(join(homeDir, ".omniskills", "workflows", "git-workflow.json")),
     ).resolves.toBeTruthy();
     await expect(
-      stat(join(rootDir, ".getsuperpower", "workflows", "git-workflow.json")),
+      stat(join(rootDir, ".omniskills", "workflows", "git-workflow.json")),
     ).rejects.toThrow();
 
     await rm(rootDir, { recursive: true, force: true });
@@ -317,9 +316,9 @@ describe("omniskill command module", () => {
     const program = new Command();
 
     await writeGitWorkflowFixtureAt(bundleDir, { version: "0.1.1", extraSkill: true });
-    await mkdir(join(rootDir, ".getsuperpower", "workflows"), { recursive: true });
+    await mkdir(join(rootDir, ".omniskills", "workflows"), { recursive: true });
     await writeFile(
-      join(rootDir, ".getsuperpower", "workflows", "git-workflow.json"),
+      join(rootDir, ".omniskills", "workflows", "git-workflow.json"),
       JSON.stringify(
         {
           schemaVersion: "0.1",
@@ -382,7 +381,7 @@ describe("omniskill command module", () => {
       },
     ]);
     const installed = JSON.parse(
-      await readFile(join(rootDir, ".getsuperpower", "workflows", "git-workflow.json"), "utf8"),
+      await readFile(join(rootDir, ".omniskills", "workflows", "git-workflow.json"), "utf8"),
     );
     expect(installed.version).toBe("0.1.1");
 
@@ -419,7 +418,7 @@ describe("omniskill command module", () => {
       });
 
       const installed = JSON.parse(
-        await readFile(join(homeDir, ".getsuperpower", "workflows", "git-workflow.json"), "utf8"),
+        await readFile(join(homeDir, ".omniskills", "workflows", "git-workflow.json"), "utf8"),
       );
 
       expect(installed.installArtifacts).toEqual([
@@ -519,7 +518,7 @@ describe("omniskill command module", () => {
       expect(stripAnsiLines(logs).join("\n")).toContain("Artifacts that would be removed:");
       await expect(stat(artifactPath)).resolves.toBeTruthy();
       await expect(
-        stat(join(homeDir, ".getsuperpower", "workflows", "git-workflow.json")),
+        stat(join(homeDir, ".omniskills", "workflows", "git-workflow.json")),
       ).resolves.toBeTruthy();
     } finally {
       console.log = originalLog;
@@ -569,7 +568,7 @@ describe("omniskill command module", () => {
       expect(stripAnsiLines(logs)).toContain("Omniskills removed: git-workflow");
       await expect(stat(artifactPath)).rejects.toThrow();
       await expect(
-        stat(join(homeDir, ".getsuperpower", "workflows", "git-workflow.json")),
+        stat(join(homeDir, ".omniskills", "workflows", "git-workflow.json")),
       ).rejects.toThrow();
     } finally {
       console.log = originalLog;
@@ -698,10 +697,10 @@ describe("omniskill command module", () => {
       );
       await expect(stat(artifactPath)).resolves.toBeTruthy();
       await expect(
-        stat(join(homeDir, ".getsuperpower", "workflows", "git-workflow.json")),
+        stat(join(homeDir, ".omniskills", "workflows", "git-workflow.json")),
       ).rejects.toThrow();
       await expect(
-        stat(join(homeDir, ".getsuperpower", "workflows", "ops-workflow.json")),
+        stat(join(homeDir, ".omniskills", "workflows", "ops-workflow.json")),
       ).resolves.toBeTruthy();
     } finally {
       console.log = originalLog;
@@ -760,7 +759,7 @@ describe("omniskill command module", () => {
       expect(stripAnsiLines(logs)).toContain("Omniskills install cancelled.");
       expect(skillInstalls).toEqual([]);
       await expect(
-        stat(join(homeDir, ".getsuperpower", "workflows", "git-workflow.json")),
+        stat(join(homeDir, ".omniskills", "workflows", "git-workflow.json")),
       ).rejects.toThrow();
     } finally {
       console.log = originalLog;
@@ -811,7 +810,7 @@ describe("omniskill command module", () => {
       expect(output).toContain("OMNISKILLS");
       expect(output).toContain("Omniskills installed: git-workflow");
       expect(output).toContain(
-        `Omniskills file: ${join(homeDir, ".getsuperpower", "workflows", "git-workflow.json")}`,
+        `Omniskills file: ${join(homeDir, ".omniskills", "workflows", "git-workflow.json")}`,
       );
     } finally {
       console.log = originalLog;
@@ -886,7 +885,7 @@ describe("omniskill command module", () => {
       expect(stripAnsiLines(logs)).toContain("Omniskills installed: git-workflow");
       expect(stripAnsiLines(logs).join("\n")).not.toContain(canonicalUrl);
       const installed = JSON.parse(
-        await readFile(join(rootDir, ".getsuperpower", "workflows", "git-workflow.json"), "utf8"),
+        await readFile(join(rootDir, ".omniskills", "workflows", "git-workflow.json"), "utf8"),
       );
       expect(installed.source).toEqual({
         kind: "git",
@@ -1400,7 +1399,7 @@ describe("omniskill command module", () => {
     ]);
     expect(printedSkills).toEqual(["tdd"]);
     await expect(
-      stat(join(rootDir, ".getsuperpower", "workflows", "matt-bundle.json")),
+      stat(join(rootDir, ".omniskills", "workflows", "matt-bundle.json")),
     ).resolves.toBeTruthy();
   });
 
@@ -1494,7 +1493,7 @@ describe("omniskill command module", () => {
     ]);
     expect(printedSkills).toEqual(["superpowers-brainstorming", "superpowers-writing-plans"]);
     await expect(
-      stat(join(rootDir, ".getsuperpower", "workflows", "superpowers-bundle.json")),
+      stat(join(rootDir, ".omniskills", "workflows", "superpowers-bundle.json")),
     ).resolves.toBeTruthy();
   });
 

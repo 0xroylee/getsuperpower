@@ -13,7 +13,7 @@ Vocabulary:
 Command note:
 
 - In a cloned Omniskills repo, use `bun run dev -- <command>`.
-- In another project, use `npx omniskills@latest <command>`.
+- In another project, use `npx omniskill <command>`.
 
 ## Recommended: Call The Authoring Skill
 
@@ -21,7 +21,7 @@ Start here when you want an agent to help create the workflow and skills set.
 Install the bundled authoring skill:
 
 ```bash
-npx omniskills@latest skills install creating-bundle-skills
+npx omniskill skills install creating-bundle-skills
 ```
 
 Restart your agent app so it reloads the skill, then call it directly:
@@ -38,7 +38,7 @@ The authoring skill should help you produce or review:
 - `README.md`: when to use the Omniskills workflow and how to install it
 - `skills/<workflow-name>/SKILL.md`: the entry skill users call
 - `skills/<local-skill>/SKILL.md`: any local skills used by the workflow
-- validation commands: `omniskills validate`, `omniskills deps`, and a
+- validation commands: `omniskill validate`, `omniskill deps`, and a
   local `install` smoke test
 
 When the workflow shape is already clear and you only need help writing the
@@ -46,7 +46,7 @@ entry skill, local role skills, dependency choices, gates, or handoff contracts,
 install and invoke the narrower prompt-writing helper:
 
 ```bash
-npx omniskills@latest skills install writing-workflow-skills
+npx omniskill skills install writing-workflow-skills
 ```
 
 Use the rest of this guide as the checklist for what that skill should create.
@@ -187,7 +187,7 @@ generated loop runner path in `workflow.json`:
 ```
 
 Looped workflows must mark exactly one local skill as `entry: true`. Put the
-exact phase prompt in `steps[].instruction`; `omniskills loop status
+exact phase prompt in `steps[].instruction`; `omniskill loop status
 <source> --json` returns that instruction.
 
 `loop.script` is an install output path, not a required source file. During
@@ -199,16 +199,16 @@ Omniskills CLI, where the generic loop runtime lives.
 Agents should operate looped workflows with:
 
 ```bash
-omniskills loop start <source> --json
-omniskills loop status <source> --latest --json
-omniskills loop log <source> --run <id> --type phase_result --message "..."
-omniskills loop advance <source> --run <id> --json
-omniskills loop summary <source> --run <id> --json
+omniskill loop start <source> --json
+omniskill loop status <source> --latest --json
+omniskill loop log <source> --run <id> --type phase_result --message "..."
+omniskill loop advance <source> --run <id> --json
+omniskill loop summary <source> --run <id> --json
 ```
 
 The generated `loop.mjs` wrapper remains a Node compatibility fallback after
-install. It requires the `omniskills` CLI on `PATH` or an `OMNISKILLS_BIN`
-environment override. `GETSUPERPOWER_BIN` remains available for legacy callers.
+install. It requires the `omniskill` CLI on `PATH` or an `OMNISKILL_BIN`
+environment override.
 
 ## 4. Edit The Entry Skill
 
@@ -331,13 +331,13 @@ git@github.com:devos-ing/omni-skills.git
 Checked-in examples under `examples/workflows` can be installed by folder alias:
 
 ```bash
-npx omniskills@latest install support-triage
+npx omniskill install support-triage
 ```
 
 That alias resolves to:
 
 ```bash
-npx omniskills@latest install 'https://github.com/devos-ing/omni-skills.git#examples/workflows/support-triage'
+npx omniskill install 'https://github.com/devos-ing/omni-skills.git#examples/workflows/support-triage'
 ```
 
 If you have write access:
@@ -356,14 +356,14 @@ Users can also install a workflow directly from a public git repository when
 the repository root contains `workflow.json`:
 
 ```bash
-npx omniskills@latest install https://github.com/acme/support-triage.git
+npx omniskill install https://github.com/acme/support-triage.git
 ```
 
 If the workflow lives in a subdirectory, add the workflow path as a URL
 fragment:
 
 ```bash
-npx omniskills@latest install 'https://github.com/acme/workflows.git#examples/workflows/support-triage'
+npx omniskill install 'https://github.com/acme/workflows.git#examples/workflows/support-triage'
 ```
 
 Before opening the pull request, run:
@@ -385,7 +385,7 @@ Before sharing, check:
 
 - The workflow name is lowercase and hyphenated.
 - `workflow.lock.json` exists and was regenerated after the latest skill edit.
-- `workflow.json` passes `omniskills validate`.
+- `workflow.json` passes `omniskill validate`.
 - The entry skill exists at `skills/<workflow-name>/SKILL.md`.
 - The entry skill lists required sub-skills in step order.
 - Every step references a declared skill source.

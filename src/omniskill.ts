@@ -313,7 +313,7 @@ function configureInstallCommand(
       "<source>",
       "workflow alias, local Omniskills path, workflow.json path, or public git source",
     )
-    .option("--dir <dir>", "override directory that receives .getsuperpower/workflows")
+    .option("--dir <dir>", "override directory that receives .omniskills/workflows")
     .option(
       "--agents <agents>",
       "comma-separated skill install targets: codex,claude,cursor,copilot,opencode (aliases: github-copilot,opencodex)",
@@ -710,7 +710,7 @@ function configureListCommand(command: Command, rootDir: string): void {
   command
     .command("list")
     .description("List installed Omniskills workflows.")
-    .option("--dir <dir>", "override directory with .getsuperpower/workflows")
+    .option("--dir <dir>", "override directory with .omniskills/workflows")
     .option("--home <dir>", "home directory that contains global Omniskills records", homedir())
     .action(async (commandOptions: { dir?: string; home: string }) => {
       const targetDir = commandOptions.dir
@@ -722,7 +722,7 @@ function configureListCommand(command: Command, rootDir: string): void {
 
       if (workflows.length === 0) {
         console.log(muted("No Omniskills workflows installed."));
-        console.log(nextStep("omniskills install <path-or-git-url>"));
+        console.log(nextStep("omniskill install <path-or-git-url>"));
         return;
       }
 
@@ -737,7 +737,7 @@ function configureRemoveCommand(command: Command, options: ConfigureOmniskillCom
     .command("remove")
     .description("Remove an installed Omniskills workflow and its recorded skill artifacts.")
     .argument("<workflow-name>", "installed Omniskills workflow name")
-    .option("--dir <dir>", "override directory with .getsuperpower/workflows")
+    .option("--dir <dir>", "override directory with .omniskills/workflows")
     .option("--home <dir>", "home directory with global Omniskills records", homedir())
     .option("--dry-run", "print the removal plan without deleting files", false)
     .option("--yes", "remove without prompting for confirmation", false)
@@ -937,7 +937,7 @@ async function importWorkflowLoopRuntime(): Promise<unknown> {
 function createLoopCommandPrefix(source: string, homeDir: string): (command: string) => string {
   const defaultHomeDir = resolveHomePath(homedir());
   const homeOption = homeDir === defaultHomeDir ? "" : ` --home ${quoteShellArg(homeDir)}`;
-  return (command) => `omniskills loop ${command} ${quoteShellArg(source)}${homeOption}`;
+  return (command) => `omniskill loop ${command} ${quoteShellArg(source)}${homeOption}`;
 }
 
 function buildLoopRuntimeArgs(

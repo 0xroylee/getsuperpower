@@ -2,7 +2,7 @@
 
 ## Goal
 
-Add an optional loop runtime to GetSuperpower workflow bundles so an installed
+Add an optional loop runtime to Omniskills workflow bundles so an installed
 entry skill can resume a workflow, report the current phase, log progress, and
 summarize prior work without hiding command or tool execution from the agent.
 
@@ -12,7 +12,7 @@ summarize prior work without hiding command or tool execution from the agent.
 - Do not require every workflow bundle to use a loop.
 - Do not introduce npm dependencies, Bun runtime APIs, or TypeScript execution
   requirements for `loop.mjs`.
-- Do not make `getsuperpower validate` write generated files.
+- Do not make `omniskill validate` write generated files.
 
 ## Chosen Approach
 
@@ -118,7 +118,7 @@ V1 behavior:
 Runs are stored globally:
 
 ```text
-~/.getsuperpower/runs/<workflow>/<run-id>/
+~/.omniskills/runs/<workflow>/<run-id>/
   state.json
   events.jsonl
   summary.md
@@ -217,7 +217,7 @@ checklist.
 
 ## Validation
 
-`getsuperpower validate` stays read-only.
+`omniskill validate` stays read-only.
 
 It validates:
 
@@ -234,10 +234,10 @@ It validates:
 
 ## Installation
 
-`getsuperpower install` continues to write the global installed workflow record:
+`omniskill install` continues to write the global installed workflow record:
 
 ```text
-~/.getsuperpower/workflows/<workflow>.json
+~/.omniskills/workflows/<workflow>.json
 ```
 
 For looped workflows, installation also copies these files into the installed
@@ -283,7 +283,7 @@ V1:
 - Per-workflow `loop.mjs`.
 - Node-only, dependency-free runtime.
 - Subcommands: `start`, `status`, `log`, `advance`, `summary`.
-- Global run state under `~/.getsuperpower/runs/<workflow>/<run-id>/`.
+- Global run state under `~/.omniskills/runs/<workflow>/<run-id>/`.
 - Read-only validation.
 - Install copies loop files into the entry skill and generates
   `loop.metadata.json`.

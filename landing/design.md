@@ -9,8 +9,8 @@ without making the root CLI package depend on landing-only decisions.
 - Active OpenSpec change:
   `openspec/changes/refactor-landing-reference-design/proposal.md`
 - Active spec delta:
-  `openspec/changes/refactor-landing-reference-design/specs/omniskills-landing/spec.md`
-- Base landing spec: `openspec/specs/omniskills-landing/spec.md`
+  `openspec/changes/refactor-landing-reference-design/specs/omniskill-landing/spec.md`
+- Base landing spec: `openspec/specs/omniskill-landing/spec.md`
 - Visual reference: `https://www.context.store`
 - Page content model: `landing/lib/landing-content.ts`
 - Page shell: `landing/components/landing-page.tsx`
@@ -140,7 +140,7 @@ workflow comparison.
 - Keep workflow, command, and explanatory copy in
   `landing/lib/landing-content.ts`.
 - Keep components presentation-focused; they should not import root CLI runtime
-  modules or read generated `.getsuperpower/` state.
+  modules or read generated `.omniskills/` state.
 - Prefer small components for stable repeated pieces such as workflow rows,
   terminal blocks, flow diagrams, and copyable command controls.
 - Search, command selection, and copy feedback should remain client-side and
@@ -151,11 +151,11 @@ workflow comparison.
 
 Use the current root-first Omniskills command surface:
 
-- `npx omniskills@latest install ...`
-- `npx omniskills@latest list`
-- `npx omniskills@latest init my-workflow`
-- `npx omniskills@latest validate my-workflow`
-- `npx omniskills@latest deps ...`
+- `npx omniskill install ...`
+- `npx omniskill list`
+- `npx omniskill init my-workflow`
+- `npx omniskill validate my-workflow`
+- `npx omniskill deps ...`
 
 Do not advertise removed nested Omniskills subcommands. Workflow entries
 should name the callable entry skill and important sub-skills in plain
