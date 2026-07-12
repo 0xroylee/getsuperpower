@@ -417,7 +417,7 @@ describe("workflow bundles", () => {
     const roleContracts = [
       {
         role: "ceo",
-        phrases: ["State the company-level decision", "smallest evidence-gathering step"],
+        phrases: ["State the company decision", "smallest evidence-gathering move"],
       },
       {
         role: "product-manager",
@@ -429,15 +429,15 @@ describe("workflow bundles", () => {
       },
       {
         role: "engineering-manager",
-        phrases: ["smallest shippable outcome", "verifiable state"],
+        phrases: ["smallest shippable result", "verifiable repository state"],
       },
       {
         role: "founding-engineer",
-        phrases: ["Read the plan", "commands run, files changed, and any residual risk"],
+        phrases: ["Read the plan", "superpowers:verification-before-completion"],
       },
       {
         role: "qa-lead",
-        phrases: ["Restate the user-facing behavior", "Separate verified facts"],
+        phrases: ["Restate the user-visible behavior", "Separate verified facts"],
       },
       {
         role: "web-design",
@@ -449,9 +449,9 @@ describe("workflow bundles", () => {
       const skill = await readFile(join(skillsDir, contract.role, "SKILL.md"), "utf8");
 
       expect(skill).toContain(`name: ${contract.role}`);
-      expect(skill).toContain("## Required Companion Skills");
-      expect(skill).toContain("If a companion skill is unavailable");
-      expect(skill).toContain("## Operating Mode");
+      expect(skill).toContain("## Companions");
+      expect(skill).toContain("If one is unavailable, stop and name it.");
+      expect(skill).toContain("## Do");
       for (const phrase of contract.phrases) {
         expect(skill).toContain(phrase);
       }
