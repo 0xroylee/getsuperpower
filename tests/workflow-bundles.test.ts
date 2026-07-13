@@ -10,12 +10,14 @@ import {
   createWorkflowRemovalPlan,
   executeWorkflowRemovalPlan,
   getPreparedWorkflowSkillInstallDependencies,
+  getWorkflowInvocationSkillName,
   getWorkflowSkillInstallDependencies,
   getWorkflowSkillInstallSources,
   installWorkflowBundle,
   listInstalledWorkflowBundles,
   loadWorkflowBundle,
   loadWorkflowLockFile,
+  WorkflowBundleManifestSchema,
   type WorkflowGitCommand,
   type WorkflowInstallSkillArtifact,
   workflowLockFileName,
@@ -60,6 +62,25 @@ const readStartupRoleSkill = (role: string) =>
     "utf8",
   );
 
+const validTeamManifest = {
+  schemaVersion: "0.1",
+  kind: "team",
+  name: "test-team",
+  version: "0.1.0",
+  description: "A test team with one coordinator and one member.",
+  coordinator: "./skills/coordinator",
+  members: ["./skills/member"],
+  skills: [
+    { source: "./skills/coordinator", entry: true },
+    { source: "./skills/member" },
+    { source: "external-review" },
+  ],
+  steps: [
+    { id: "route", title: "Route work", skill: "./skills/coordinator" },
+    { id: "review", title: "Review work", skill: "./skills/member" },
+  ],
+} as const;
+
 describe("workflow bundles", () => {
   test("exports workflow bundle helpers from the Omniskills runtime namespace", async () => {
     const runtime = await import("../src/runtimes/omniskill/workflow-bundles");
@@ -75,6 +96,74 @@ describe("workflow bundles", () => {
     await expect(loadWorkflowBundle("product_dev")).rejects.toThrow(
       "Unsupported Omniskills source: product_dev",
     );
+  });
+
+  test("parses first-class team metadata while legacy manifests remain workflows", () => {
+    const team = WorkflowBundleManifestSchema.parse(validTeamManifest);
+    const legacy = WorkflowBundleManifestSchema.parse({
+      schemaVersion: "0.1",
+      name: "legacy-workflow",
+      version: "0.1.0",
+      description: "A legacy workflow without an explicit kind.",
+      skills: [{ source: "skill-a" }],
+      steps: [{ id: "run", title: "Run", skill: "skill-a" }],
+    });
+
+    expect(team.kind).toBe("team");
+    expect(team.coordinator).toBe("./skills/coordinator");
+    expect(team.members).toEqual(["./skills/member"]);
+    expect(legacy.kind).toBeUndefined();
+    expect(getWorkflowInvocationSkillName(team)).toBe("coordinator");
+    expect(getWorkflowInvocationSkillName(legacy)).toBeNull();
+  });
+
+  test("rejects invalid team coordinator and member contracts", () => {
+    const invalidCases = [
+      {
+        manifest: { ...validTeamManifest, coordinator: undefined },
+        message: "Team manifests must declare a coordinator",
+      },
+      {
+        manifest: { ...validTeamManifest, members: [] },
+        message: "Team manifests must declare at least one member",
+      },
+      {
+        manifest: { ...validTeamManifest, coordinator: "./skills/missing" },
+        message: "Team coordinator references unknown skill: ./skills/missing",
+      },
+      {
+        manifest: { ...validTeamManifest, coordinator: "external-review" },
+        message: "Team coordinator must be a local skill path: external-review",
+      },
+      {
+        manifest: { ...validTeamManifest, members: ["./skills/missing"] },
+        message: "Team member references unknown skill: ./skills/missing",
+      },
+      {
+        manifest: { ...validTeamManifest, members: ["external-review"] },
+        message: "Team member must be a local skill path: external-review",
+      },
+      {
+        manifest: { ...validTeamManifest, members: ["./skills/member", "./skills/member"] },
+        message: "Duplicate team member: ./skills/member",
+      },
+      {
+        manifest: { ...validTeamManifest, members: ["./skills/coordinator"] },
+        message: "Team coordinator cannot also be a member: ./skills/coordinator",
+      },
+    ];
+
+    for (const invalidCase of invalidCases) {
+      expect(() => WorkflowBundleManifestSchema.parse(invalidCase.manifest)).toThrow(
+        invalidCase.message,
+      );
+    }
+  });
+
+  test("rejects team-only metadata on workflow manifests", () => {
+    expect(() =>
+      WorkflowBundleManifestSchema.parse({ ...validTeamManifest, kind: "workflow" }),
+    ).toThrow("Workflow manifests cannot declare coordinator or members");
   });
 
   test("rejects duplicate workflow step ids", async () => {
