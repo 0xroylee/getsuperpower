@@ -91,6 +91,8 @@ test("parses first-class team metadata while legacy manifests remain workflows",
   expect(team.coordinator).toBe("./skills/coordinator");
   expect(team.members).toEqual(["./skills/member"]);
   expect(legacy.kind).toBeUndefined();
+  expect(getWorkflowInvocationSkillName(team)).toBe("coordinator");
+  expect(getWorkflowInvocationSkillName(legacy)).toBeNull();
 });
 
 test("rejects invalid team coordinator and member contracts", () => {
@@ -243,6 +245,21 @@ if (effectiveKind === "team") {
 
 Place `skillSources` before this block and retain the existing step, entry-skill, and loop validation below it.
 
+Export a small display helper from the same runtime module so CLI output can derive the callable skill from validated team metadata:
+
+```ts
+export function getWorkflowInvocationSkillName(
+  manifest: WorkflowBundleManifest,
+): string | null {
+  if (manifest.kind !== "team" || !manifest.coordinator) {
+    return null;
+  }
+  return basename(manifest.coordinator);
+}
+```
+
+Import `getWorkflowInvocationSkillName` in the test alongside `WorkflowBundleManifestSchema`. Do not hard-code `startup-goal` in this helper.
+
 - [ ] **Step 4: Run focused and full runtime tests**
 
 Run:
@@ -366,12 +383,37 @@ test("rejects a workflow manifest resolved through a team alias", async () => {
 
   await rm(tempDir, { recursive: true, force: true });
 });
+
+test("does not redirect the startup-goal alias to startup-team", async () => {
+  const tempDir = await mkdtemp(join(tmpdir(), "workflow-startup-goal-alias-"));
+
+  await expect(
+    loadWorkflowBundle("startup-goal", {
+      tempDir,
+      runGitCommand: async (command) => {
+        if (command.args[0] === "clone") {
+          const checkoutDir = command.args.at(-1) ?? "";
+          await mkdir(join(checkoutDir, "examples", "workflows"), { recursive: true });
+          await writeTeamBundleFixtureAt(
+            join(checkoutDir, "examples", "teams", "startup-team"),
+          );
+          return { stdout: "", stderr: "", exitCode: 0 };
+        }
+        return { stdout: "abc123\n", stderr: "", exitCode: 0 };
+      },
+    }),
+  ).rejects.toThrow(
+    "Omniskills workflow alias not found: startup-goal\nChecked: https://github.com/devos-ing/omni-skills.git#examples/workflows/startup-goal",
+  );
+
+  await rm(tempDir, { recursive: true, force: true });
+});
 ```
 
 - [ ] **Step 3: Run the alias tests and observe the wrong catalog path**
 
 ```bash
-rtk bun test tests/workflow-bundles.test.ts --test-name-pattern "team aliases|team alias"
+rtk bun test tests/workflow-bundles.test.ts --test-name-pattern "team aliases|team alias|does not redirect"
 ```
 
 Expected: FAIL because `startup-team` resolves to `examples/workflows/startup-team` and no alias-kind check exists.
@@ -482,6 +524,9 @@ expect(bundle.manifest).toMatchObject({
     "./skills/qa-lead",
   ],
 });
+expect(
+  bundle.manifest.skills.find((skill) => skill.source === bundle.manifest.coordinator),
+).toEqual({ source: "./skills/startup-goal", entry: true });
 expect(bundle.lock?.workflow).toBe("startup-team");
 expect(bundle.lock?.workflowVersion).toBe("0.2.0");
 ```
@@ -626,21 +671,61 @@ Change source argument help from `workflow alias` to `workflow or team alias`, a
 
 Do not rename internal functions, record directories, or compatibility command groups.
 
-- [ ] **Step 4: Verify CLI tests and help smoke output**
+- [ ] **Step 4: Add a failing team install next-step test**
+
+Extend `writeGitWorkflowFixtureAt` with a `team?: boolean` option. When true, create the existing `git-extra` skill, mark `./skills/git-entry` as `entry: true`, and add these manifest properties:
+
+```ts
+kind: "team",
+name: "git-team",
+coordinator: "./skills/git-entry",
+members: ["./skills/git-extra"],
+```
+
+Add an install test that writes `writeGitWorkflowFixtureAt(bundleDir, { team: true, extraSkill: true })`, captures console output, and asserts:
+
+```ts
+expect(output).toContain("Omniskills installed: git-team");
+expect(output).toContain("Next: $git-entry");
+expect(output).not.toContain("$startup-goal");
+```
+
+Run:
 
 ```bash
-rtk bun test tests/omniskill.test.ts --test-name-pattern "supporting workflows and teams"
+rtk bun test tests/omniskill.test.ts --test-name-pattern "team users to invoke"
+```
+
+Expected: FAIL because successful installs do not print a coordinator invocation step.
+
+- [ ] **Step 5: Print the invocation hint from validated team metadata**
+
+Import `getWorkflowInvocationSkillName` from `./runtimes/omniskill` in `src/omniskill.ts`. Immediately after the install result box is printed, add:
+
+```ts
+const invocationSkillName = getWorkflowInvocationSkillName(bundle.manifest);
+if (invocationSkillName) {
+  console.log(nextStep(`$${invocationSkillName}`));
+}
+```
+
+This keeps the CLI generic: `startup-goal` comes from `coordinator`, not from a startup-specific conditional.
+
+- [ ] **Step 6: Verify CLI tests and help smoke output**
+
+```bash
+rtk bun test tests/omniskill.test.ts --test-name-pattern "supporting workflows and teams|team users to invoke"
 rtk bun test tests/cli.test.ts tests/omniskill.test.ts
 rtk bun run dev -- --help
 ```
 
 Expected: tests pass and help describes installable workflows and teams without changing command names.
 
-- [ ] **Step 5: Commit the CLI wording slice**
+- [ ] **Step 7: Commit the CLI wording and invocation slice**
 
 ```bash
 rtk git add src/omniskill.ts tests/omniskill.test.ts
-rtk git commit -m "docs: expose teams in CLI help"
+rtk git commit -m "feat: show the team coordinator after install"
 ```
 
 ### Task 5: Update root documentation and author guidance
