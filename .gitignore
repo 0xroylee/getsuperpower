@@ -15,3 +15,5 @@ __pycache__/
 *.pyc
 .env
 outputs/
+.vercel
+.vercel
