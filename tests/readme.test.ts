@@ -89,6 +89,24 @@ describe("README source contract", () => {
     );
   });
 
+  test("keeps authoritative repository guidance aligned with first-class teams", () => {
+    const agents = readRepoFile("AGENTS.md");
+    const architecture = readRepoFile("docs/architecture.md");
+
+    expect(agents).toContain("examples/teams/startup-team");
+    expect(agents).toContain('kind: "team"');
+    expect(agents).toContain("`coordinator`");
+    expect(agents).toContain("`members`");
+    expect(agents).not.toContain("examples/workflows/startup-goal");
+    expect(agents).not.toContain("remove startup-goal --dry-run");
+
+    expect(architecture).toContain('kind: "team"');
+    expect(architecture).toContain("`coordinator`");
+    expect(architecture).toContain("`members`");
+    expect(architecture).toContain("examples/teams/<name>");
+    expect(architecture).toContain("startup-goal remains the callable coordinator");
+  });
+
   test("names the built-in skill ecosystem", () => {
     const readme = readReadme();
 

@@ -61,13 +61,14 @@ export const workflows: WorkflowCardContent[] = [
     slug: "startup-team",
     name: "Startup Team",
     description:
-      "Move a startup goal through the core operating roles: CEO, CTO, PM, EM, founding engineer, and QA lead.",
+      "Move a startup goal through the core operating roles: CEO, CTO, PM, web design, EM, founding engineer, and QA lead.",
     entrySkill: "startup-goal",
     localSkillNames: [
       "startup-goal",
       "ceo",
       "cto",
       "product-manager",
+      "web-design",
       "engineering-manager",
       "founding-engineer",
       "qa-lead",
@@ -82,6 +83,7 @@ export const workflows: WorkflowCardContent[] = [
       { name: "ceo", description: "Company direction and tradeoffs" },
       { name: "cto", description: "Architecture and technical risk" },
       { name: "product-manager", description: "Discovery, PRDs, and issue slicing" },
+      { name: "web-design", description: "Interface direction and motion quality" },
       { name: "engineering-manager", description: "Delivery sequencing and quality gates" },
       { name: "founding-engineer", description: "Implementation framing and handoff" },
       { name: "qa-lead", description: "Acceptance checks and release risk" },
@@ -100,7 +102,7 @@ export const workflows: WorkflowCardContent[] = [
       { name: "mattpocock:tdd", description: "Build with tests where practical" },
       { name: "mattpocock:diagnosing-bugs", description: "Diagnose failures from evidence" },
       { name: "mattpocock:review", description: "Review behavior and risk" },
-      { name: "implement", description: "Execute the implementation slice" },
+      { name: "mattpocock:implement", description: "Execute the implementation slice" },
     ],
     diagramSteps: [
       {
@@ -119,6 +121,11 @@ export const workflows: WorkflowCardContent[] = [
         description: "Shape customer value, PRD, and issue slices.",
       },
       {
+        label: "Design",
+        skill: "web-design",
+        description: "Set responsive interface direction and motion quality.",
+      },
+      {
         label: "Technology",
         skill: "cto",
         description: "Set architecture and technical risk boundaries.",
@@ -135,7 +142,7 @@ export const workflows: WorkflowCardContent[] = [
       },
       {
         label: "Implement",
-        skill: "implement",
+        skill: "mattpocock:implement",
         description: "Execute the planned change with tests and review.",
       },
       {

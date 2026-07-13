@@ -160,7 +160,7 @@ npx omniskill@latest install startup-team
 ```
 
 Description: Move a startup goal through the core operating roles: CEO, CTO,
-PM, EM, founding engineer, and QA lead.
+PM, web design, EM, founding engineer, and QA lead.
 
 Skills:
 
@@ -168,6 +168,7 @@ Skills:
 - `ceo`: Company direction and tradeoffs
 - `cto`: Architecture and technical risk
 - `product-manager`: Discovery, PRDs, and issue slicing
+- `web-design`: Interface direction and motion quality
 - `engineering-manager`: Delivery sequencing and quality gates
 - `founding-engineer`: Implementation framing and handoff
 - `qa-lead`: Acceptance checks and release risk
@@ -183,7 +184,7 @@ Skills:
 - `mattpocock:tdd`: Build with tests where practical
 - `mattpocock:diagnosing-bugs`: Diagnose failures from evidence
 - `mattpocock:review`: Review behavior and risk
-- `implement`: Execute the implementation slice
+- `mattpocock:implement`: Execute the implementation slice
 
 Ordered skill path:
 
@@ -193,15 +194,17 @@ Ordered skill path:
    - Clarify company direction and tradeoffs.
 3. Product -> `product-manager`
    - Shape customer value, PRD, and issue slices.
-4. Technology -> `cto`
+4. Design -> `web-design`
+   - Set responsive interface direction and motion quality.
+5. Technology -> `cto`
    - Set architecture and technical risk boundaries.
-5. Delivery -> `engineering-manager`
+6. Delivery -> `engineering-manager`
    - Sequence execution and quality gates.
-6. Implementation frame -> `founding-engineer`
+7. Implementation frame -> `founding-engineer`
    - Prepare the smallest correct implementation slice.
-7. Implement -> `implement`
+8. Implement -> `mattpocock:implement`
    - Execute the planned change with tests and review.
-8. QA -> `qa-lead`
+9. QA -> `qa-lead`
    - Check release readiness and residual risk.
 
 ### CEO

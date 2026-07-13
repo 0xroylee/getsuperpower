@@ -105,7 +105,8 @@
       "repo": "https://github.com/mattpocock/skills/tree/v1.1.0"
     },
     {
-      "source": "implement"
+      "source": "mattpocock:implement",
+      "repo": "https://github.com/mattpocock/skills/tree/v1.1.0"
     }
   ],
   "steps": [
@@ -157,7 +158,7 @@
     {
       "id": "implement",
       "title": "Implement the planned change",
-      "skill": "implement"
+      "skill": "mattpocock:implement"
     },
     {
       "id": "qa",

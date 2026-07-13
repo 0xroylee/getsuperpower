@@ -534,7 +534,7 @@ describe("workflow bundles", () => {
       ["technology", "./skills/cto", null],
       ["delivery", "./skills/engineering-manager", null],
       ["implementation", "./skills/founding-engineer", null],
-      ["implement", "implement", null],
+      ["implement", "mattpocock:implement", null],
       ["qa", "./skills/qa-lead", null],
     ]);
     expect(bundle.manifest.steps[0]?.instruction).toContain(
@@ -547,8 +547,13 @@ describe("workflow bundles", () => {
         { source: "emilkowalski:animation-vocabulary", repo: "emilkowalski/skills" },
         { source: "emilkowalski:apple-design", repo: "emilkowalski/skills" },
         { source: "emilkowalski:review-animations", repo: "emilkowalski/skills" },
+        {
+          source: "mattpocock:implement",
+          repo: "https://github.com/mattpocock/skills/tree/v1.1.0",
+        },
       ]),
     );
+    expect(bundle.manifest.skills).not.toContainEqual({ source: "implement" });
     expect(skill).toContain("name: startup-goal");
     for (const heading of [
       "## 1. Clarify",

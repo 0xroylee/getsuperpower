@@ -216,6 +216,11 @@ describe("landing app source contract", () => {
     expect(content).toContain("getLocalSkillSourceUrl");
     expect(content).toContain('localSkillNames: ["haaland"]');
     expect(content).toContain('slug: "startup-team"');
+    expect(content).toContain(
+      '{ name: "web-design", description: "Interface direction and motion quality" }',
+    );
+    expect(content).toContain('label: "Design"');
+    expect(content).toContain('skill: "web-design"');
     expect(content).toContain('slug: "founding-engineer"');
     expect(content).toContain('slug: "haaland"');
     expect(content).toContain(`\${githubUrl}/tree/main/examples/teams/startup-team`);
