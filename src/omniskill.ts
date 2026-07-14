@@ -13,15 +13,20 @@ import {
   warning,
 } from "./cli-theme";
 import {
+  type AgentProfileArtifact,
+  executeAgentProfilePlan,
   getInterfaceCraftInstalledSkillName,
+  loadOrchestrationConfigPlan,
   MissingInterfaceCraftSkillError,
   MissingMattPocockSkillError,
   MissingSuperpowersSkillError,
   parseSkillInstallAgents,
+  preflightAgentProfiles,
   type SkillInstallResult,
 } from "./plugins";
 import { runSubprocess } from "./process";
 import {
+  type AgentProfileTarget,
   createWorkflowBundleScaffold,
   createWorkflowRemovalPlan,
   executeWorkflowRemovalPlan,
@@ -30,9 +35,10 @@ import {
   installWorkflowBundle,
   listInstalledWorkflowBundles,
   loadWorkflowBundle,
+  planAgentProfiles,
   resolveWorkflowDependencyGraph,
   type WorkflowGitCommandRunner,
-  type WorkflowInstallSkillArtifact,
+  type WorkflowInstallArtifact,
   type WorkflowRemovalPlan,
   writeWorkflowLockFile,
 } from "./runtimes/omniskill";
@@ -160,6 +166,8 @@ interface OmniskillInstallCommandOptions {
   dir?: string;
   agents: string;
   home: string;
+  dryRun: boolean;
+  force: boolean;
 }
 
 interface OmniskillRemoveCommandOptions {
@@ -340,6 +348,8 @@ function configureInstallCommand(
       "home directory for global Omniskills records and agent config folders",
       homedir(),
     )
+    .option("--dry-run", "print the complete install plan without writing files", false)
+    .option("--force", "replace drifted managed agent profiles", false)
     .action((source: string, commandOptions: OmniskillInstallCommandOptions) =>
       runOmniskillInstall(source, commandOptions, options),
     );
@@ -377,13 +387,42 @@ async function runOmniskillInstall(
       source: preparedDependencies?.displaySources[index] ?? dependency.source,
       ...(dependency.repo ? { repo: dependency.repo } : {}),
     }));
+    const configPlan = bundle.manifest.orchestration
+      ? await loadOrchestrationConfigPlan({ homeDir })
+      : undefined;
+    const plannedProfiles = configPlan
+      ? planAgentProfiles({
+          manifest: bundle.manifest,
+          config: configPlan.config,
+          homeDir,
+          targets: orchestrationTargets(installAgents),
+        })
+      : [];
+    const installedWorkflow = (await listInstalledWorkflowBundles({ rootDir: targetDir })).find(
+      (workflow) => workflow.name === bundle.manifest.name,
+    );
+    const previousProfiles = (installedWorkflow?.installArtifacts ?? []).filter(
+      (artifact): artifact is AgentProfileArtifact => artifact.kind === "agent_profile",
+    );
+    const profilePlan = await preflightAgentProfiles({
+      profiles: plannedProfiles,
+      previousArtifacts: previousProfiles,
+      force: commandOptions.force,
+    });
     printOmniskillInstallPlan({
       workflowName: bundle.manifest.name,
       workflowVersion: bundle.manifest.version,
       skills: skillPlans,
       targetDir,
       homeDir,
+      ...(configPlan ? { configPlan } : {}),
+      profilePlan,
     });
+
+    if (profilePlan.some(({ status }) => status === "conflict")) {
+      throw new Error("Omniskills install blocked by agent profile conflicts");
+    }
+    if (commandOptions.dryRun) return;
 
     const approved = await installPrompt.confirmInstall({
       workflowName: bundle.manifest.name,
@@ -407,7 +446,7 @@ async function runOmniskillInstall(
       workflowVersion: bundle.manifest.version,
     });
     const skillDependencies = preparedDependencies.dependencies;
-    const installArtifacts: WorkflowInstallSkillArtifact[] = [];
+    const installArtifacts: WorkflowInstallArtifact[] = [];
     for (const [index, skillDependency] of skillDependencies.entries()) {
       const manifestSource = preparedDependencies.displaySources[index] ?? skillDependency.source;
       const displaySkill = manifestSource;
@@ -439,6 +478,14 @@ async function runOmniskillInstall(
         showPostSkillChangeWelcome: false,
       });
       console.log(success(`Installed skill: ${skillResult.skillInstall.skillName}`));
+    }
+
+    if (configPlan) {
+      const profileArtifacts = await executeAgentProfilePlan({
+        profiles: profilePlan,
+        config: configPlan,
+      });
+      installArtifacts.push(...profileArtifacts);
     }
 
     const install = await installWorkflowBundle({ rootDir: targetDir, bundle, installArtifacts });
@@ -484,6 +531,8 @@ function printOmniskillInstallPlan(input: {
   skills: OmniskillInstallSkillPlan[];
   targetDir: string;
   homeDir: string;
+  configPlan?: Awaited<ReturnType<typeof loadOrchestrationConfigPlan>>;
+  profilePlan: Awaited<ReturnType<typeof preflightAgentProfiles>>;
 }): void {
   console.log(success(`Omniskills install plan: ${input.workflowName}@${input.workflowVersion}`));
   console.log(keyValue("Workflow records", input.targetDir));
@@ -492,6 +541,26 @@ function printOmniskillInstallPlan(input: {
   for (const skill of input.skills) {
     console.log(`- ${formatInstallSkillPlan(skill)}`);
   }
+  console.log("Agent profiles:");
+  if (input.profilePlan.length === 0) console.log("- none");
+  for (const planned of input.profilePlan) {
+    console.log(
+      `- ${planned.status}: ${planned.profile.profileId} (${planned.profile.target}/${planned.profile.tier}/${planned.profile.model}/${planned.profile.effort}) -> ${planned.profile.destination}`,
+    );
+  }
+  if (input.configPlan) {
+    console.log(
+      keyValue("Orchestration config", `${input.configPlan.status}: ${input.configPlan.path}`),
+    );
+  }
+}
+
+function orchestrationTargets(
+  agents: ReturnType<typeof parseSkillInstallAgents>,
+): AgentProfileTarget[] {
+  return agents.filter(
+    (agent): agent is AgentProfileTarget => agent === "codex" || agent === "claude",
+  );
 }
 
 function formatInstallSkillPlan(skill: OmniskillInstallSkillPlan): string {

@@ -52,6 +52,7 @@ async function writeGitWorkflowFixtureAt(
     extraSkill?: boolean;
     team?: boolean;
     localTeamMember?: boolean;
+    orchestration?: boolean;
   } = {},
 ): Promise<void> {
   const includeExtraSkill = options.extraSkill === true;
@@ -119,6 +120,24 @@ async function writeGitWorkflowFixtureAt(
         description: "Uses one local skill from git.",
         ...(options.loop
           ? { loop: { script: "./loop.mjs", state: "global", execution: "action-only" } }
+          : {}),
+        ...(options.team && options.orchestration
+          ? {
+              orchestration: {
+                roles: {
+                  "./skills/git-entry": {
+                    tier: "deep",
+                    access: "read-only",
+                    consultation: "receive",
+                  },
+                  [options.localTeamMember ? "./skills/git-extra" : "./member-workflow"]: {
+                    tier: "standard",
+                    access: "workspace-write",
+                    consultation: "request",
+                  },
+                },
+              },
+            }
           : {}),
         skills: [
           {
@@ -237,6 +256,115 @@ describe("omniskill command module", () => {
     expect(descriptions.get("deps")).toBe(
       "List the skill dependencies declared by an Omniskills workflow or team.",
     );
+  });
+
+  test("install dry-run prints native profiles without installing skills or writing files", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "omniskill-dry-run-root-"));
+    const homeDir = await mkdtemp(join(tmpdir(), "omniskill-dry-run-home-"));
+    const bundleDir = join(rootDir, "git-team");
+    const logs: string[] = [];
+    const originalLog = console.log;
+    let installCalls = 0;
+    const program = new Command();
+
+    console.log = (...values: unknown[]) => logs.push(values.join(" "));
+    try {
+      await writeGitWorkflowFixtureAt(bundleDir, {
+        team: true,
+        orchestration: true,
+      });
+      configureOmniskillCommand(program, {
+        rootDir,
+        installSkill: async () => {
+          installCalls += 1;
+          throw new Error("dry-run must not install skills");
+        },
+        printSkillInstallResult: () => {},
+      });
+
+      await program.parseAsync(
+        ["install", bundleDir, "--home", homeDir, "--agents", "codex,claude", "--dry-run"],
+        { from: "user" },
+      );
+
+      expect(installCalls).toBe(0);
+      expect(logs.join("\n")).toContain("Agent profiles:");
+      expect(logs.join("\n")).toContain("omniskills-git-team-git-entry");
+      await expect(
+        readFile(join(homeDir, ".omniskills", "orchestration.json"), "utf8"),
+      ).rejects.toThrow();
+      await expect(
+        readFile(join(homeDir, ".omniskills", "workflows", "git-team.json"), "utf8"),
+      ).rejects.toThrow();
+    } finally {
+      console.log = originalLog;
+      await rm(rootDir, { recursive: true, force: true });
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test("install persists native profiles and their managed artifacts", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "omniskill-profile-root-"));
+    const homeDir = await mkdtemp(join(tmpdir(), "omniskill-profile-home-"));
+    const bundleDir = join(rootDir, "git-team");
+    const program = new Command();
+
+    try {
+      await writeGitWorkflowFixtureAt(bundleDir, {
+        team: true,
+        orchestration: true,
+      });
+      configureOmniskillCommand(program, {
+        rootDir,
+        installPrompt: { confirmInstall: async () => true },
+        installSkill: async (input) => {
+          const skillName = input.source.endsWith("git-extra") ? "git-extra" : "git-entry";
+          return {
+            skillInstall: fakeSkillInstallResult({
+              source: input.source,
+              skillName,
+              destination: join(homeDir, ".agents", "skills", skillName),
+            }),
+          };
+        },
+        printSkillInstallResult: () => {},
+      });
+
+      await program.parseAsync(
+        ["install", bundleDir, "--home", homeDir, "--agents", "codex,claude"],
+        { from: "user" },
+      );
+
+      const installed = JSON.parse(
+        await readFile(join(homeDir, ".omniskills", "workflows", "git-team.json"), "utf8"),
+      );
+      expect(installed.installArtifacts).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            kind: "agent_profile",
+            profileId: "omniskills-git-team-git-entry",
+            agent: "codex",
+          }),
+          expect.objectContaining({
+            kind: "agent_profile",
+            profileId: "omniskills-git-team-git-entry",
+            agent: "claude",
+          }),
+        ]),
+      );
+      expect(await readFile(join(homeDir, ".omniskills", "orchestration.json"), "utf8")).toContain(
+        '"schemaVersion": "0.1"',
+      );
+      await expect(
+        readFile(join(homeDir, ".codex", "agents", "omniskills-git-team-git-entry.toml"), "utf8"),
+      ).resolves.toContain('model = "gpt-5.6"');
+      await expect(
+        readFile(join(homeDir, ".claude", "agents", "omniskills-git-team-git-entry.md"), "utf8"),
+      ).resolves.toContain("model: opus");
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+      await rm(homeDir, { recursive: true, force: true });
+    }
   });
 
   test("install supports a public git workflow source", async () => {
