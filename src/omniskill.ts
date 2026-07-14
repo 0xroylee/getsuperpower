@@ -45,6 +45,7 @@ import {
   executeWorkflowRemovalPlan,
   getPreparedWorkflowSkillInstallDependencies,
   getWorkflowInvocationSkillName,
+  hasRepeatedConsultationEvidence,
   installWorkflowBundle,
   listInstalledWorkflowBundles,
   loadInstalledWorkflowBundle,
@@ -562,6 +563,11 @@ async function runOmniskillDispatchResume(
   const consultationLimitExceeded =
     result.status === "consultation_required" &&
     stored.receipt.consultationCount >= selectedPlan.limits.consultationsPerAgent;
+  const repeatedConsultationEvidence =
+    result.status === "consultation_required" &&
+    result.consultation !== undefined &&
+    stored.receipt.consultation !== undefined &&
+    hasRepeatedConsultationEvidence(stored.receipt.consultation, result.consultation);
   const attempt: DispatchAttempt = {
     attemptNumber: nextAttemptNumber,
     candidateIndex: selectedPlan.candidateIndex,
@@ -582,22 +588,27 @@ async function runOmniskillDispatchResume(
     profileHash: selectedPlan.profileHash,
     model: selectedPlan.model,
     effort: selectedPlan.effort,
-    status: consultationLimitExceeded ? "failed" : result.status,
+    status: consultationLimitExceeded || repeatedConsultationEvidence ? "failed" : result.status,
     evidence: result.evidence,
     consultationCount:
       stored.receipt.consultationCount + (result.status === "consultation_required" ? 1 : 0),
     reassignmentCount: stored.receipt.reassignmentCount + (decision === "reassign" ? 1 : 0),
     ...(result.sessionId ? { sessionId: result.sessionId } : {}),
     ...(result.consultation ? { consultation: result.consultation } : {}),
-    ...(consultationLimitExceeded
+    ...(repeatedConsultationEvidence
       ? {
-          failureCode: "consultation_limit_exceeded",
-          failureReason: `Dispatch consultation limit exceeded: ${runId}`,
+          failureCode: "consultation_repeated_evidence",
+          failureReason: `Dispatch consultation repeated prior evidence: ${runId}`,
         }
-      : result.failureCode
-        ? { failureCode: result.failureCode }
-        : {}),
-    ...(!consultationLimitExceeded && result.failureReason
+      : consultationLimitExceeded
+        ? {
+            failureCode: "consultation_limit_exceeded",
+            failureReason: `Dispatch consultation limit exceeded: ${runId}`,
+          }
+        : result.failureCode
+          ? { failureCode: result.failureCode }
+          : {}),
+    ...(!consultationLimitExceeded && !repeatedConsultationEvidence && result.failureReason
       ? { failureReason: result.failureReason }
       : {}),
     updatedAt: new Date().toISOString(),

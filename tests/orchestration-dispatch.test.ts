@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { hashAgentProfileContent } from "../src/runtimes/omniskill/orchestration";
 import {
   createDispatchAttemptSchedule,
+  hasRepeatedConsultationEvidence,
   MAX_DISPATCH_TASK_BYTES,
   OrchestrationDispatchError,
   planOrchestrationDispatch,
@@ -127,6 +128,24 @@ async function expectDispatchError(
 }
 
 describe("orchestration dispatch planning", () => {
+  test("detects repeated consultation evidence without conflating new evidence", () => {
+    const prior = {
+      type: "consultation_request" as const,
+      trigger: "ambiguity" as const,
+      current_task: "Review boundaries",
+      evidence: ["Two public boundaries remain."],
+      decision_needed: "Choose one boundary.",
+      recommendation: "Keep the adapter.",
+    };
+    expect(hasRepeatedConsultationEvidence(prior, { ...prior })).toBe(true);
+    expect(
+      hasRepeatedConsultationEvidence(prior, {
+        ...prior,
+        evidence: ["The adapter now fails compatibility verification."],
+      }),
+    ).toBe(false);
+  });
+
   test("plans ordered verified read-only candidates from installed artifacts", async () => {
     const primary = profile({ candidateCount: 2 });
     const fallback = profile({

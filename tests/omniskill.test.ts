@@ -996,14 +996,23 @@ describe("omniskill command module", () => {
                 status: "consultation_required",
                 evidence: "launch_configured",
                 sessionId: `thread-${dispatchedRoles.length}`,
-                consultation,
+                consultation:
+                  dispatchedRoles.length === 1
+                    ? consultation
+                    : {
+                        ...consultation,
+                        evidence: ["The coordinator found a new release-risk constraint."],
+                      },
               };
             },
             resume: async (input) => ({
               status: "consultation_required",
               evidence: "launch_configured",
               sessionId: input.sessionId,
-              consultation,
+              consultation: {
+                ...consultation,
+                evidence: ["Compatibility verification produced a new failing case."],
+              },
             }),
           },
         },

@@ -146,6 +146,16 @@ export function createDispatchAttemptSchedule(planSet: DispatchPlanSet): Dispatc
   );
 }
 
+export function hasRepeatedConsultationEvidence(
+  prior: ConsultationRequest,
+  next: ConsultationRequest,
+): boolean {
+  return (
+    prior.evidence.length === next.evidence.length &&
+    prior.evidence.every((item, index) => item === next.evidence[index])
+  );
+}
+
 interface DispatchableProfileArtifact extends WorkflowInstallAgentProfileArtifact {
   taskClass: "role" | "support";
   tier: "deep" | "standard" | "fast";
