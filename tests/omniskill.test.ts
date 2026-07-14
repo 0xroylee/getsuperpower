@@ -48,7 +48,7 @@ function fakeSkillInstallResult(input: {
 
 async function writeInstalledDispatchFixture(
   homeDir: string,
-  options: { fallback?: boolean } = {},
+  options: { fallback?: boolean; coordinator?: boolean } = {},
 ): Promise<{
   profileId: string;
   profilePath: string;
@@ -60,11 +60,17 @@ async function writeInstalledDispatchFixture(
   const fallbackProfileId = "omniskills-startup-team-cto-fallback-2";
   const fallbackProfilePath = join(homeDir, ".codex", "agents", `${fallbackProfileId}.toml`);
   const fallbackProfileContent = `# omniskills-managed: team=startup-team source=catalog:cto\nname = "${fallbackProfileId}"\n`;
+  const coordinatorProfileId = "omniskills-startup-team-startup-goal";
+  const coordinatorProfilePath = join(homeDir, ".codex", "agents", `${coordinatorProfileId}.toml`);
+  const coordinatorProfileContent = `# omniskills-managed: team=startup-team source=./skills/startup-goal\nname = "${coordinatorProfileId}"\n`;
   await mkdir(join(homeDir, ".omniskills", "workflows"), { recursive: true });
   await mkdir(join(homeDir, ".codex", "agents"), { recursive: true });
   await writeFile(profilePath, profileContent);
   if (options.fallback) {
     await writeFile(fallbackProfilePath, fallbackProfileContent);
+  }
+  if (options.coordinator) {
+    await writeFile(coordinatorProfilePath, coordinatorProfileContent);
   }
   const profileLimits = {
     retryPerCandidate: 1,
@@ -111,6 +117,29 @@ async function writeInstalledDispatchFixture(
             limits: profileLimits,
             candidateIndex: 1,
             candidateCount: 2,
+          },
+        ]
+      : []),
+    ...(options.coordinator
+      ? [
+          {
+            kind: "agent_profile",
+            source: "./skills/startup-goal",
+            profileId: coordinatorProfileId,
+            agent: "codex",
+            status: "installed",
+            path: coordinatorProfilePath,
+            contentHash: hashAgentProfileContent(coordinatorProfileContent),
+            taskClass: "role",
+            tier: "deep",
+            model: "gpt-5.6",
+            effort: "high",
+            access: "read-only",
+            instructions: "You are the startup-goal coordinator.",
+            consultation: "receive",
+            limits: profileLimits,
+            candidateIndex: 0,
+            candidateCount: 1,
           },
         ]
       : []),
@@ -808,6 +837,347 @@ describe("omniskill command module", () => {
       expect(
         (await readFile(join(runDir, "attempts.jsonl"), "utf8")).trim().split("\n"),
       ).toHaveLength(4);
+    } finally {
+      console.log = originalLog;
+      await rm(rootDir, { recursive: true, force: true });
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test("dispatch resume re-verifies and continues a suspended Codex session", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "omniskill-dispatch-resume-root-"));
+    const homeDir = await mkdtemp(join(tmpdir(), "omniskill-dispatch-resume-home-"));
+    const originalLog = console.log;
+    const resumeInputs: unknown[] = [];
+    const consultation = {
+      type: "consultation_request" as const,
+      trigger: "ambiguity" as const,
+      current_task: "Review boundaries",
+      evidence: ["Two compatible boundaries remain."],
+      decision_needed: "Choose the public boundary.",
+      recommendation: "Keep the existing public adapter.",
+    };
+    const configure = (program: Command) =>
+      configureOmniskillCommand(program, {
+        rootDir,
+        installSkill: async () => {
+          throw new Error("install is not exercised by dispatch resume");
+        },
+        printSkillInstallResult: () => {},
+        createRunStore: (storeHomeDir) =>
+          createOrchestrationRunStore({
+            homeDir: storeHomeDir,
+            createRunId: () => "run-consult",
+          }),
+        dispatchers: {
+          codex: {
+            runtime: "codex",
+            available: async () => true,
+            dispatch: async () => ({
+              status: "consultation_required",
+              evidence: "launch_configured",
+              sessionId: "thread-consult",
+              consultation,
+            }),
+            resume: async (input) => {
+              resumeInputs.push(input);
+              return {
+                status: "completed",
+                evidence: "launch_configured",
+                sessionId: input.sessionId,
+              };
+            },
+          },
+        },
+      });
+
+    try {
+      await writeInstalledDispatchFixture(homeDir);
+      console.log = () => {};
+      const startProgram = new Command();
+      configure(startProgram);
+      await startProgram.parseAsync(
+        [
+          "dispatch",
+          "startup-team",
+          "--role",
+          "catalog:cto",
+          "--task",
+          "Review boundaries",
+          "--home",
+          homeDir,
+        ],
+        { from: "user" },
+      );
+
+      const runDir = join(homeDir, ".omniskills", "runs", "startup-team", "run-consult");
+      const receiptPath = join(runDir, "receipt.json");
+      expect(JSON.parse(await readFile(receiptPath, "utf8"))).toEqual(
+        expect.objectContaining({
+          status: "consultation_required",
+          consultation,
+          consultationCount: 1,
+        }),
+      );
+
+      const resumeProgram = new Command();
+      configure(resumeProgram);
+      await resumeProgram.parseAsync(
+        [
+          "dispatch",
+          "resume",
+          "run-consult",
+          "--decision",
+          "continue",
+          "--message",
+          "Keep the existing public adapter.",
+          "--home",
+          homeDir,
+        ],
+        { from: "user" },
+      );
+
+      expect(resumeInputs).toEqual([
+        expect.objectContaining({
+          sessionId: "thread-consult",
+          decision: "continue",
+          message: "Keep the existing public adapter.",
+          plan: expect.objectContaining({ profileId: "omniskills-startup-team-cto" }),
+        }),
+      ]);
+      expect(JSON.parse(await readFile(receiptPath, "utf8"))).toEqual(
+        expect.objectContaining({ status: "completed", consultationCount: 1 }),
+      );
+      const attempts = (await readFile(join(runDir, "attempts.jsonl"), "utf8"))
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line));
+      expect(attempts).toHaveLength(2);
+      expect(attempts[1]).toEqual(expect.objectContaining({ resumeDecision: "continue" }));
+    } finally {
+      console.log = originalLog;
+      await rm(rootDir, { recursive: true, force: true });
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test("dispatch resume bounds reassignment and repeated consultations", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "omniskill-dispatch-reassign-root-"));
+    const homeDir = await mkdtemp(join(tmpdir(), "omniskill-dispatch-reassign-home-"));
+    const originalLog = console.log;
+    const dispatchedRoles: string[] = [];
+    const consultation = {
+      type: "consultation_request" as const,
+      trigger: "elevated_risk" as const,
+      current_task: "Review boundaries",
+      evidence: ["The change crosses a public boundary."],
+      decision_needed: "Choose an owner.",
+      recommendation: "Reassign to the coordinator.",
+    };
+    const configure = (program: Command) =>
+      configureOmniskillCommand(program, {
+        rootDir,
+        installSkill: async () => {
+          throw new Error("install is not exercised by dispatch reassignment");
+        },
+        printSkillInstallResult: () => {},
+        createRunStore: (storeHomeDir) =>
+          createOrchestrationRunStore({
+            homeDir: storeHomeDir,
+            createRunId: () => "run-reassign",
+          }),
+        dispatchers: {
+          codex: {
+            runtime: "codex",
+            available: async () => true,
+            dispatch: async (plan) => {
+              dispatchedRoles.push(plan.role);
+              return {
+                status: "consultation_required",
+                evidence: "launch_configured",
+                sessionId: `thread-${dispatchedRoles.length}`,
+                consultation,
+              };
+            },
+            resume: async (input) => ({
+              status: "consultation_required",
+              evidence: "launch_configured",
+              sessionId: input.sessionId,
+              consultation,
+            }),
+          },
+        },
+      });
+
+    try {
+      await writeInstalledDispatchFixture(homeDir, { coordinator: true });
+      console.log = () => {};
+      const startProgram = new Command();
+      configure(startProgram);
+      await startProgram.parseAsync(
+        [
+          "dispatch",
+          "startup-team",
+          "--role",
+          "catalog:cto",
+          "--task",
+          "Review boundaries",
+          "--home",
+          homeDir,
+        ],
+        { from: "user" },
+      );
+
+      const reassignProgram = new Command();
+      configure(reassignProgram);
+      await reassignProgram.parseAsync(
+        [
+          "dispatch",
+          "resume",
+          "run-reassign",
+          "--decision",
+          "reassign",
+          "--role",
+          "./skills/startup-goal",
+          "--message",
+          "Coordinator should own this decision.",
+          "--home",
+          homeDir,
+        ],
+        { from: "user" },
+      );
+
+      const receiptPath = join(
+        homeDir,
+        ".omniskills",
+        "runs",
+        "startup-team",
+        "run-reassign",
+        "receipt.json",
+      );
+      expect(dispatchedRoles).toEqual(["catalog:cto", "./skills/startup-goal"]);
+      expect(JSON.parse(await readFile(receiptPath, "utf8"))).toEqual(
+        expect.objectContaining({
+          status: "consultation_required",
+          role: "./skills/startup-goal",
+          reassignmentCount: 1,
+          consultationCount: 2,
+        }),
+      );
+
+      const continueProgram = new Command();
+      configure(continueProgram);
+      await expect(
+        continueProgram.parseAsync(
+          [
+            "dispatch",
+            "resume",
+            "run-reassign",
+            "--decision",
+            "continue",
+            "--message",
+            "Continue with the coordinator recommendation.",
+            "--home",
+            homeDir,
+          ],
+          { from: "user" },
+        ),
+      ).rejects.toThrow("Dispatch consultation limit exceeded");
+      expect(JSON.parse(await readFile(receiptPath, "utf8"))).toEqual(
+        expect.objectContaining({
+          status: "failed",
+          failureCode: "consultation_limit_exceeded",
+          consultationCount: 3,
+        }),
+      );
+    } finally {
+      console.log = originalLog;
+      await rm(rootDir, { recursive: true, force: true });
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test("dispatch resume rejects profile drift before contacting Codex", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "omniskill-dispatch-drift-root-"));
+    const homeDir = await mkdtemp(join(tmpdir(), "omniskill-dispatch-drift-home-"));
+    const originalLog = console.log;
+    let resumeCalls = 0;
+    const configure = (program: Command) =>
+      configureOmniskillCommand(program, {
+        rootDir,
+        installSkill: async () => {
+          throw new Error("install is not exercised by dispatch drift");
+        },
+        printSkillInstallResult: () => {},
+        createRunStore: (storeHomeDir) =>
+          createOrchestrationRunStore({
+            homeDir: storeHomeDir,
+            createRunId: () => "run-drift",
+          }),
+        dispatchers: {
+          codex: {
+            runtime: "codex",
+            available: async () => true,
+            dispatch: async () => ({
+              status: "consultation_required",
+              evidence: "launch_configured",
+              sessionId: "thread-drift",
+              consultation: {
+                type: "consultation_request",
+                trigger: "failed_verification",
+                current_task: "Review boundaries",
+                evidence: ["Verification is incomplete."],
+                decision_needed: "Choose the next verification step.",
+                recommendation: "Re-check the installed profile.",
+              },
+            }),
+            resume: async () => {
+              resumeCalls += 1;
+              return { status: "completed", evidence: "launch_configured" };
+            },
+          },
+        },
+      });
+
+    try {
+      const { profilePath } = await writeInstalledDispatchFixture(homeDir);
+      console.log = () => {};
+      const startProgram = new Command();
+      configure(startProgram);
+      await startProgram.parseAsync(
+        [
+          "dispatch",
+          "startup-team",
+          "--role",
+          "catalog:cto",
+          "--task",
+          "Review boundaries",
+          "--home",
+          homeDir,
+        ],
+        { from: "user" },
+      );
+      await writeFile(profilePath, "# user modified profile\n");
+
+      const resumeProgram = new Command();
+      configure(resumeProgram);
+      await expect(
+        resumeProgram.parseAsync(
+          [
+            "dispatch",
+            "resume",
+            "run-drift",
+            "--decision",
+            "continue",
+            "--message",
+            "Continue after verification.",
+            "--home",
+            homeDir,
+          ],
+          { from: "user" },
+        ),
+      ).rejects.toThrow("Managed profile has drifted");
+      expect(resumeCalls).toBe(0);
     } finally {
       console.log = originalLog;
       await rm(rootDir, { recursive: true, force: true });

@@ -33,6 +33,8 @@ import {
 import { runSubprocess } from "./process";
 import {
   type AgentProfileTarget,
+  type ConsultationDecision,
+  ConsultationDecisionSchema,
   createDispatchAttemptSchedule,
   createWorkflowBundleScaffold,
   createWorkflowRemovalPlan,
@@ -192,7 +194,7 @@ interface OmniskillRemoveCommandOptions {
 }
 
 interface OmniskillDispatchCommandOptions {
-  role: string;
+  role?: string;
   task?: string;
   taskFile?: string;
   runtime: string;
@@ -200,6 +202,15 @@ interface OmniskillDispatchCommandOptions {
   dir?: string;
   approveWorkspaceWrite: boolean;
   dryRun: boolean;
+  json: boolean;
+}
+
+interface OmniskillDispatchResumeCommandOptions {
+  decision: string;
+  message: string;
+  role?: string;
+  home: string;
+  dir?: string;
   json: boolean;
 }
 
@@ -270,11 +281,11 @@ function configureDispatchCommand(
   command: Command,
   options: ConfigureOmniskillCommandOptions,
 ): void {
-  command
+  const dispatchCommand = command
     .command("dispatch")
     .description("Dispatch an installed Omniskills role through a verified runtime profile.")
-    .argument("<workflow-name>", "installed workflow or team name")
-    .requiredOption("--role <source>", "role source or support id")
+    .argument("[workflow-name]", "installed workflow or team name")
+    .option("--role <source>", "role source or support id")
     .option("--task <text>", "task text")
     .option("--task-file <path>", "read task text from a file")
     .option("--runtime <runtime>", "codex or claude", "codex")
@@ -283,137 +294,331 @@ function configureDispatchCommand(
     .option("--approve-workspace-write", "approve the implementation write gate", false)
     .option("--dry-run", "print the launch plan without starting a child", false)
     .option("--json", "print machine-readable output", false)
-    .action(async (workflowName: string, commandOptions: OmniskillDispatchCommandOptions) => {
-      const hasTask = commandOptions.task !== undefined;
-      const hasTaskFile = commandOptions.taskFile !== undefined;
-      if (hasTask === hasTaskFile) {
-        throw new Error("Dispatch requires exactly one of --task or --task-file");
-      }
-      const homeDir = resolveHomePath(commandOptions.home);
-      const targetDir = commandOptions.dir
-        ? resolvePath(options.rootDir, commandOptions.dir)
-        : homeDir;
-      const runtime = DispatchRuntimeSchema.parse(commandOptions.runtime);
-      const dispatcher = options.dispatchers?.[runtime];
-      const available = dispatcher ? await dispatcher.available(options.rootDir) : false;
-      const task = commandOptions.taskFile
-        ? await readFile(resolvePath(options.rootDir, commandOptions.taskFile), "utf8")
-        : (commandOptions.task as string);
-      const installed = await loadInstalledWorkflowBundle({
-        rootDir: targetDir,
-        workflowName,
-      });
-      const planSet = await planOrchestrationDispatch({
-        workflow: installed.workflow,
-        role: commandOptions.role,
-        runtime,
-        task,
-        cwd: options.rootDir,
-        homeDir,
-        approveWorkspaceWrite: commandOptions.approveWorkspaceWrite,
-        capabilities: { [runtime]: available },
-        readProfile: (path) => readFile(path, "utf8"),
-      });
-      if (commandOptions.dryRun) {
-        if (commandOptions.json) {
-          console.log(JSON.stringify(planSet, null, 2));
+    .action(
+      async (workflowName: string | undefined, commandOptions: OmniskillDispatchCommandOptions) => {
+        if (!workflowName) {
+          throw new Error("Dispatch requires an installed workflow name");
+        }
+        if (!commandOptions.role) {
+          throw new Error("Dispatch requires --role");
+        }
+        const hasTask = commandOptions.task !== undefined;
+        const hasTaskFile = commandOptions.taskFile !== undefined;
+        if (hasTask === hasTaskFile) {
+          throw new Error("Dispatch requires exactly one of --task or --task-file");
+        }
+        const homeDir = resolveHomePath(commandOptions.home);
+        const targetDir = commandOptions.dir
+          ? resolvePath(options.rootDir, commandOptions.dir)
+          : homeDir;
+        const runtime = DispatchRuntimeSchema.parse(commandOptions.runtime);
+        const dispatcher = options.dispatchers?.[runtime];
+        const available = dispatcher ? await dispatcher.available(options.rootDir) : false;
+        const task = commandOptions.taskFile
+          ? await readFile(resolvePath(options.rootDir, commandOptions.taskFile), "utf8")
+          : (commandOptions.task as string);
+        const installed = await loadInstalledWorkflowBundle({
+          rootDir: targetDir,
+          workflowName,
+        });
+        const planSet = await planOrchestrationDispatch({
+          workflow: installed.workflow,
+          role: commandOptions.role,
+          runtime,
+          task,
+          cwd: options.rootDir,
+          homeDir,
+          approveWorkspaceWrite: commandOptions.approveWorkspaceWrite,
+          capabilities: { [runtime]: available },
+          readProfile: (path) => readFile(path, "utf8"),
+        });
+        if (commandOptions.dryRun) {
+          if (commandOptions.json) {
+            console.log(JSON.stringify(planSet, null, 2));
+            return;
+          }
+          console.log(success(`Orchestration dispatch plan: ${planSet.primary.profileId}`));
+          console.log(keyValue("Runtime", planSet.primary.runtime));
+          console.log(keyValue("Tier", planSet.primary.tier));
+          console.log(keyValue("Model", planSet.primary.model));
+          console.log(keyValue("Effort", planSet.primary.effort));
+          console.log(keyValue("Access", planSet.primary.access));
+          console.log(keyValue("Evidence required", planSet.primary.evidenceRequired));
           return;
         }
-        console.log(success(`Orchestration dispatch plan: ${planSet.primary.profileId}`));
-        console.log(keyValue("Runtime", planSet.primary.runtime));
-        console.log(keyValue("Tier", planSet.primary.tier));
-        console.log(keyValue("Model", planSet.primary.model));
-        console.log(keyValue("Effort", planSet.primary.effort));
-        console.log(keyValue("Access", planSet.primary.access));
-        console.log(keyValue("Evidence required", planSet.primary.evidenceRequired));
-        return;
-      }
-      const request: DispatchRequest = {
-        workflow: workflowName,
-        role: commandOptions.role,
-        task,
-        cwd: options.rootDir,
-        homeDir,
-        runtime,
-        approveWorkspaceWrite: commandOptions.approveWorkspaceWrite,
-      };
-      const store = (
-        options.createRunStore ?? ((dir) => createOrchestrationRunStore({ homeDir: dir }))
-      )(homeDir);
-      const plannedReceipt = await store.create({ request, planSet });
-      if (!dispatcher) {
-        throw new Error(`Dispatch runtime unavailable: ${runtime}`);
-      }
-      const schedule = createDispatchAttemptSchedule(planSet);
-      let selectedPlan = planSet.primary;
-      let result = await dispatcher.dispatch(selectedPlan);
-      let attemptsMade = 0;
-      for (const [index, candidate] of schedule.entries()) {
-        if (index > 0) {
-          selectedPlan = candidate;
-          result = await dispatcher.dispatch(selectedPlan);
+        const request: DispatchRequest = {
+          workflow: workflowName,
+          role: commandOptions.role,
+          task,
+          cwd: options.rootDir,
+          homeDir,
+          runtime,
+          approveWorkspaceWrite: commandOptions.approveWorkspaceWrite,
+        };
+        const store = (
+          options.createRunStore ?? ((dir) => createOrchestrationRunStore({ homeDir: dir }))
+        )(homeDir);
+        const plannedReceipt = await store.create({ request, planSet });
+        if (!dispatcher) {
+          throw new Error(`Dispatch runtime unavailable: ${runtime}`);
         }
-        attemptsMade = index + 1;
-        const previousCandidate = schedule[index - 1];
-        const attempt: DispatchAttempt = {
-          attemptNumber: index + 1,
-          candidateIndex: selectedPlan.candidateIndex,
+        const schedule = createDispatchAttemptSchedule(planSet);
+        let selectedPlan = planSet.primary;
+        let result = await dispatcher.dispatch(selectedPlan);
+        let attemptsMade = 0;
+        for (const [index, candidate] of schedule.entries()) {
+          if (index > 0) {
+            selectedPlan = candidate;
+            result = await dispatcher.dispatch(selectedPlan);
+          }
+          attemptsMade = index + 1;
+          const previousCandidate = schedule[index - 1];
+          const attempt: DispatchAttempt = {
+            attemptNumber: index + 1,
+            candidateIndex: selectedPlan.candidateIndex,
+            profileId: selectedPlan.profileId,
+            model: selectedPlan.model,
+            status: result.status,
+            evidence: result.evidence,
+            ...(result.sessionId ? { sessionId: result.sessionId } : {}),
+            ...(result.failureCode ? { failureCode: result.failureCode } : {}),
+            ...(result.failureReason ? { failureReason: result.failureReason } : {}),
+            ...(result.consultation ? { consultation: result.consultation } : {}),
+            ...(previousCandidate &&
+            previousCandidate.candidateIndex !== selectedPlan.candidateIndex
+              ? { fallbackFromAttempt: index }
+              : {}),
+          };
+          await store.appendAttempt(plannedReceipt.runId, attempt);
+          if (
+            result.status !== "failed" ||
+            result.failureCode === "runtime_mismatch" ||
+            result.failureCode === "runtime_upgrade_required"
+          ) {
+            break;
+          }
+        }
+        const exhausted = result.status === "failed" && attemptsMade === schedule.length;
+        const receipt: DispatchReceipt = {
+          ...plannedReceipt,
           profileId: selectedPlan.profileId,
+          profileHash: selectedPlan.profileHash,
           model: selectedPlan.model,
+          effort: selectedPlan.effort,
           status: result.status,
           evidence: result.evidence,
+          consultationCount:
+            plannedReceipt.consultationCount + (result.status === "consultation_required" ? 1 : 0),
           ...(result.sessionId ? { sessionId: result.sessionId } : {}),
-          ...(result.failureCode ? { failureCode: result.failureCode } : {}),
-          ...(result.failureReason ? { failureReason: result.failureReason } : {}),
-          ...(previousCandidate && previousCandidate.candidateIndex !== selectedPlan.candidateIndex
-            ? { fallbackFromAttempt: index }
-            : {}),
+          ...(result.consultation ? { consultation: result.consultation } : {}),
+          ...(exhausted
+            ? {
+                failureCode: "retry_exhausted",
+                failureReason: `Dispatch exhausted ${schedule.length} configured attempts`,
+              }
+            : result.failureCode
+              ? { failureCode: result.failureCode }
+              : {}),
+          ...(!exhausted && result.failureReason ? { failureReason: result.failureReason } : {}),
+          updatedAt: new Date().toISOString(),
         };
-        await store.appendAttempt(plannedReceipt.runId, attempt);
-        if (
-          result.status !== "failed" ||
-          result.failureCode === "runtime_mismatch" ||
-          result.failureCode === "runtime_upgrade_required"
-        ) {
-          break;
+        await store.finish(plannedReceipt.runId, receipt);
+        if (commandOptions.json) {
+          console.log(JSON.stringify(receipt, null, 2));
+        } else {
+          console.log(success(`Orchestration dispatch ${receipt.status}: ${receipt.runId}`));
+          console.log(keyValue("Profile", receipt.profileId));
+          console.log(keyValue("Model", receipt.model));
+          console.log(keyValue("Evidence", receipt.evidence));
         }
-      }
-      const exhausted = result.status === "failed" && attemptsMade === schedule.length;
-      const receipt: DispatchReceipt = {
-        ...plannedReceipt,
-        profileId: selectedPlan.profileId,
-        profileHash: selectedPlan.profileHash,
-        model: selectedPlan.model,
-        effort: selectedPlan.effort,
-        status: result.status,
-        evidence: result.evidence,
-        consultationCount:
-          plannedReceipt.consultationCount + (result.status === "consultation_required" ? 1 : 0),
-        ...(result.sessionId ? { sessionId: result.sessionId } : {}),
-        ...(exhausted
-          ? {
-              failureCode: "retry_exhausted",
-              failureReason: `Dispatch exhausted ${schedule.length} configured attempts`,
-            }
-          : result.failureCode
-            ? { failureCode: result.failureCode }
-            : {}),
-        ...(!exhausted && result.failureReason ? { failureReason: result.failureReason } : {}),
-        updatedAt: new Date().toISOString(),
-      };
-      await store.finish(plannedReceipt.runId, receipt);
-      if (commandOptions.json) {
-        console.log(JSON.stringify(receipt, null, 2));
-      } else {
-        console.log(success(`Orchestration dispatch ${receipt.status}: ${receipt.runId}`));
-        console.log(keyValue("Profile", receipt.profileId));
-        console.log(keyValue("Model", receipt.model));
-        console.log(keyValue("Evidence", receipt.evidence));
-      }
-      if (result.status === "failed") {
-        throw new Error(receipt.failureReason ?? `Orchestration dispatch failed: ${receipt.runId}`);
-      }
+        if (result.status === "failed") {
+          throw new Error(
+            receipt.failureReason ?? `Orchestration dispatch failed: ${receipt.runId}`,
+          );
+        }
+      },
+    );
+
+  dispatchCommand
+    .command("resume")
+    .description("Resume a suspended orchestration consultation.")
+    .argument("<run-id>", "orchestration run id")
+    .requiredOption("--decision <decision>", "continue, retry, reassign, or escalate-to-human")
+    .requiredOption("--message <text>", "coordinator advice or escalation context")
+    .option("--role <source>", "new role source; required for reassign")
+    .option("--home <dir>", "home directory with Omniskills state", homedir())
+    .option("--dir <dir>", "override directory with installed workflow records")
+    .option("--json", "print machine-readable output", false)
+    .action((runId: string, _commandOptions: unknown, actionCommand: Command) =>
+      runOmniskillDispatchResume(
+        runId,
+        actionCommand.optsWithGlobals() as OmniskillDispatchResumeCommandOptions,
+        options,
+      ),
+    );
+}
+
+async function runOmniskillDispatchResume(
+  runId: string,
+  commandOptions: OmniskillDispatchResumeCommandOptions,
+  options: ConfigureOmniskillCommandOptions,
+): Promise<void> {
+  const decision: ConsultationDecision = ConsultationDecisionSchema.parse(commandOptions.decision);
+  if (decision === "reassign" && !commandOptions.role) {
+    throw new Error("Dispatch reassign requires --role");
+  }
+  if (decision !== "reassign" && commandOptions.role) {
+    throw new Error("Dispatch resume --role is only valid with --decision reassign");
+  }
+  const homeDir = resolveHomePath(commandOptions.home);
+  const targetDir = commandOptions.dir ? resolvePath(options.rootDir, commandOptions.dir) : homeDir;
+  const store = (
+    options.createRunStore ?? ((dir) => createOrchestrationRunStore({ homeDir: dir }))
+  )(homeDir);
+  const stored = await store.load(runId);
+  if (stored.receipt.status !== "consultation_required" || !stored.receipt.sessionId) {
+    throw new Error(`Orchestration run is not awaiting consultation: ${runId}`);
+  }
+  const dispatcher = options.dispatchers?.[stored.request.runtime];
+  const available = dispatcher ? await dispatcher.available(stored.request.cwd) : false;
+  const installed = await loadInstalledWorkflowBundle({
+    rootDir: targetDir,
+    workflowName: stored.request.workflow,
+  });
+  const currentPlanSet = await planOrchestrationDispatch({
+    workflow: installed.workflow,
+    role: stored.receipt.role,
+    runtime: stored.request.runtime,
+    task: stored.request.task,
+    cwd: stored.request.cwd,
+    homeDir,
+    approveWorkspaceWrite: stored.request.approveWorkspaceWrite,
+    capabilities: { [stored.request.runtime]: available },
+    readProfile: (path) => readFile(path, "utf8"),
+  });
+  const currentPlan = currentPlanSet.candidates.find(
+    (candidate) => candidate.profileId === stored.receipt.profileId,
+  );
+  if (!currentPlan || currentPlan.profileHash !== stored.receipt.profileHash) {
+    throw new Error(`Managed profile has drifted since dispatch: ${stored.receipt.profileId}`);
+  }
+  if (!dispatcher) {
+    throw new Error(`Dispatch runtime unavailable: ${stored.request.runtime}`);
+  }
+
+  const nextAttemptNumber = stored.attempts.length + 1;
+  if (decision === "escalate-to-human") {
+    const attempt: DispatchAttempt = {
+      attemptNumber: nextAttemptNumber,
+      candidateIndex: currentPlan.candidateIndex,
+      profileId: currentPlan.profileId,
+      model: currentPlan.model,
+      status: "consultation_required",
+      evidence:
+        stored.receipt.evidence === "requested" ? "launch_configured" : stored.receipt.evidence,
+      sessionId: stored.receipt.sessionId,
+      resumeDecision: decision,
+      ...(stored.receipt.consultation ? { consultation: stored.receipt.consultation } : {}),
+    };
+    const receipt: DispatchReceipt = {
+      ...stored.receipt,
+      failureCode: "human_escalation_required",
+      failureReason: commandOptions.message,
+      updatedAt: new Date().toISOString(),
+    };
+    await store.appendAttempt(runId, attempt);
+    await store.finish(runId, receipt);
+    printDispatchReceipt(receipt, commandOptions.json);
+    return;
+  }
+
+  let selectedPlan = currentPlan;
+  if (decision === "reassign") {
+    if (stored.receipt.reassignmentCount >= currentPlan.limits.reassignmentPerWorkItem) {
+      throw new Error(`Dispatch reassignment limit exceeded: ${runId}`);
+    }
+    const reassignedPlanSet = await planOrchestrationDispatch({
+      workflow: installed.workflow,
+      role: commandOptions.role as string,
+      runtime: stored.request.runtime,
+      task: stored.request.task,
+      cwd: stored.request.cwd,
+      homeDir,
+      approveWorkspaceWrite: stored.request.approveWorkspaceWrite,
+      capabilities: { [stored.request.runtime]: true },
+      readProfile: (path) => readFile(path, "utf8"),
     });
+    selectedPlan = reassignedPlanSet.primary;
+  }
+  const result =
+    decision === "reassign"
+      ? await dispatcher.dispatch(selectedPlan)
+      : await dispatcher.resume({
+          plan: selectedPlan,
+          sessionId: stored.receipt.sessionId,
+          decision,
+          message: commandOptions.message,
+        });
+  const consultationLimitExceeded =
+    result.status === "consultation_required" &&
+    stored.receipt.consultationCount >= selectedPlan.limits.consultationsPerAgent;
+  const attempt: DispatchAttempt = {
+    attemptNumber: nextAttemptNumber,
+    candidateIndex: selectedPlan.candidateIndex,
+    profileId: selectedPlan.profileId,
+    model: selectedPlan.model,
+    status: result.status,
+    evidence: result.evidence,
+    resumeDecision: decision,
+    ...(result.sessionId ? { sessionId: result.sessionId } : {}),
+    ...(result.failureCode ? { failureCode: result.failureCode } : {}),
+    ...(result.failureReason ? { failureReason: result.failureReason } : {}),
+    ...(result.consultation ? { consultation: result.consultation } : {}),
+  };
+  const receipt: DispatchReceipt = {
+    ...stored.receipt,
+    role: selectedPlan.role,
+    profileId: selectedPlan.profileId,
+    profileHash: selectedPlan.profileHash,
+    model: selectedPlan.model,
+    effort: selectedPlan.effort,
+    status: consultationLimitExceeded ? "failed" : result.status,
+    evidence: result.evidence,
+    consultationCount:
+      stored.receipt.consultationCount + (result.status === "consultation_required" ? 1 : 0),
+    reassignmentCount: stored.receipt.reassignmentCount + (decision === "reassign" ? 1 : 0),
+    ...(result.sessionId ? { sessionId: result.sessionId } : {}),
+    ...(result.consultation ? { consultation: result.consultation } : {}),
+    ...(consultationLimitExceeded
+      ? {
+          failureCode: "consultation_limit_exceeded",
+          failureReason: `Dispatch consultation limit exceeded: ${runId}`,
+        }
+      : result.failureCode
+        ? { failureCode: result.failureCode }
+        : {}),
+    ...(!consultationLimitExceeded && result.failureReason
+      ? { failureReason: result.failureReason }
+      : {}),
+    updatedAt: new Date().toISOString(),
+  };
+  await store.appendAttempt(runId, attempt);
+  await store.finish(runId, receipt);
+  printDispatchReceipt(receipt, commandOptions.json);
+  if (receipt.status === "failed") {
+    throw new Error(receipt.failureReason ?? `Orchestration dispatch failed: ${runId}`);
+  }
+}
+
+function printDispatchReceipt(receipt: DispatchReceipt, json: boolean): void {
+  if (json) {
+    console.log(JSON.stringify(receipt, null, 2));
+    return;
+  }
+  console.log(success(`Orchestration dispatch ${receipt.status}: ${receipt.runId}`));
+  console.log(keyValue("Profile", receipt.profileId));
+  console.log(keyValue("Model", receipt.model));
+  console.log(keyValue("Evidence", receipt.evidence));
 }
 
 function configureAuthorCommands(

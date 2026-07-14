@@ -111,6 +111,8 @@ export interface DispatchAttempt {
   failureCode?: string;
   failureReason?: string;
   fallbackFromAttempt?: number;
+  resumeDecision?: ConsultationDecision;
+  consultation?: ConsultationRequest;
 }
 
 export interface DispatchReceipt {
@@ -133,6 +135,7 @@ export interface DispatchReceipt {
   sessionId?: string;
   failureCode?: string;
   failureReason?: string;
+  consultation?: ConsultationRequest;
   createdAt: string;
   updatedAt: string;
 }
