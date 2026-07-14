@@ -13,9 +13,7 @@ src/
     skill-installer.ts
   runtimes/
     omniskill/
-      instruction-context.ts
       orchestration.ts
-      snapshots.ts
       workflow-bundles.ts
       workflow-loop-runtime.mjs
 ```
@@ -84,9 +82,7 @@ Compatibility aliases:
 - plan and execute removal of installed bundle skill artifacts while
   preserving artifacts referenced by other install records
 
-The runtime folder retains the singular `omniskill` name internally. Older Pony
-Trail history, revert, and prehook behavior remains paused and is not exposed by
-the public CLI.
+The runtime folder retains the singular `omniskill` name internally.
 
 ## Skill Installer
 
@@ -119,15 +115,9 @@ When a repo-backed skill is also an orchestration role and is not locally
 resolvable before bootstrap, `skills[].installedName` declares its validated
 target name. Once the skill exists, installer metadata must match that value.
 
-## Paused Pony Trail Runtime
+## Runtime State
 
-`src/runtimes/omniskill/snapshots.ts` and
-`src/runtimes/omniskill/instruction-context.ts` remain in the source tree for
-future or legacy use, but the public Omniskills CLI does not expose history,
-revert, or prehook commands while Pony Trail is paused.
-
-Skill install and workflow install commands do not write snapshot history during
-this pause. Installed workflow records live under
+Installed workflow records live under
 `~/.omniskills/workflows/`; project-local records are only written when a
 caller passes `--dir`. Optional looped workflows may write per-run state under
 `~/.omniskills/runs/<workflow>/<run-id>/` through `omniskill loop` or the
