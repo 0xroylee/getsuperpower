@@ -98,7 +98,12 @@ const validTeamManifest = {
   steps: [
     { id: "route", title: "Route work", skill: "./skills/coordinator" },
     { id: "review", title: "Review work", skill: "catalog:member-workflow" },
-    { id: "implement", title: "Implement", skill: "external-review" },
+    {
+      id: "execute",
+      title: "Implement",
+      skill: "external-review",
+      phase: "implementation",
+    },
   ],
 } as const;
 
@@ -577,6 +582,15 @@ describe("workflow bundles", () => {
         steps: [{ id: "run", title: "Run", skill: "leaf" }],
       }),
     ).toThrow("Invalid workflow semantic version: not-semver");
+  });
+
+  test("rejects workflow names that are unsafe filesystem identities", () => {
+    expect(() =>
+      WorkflowBundleManifestSchema.parse({
+        ...validTeamManifest,
+        name: "../../escape",
+      }),
+    ).toThrow();
   });
 
   test("creates a transitive lock while expanding three local workflow levels", async () => {

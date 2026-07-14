@@ -396,6 +396,7 @@ async function runOmniskillInstall(
           config: configPlan.config,
           homeDir,
           targets: orchestrationTargets(installAgents),
+          roleSkillNames: preparedDependencies.roleSkillNames,
         })
       : [];
     const installedWorkflow = (await listInstalledWorkflowBundles({ rootDir: targetDir })).find(

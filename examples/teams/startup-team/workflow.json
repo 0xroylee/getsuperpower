@@ -154,7 +154,8 @@
     {
       "id": "implement",
       "title": "Implement the planned change",
-      "skill": "mattpocock:implement"
+      "skill": "mattpocock:implement",
+      "phase": "implementation"
     },
     {
       "id": "qa",

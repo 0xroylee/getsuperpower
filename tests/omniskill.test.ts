@@ -168,9 +168,10 @@ async function writeGitWorkflowFixtureAt(
           ...(options.team
             ? [
                 {
-                  id: options.orchestration ? "implement" : "member",
+                  id: "member",
                   title: "Member",
                   skill: options.localTeamMember ? "./skills/git-extra" : "./member-workflow",
+                  ...(options.orchestration ? { phase: "implementation" } : {}),
                 },
               ]
             : []),
@@ -365,6 +366,12 @@ describe("omniskill command module", () => {
       await expect(
         readFile(join(homeDir, ".claude", "agents", "omniskills-git-team-git-entry.md"), "utf8"),
       ).resolves.toContain("model: opus");
+      await expect(
+        readFile(
+          join(homeDir, ".codex", "agents", "omniskills-git-team-member-workflow.toml"),
+          "utf8",
+        ),
+      ).resolves.toContain("load and follow the installed `$git-extra` skill");
     } finally {
       await rm(rootDir, { recursive: true, force: true });
       await rm(homeDir, { recursive: true, force: true });

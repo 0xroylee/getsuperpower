@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { basename, join } from "node:path";
+import { basename, resolve, sep } from "node:path";
 import { z } from "zod";
 import type { WorkflowBundleManifest } from "./workflow-bundles";
 
@@ -16,7 +16,9 @@ const CodexCandidateSchema = z
   .strict();
 const ClaudeCandidateSchema = z
   .object({
-    model: z.string().min(1),
+    model: z
+      .string()
+      .regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/, "Claude model must be a safe model identifier"),
     effort: z.enum(["low", "medium", "high", "xhigh", "max"]),
   })
   .strict();
@@ -128,10 +130,19 @@ function sourceId(source: string): string {
   return basename(source);
 }
 
+const profileIdentityPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+function assertSafeProfileIdentity(component: string): void {
+  if (!profileIdentityPattern.test(component)) {
+    throw new Error(`Unsafe agent profile identifier component: ${component}`);
+  }
+}
+
 function instructions(input: {
   team: string;
   source: string;
   taskClass: "role" | "support";
+  skillName: string | undefined;
   tier: OrchestrationTier;
   access: "read-only" | "workspace-write";
   consultation: "receive" | "request" | "none";
@@ -140,7 +151,7 @@ function instructions(input: {
   return [
     `You are the ${input.source} agent for the ${input.team} Omniskills team.`,
     input.taskClass === "role"
-      ? `Before acting, load and follow the installed \`$${sourceId(input.source)}\` skill.`
+      ? `Before acting, load and follow the installed \`$${input.skillName}\` skill.`
       : "This is a support task class with no installed role skill.",
     input.access === "workspace-write"
       ? "Workspace-write tools are authorized only while executing an explicitly assigned implementation step."
@@ -150,6 +161,7 @@ function instructions(input: {
     `Reassign a work item at most ${input.limits.reassignmentPerWorkItem} time(s).`,
     `Consult at most ${input.limits.consultationsPerAgent} time(s), only for ambiguity, requirement_conflict, elevated_risk, or failed_verification.`,
     "A consultation must include trigger, current_task, evidence, decision_needed, and recommendation.",
+    "When native messaging is unavailable, return the same structured consultation request as your result and stop; do not continue the blocked task.",
     "Reject a repeated consultation without new evidence and escalate when the consultation limit is exhausted.",
     "Use an ordered same-tier fallback only after an observed failure, and disclose the failed candidate and reason.",
     "Never expand scope, bypass an approval gate, change permissions, or downgrade a tier without human approval.",
@@ -190,8 +202,7 @@ function renderClaude(input: {
     "Read",
     "Glob",
     "Grep",
-    "Bash",
-    ...(input.access === "workspace-write" ? ["Write", "Edit"] : []),
+    ...(input.access === "workspace-write" ? ["Bash", "Write", "Edit"] : []),
     ...(input.consultation === "none" ? [] : ["SendMessage"]),
   ].join(", ");
   return [
@@ -216,34 +227,45 @@ export function planAgentProfiles(input: {
   config: OrchestrationConfig;
   homeDir: string;
   targets: AgentProfileTarget[];
+  roleSkillNames: Record<string, string>;
 }): PlannedAgentProfile[] {
   if (!input.manifest.orchestration) return [];
+  const config = OrchestrationConfigSchema.parse(input.config);
+  assertSafeProfileIdentity(input.manifest.name);
   const assignments = [
     ...Object.entries(input.manifest.orchestration.roles).map(([source, assignment]) => ({
       source,
       assignment,
       taskClass: "role" as const,
+      skillName: input.roleSkillNames[source],
     })),
     ...Object.entries(input.manifest.orchestration.support ?? {}).map(([source, assignment]) => ({
       source,
       assignment,
       taskClass: "support" as const,
+      skillName: undefined,
     })),
   ];
   const profiles: PlannedAgentProfile[] = [];
 
   const profileIds = new Set<string>();
   for (const { source } of assignments) {
-    const profileId = `omniskills-${input.manifest.name}-${sourceId(source)}`;
+    const identity = sourceId(source);
+    assertSafeProfileIdentity(identity);
+    const profileId = `omniskills-${input.manifest.name}-${identity}`;
     if (profileIds.has(profileId)) {
       throw new Error(`Duplicate agent profile identifier: ${profileId}`);
     }
     profileIds.add(profileId);
   }
 
-  for (const { source, assignment, taskClass } of assignments) {
+  for (const { source, assignment, taskClass, skillName } of assignments) {
+    if (taskClass === "role" && !skillName) {
+      throw new Error(`Missing installed role skill name: ${source}`);
+    }
+    if (skillName) assertSafeProfileIdentity(skillName);
     for (const target of input.targets) {
-      const candidates = input.config.tiers[assignment.tier][target];
+      const candidates = config.tiers[assignment.tier][target];
       for (const [candidateIndex, candidate] of candidates.entries()) {
         const baseId = `omniskills-${input.manifest.name}-${sourceId(source)}`;
         const profileId =
@@ -252,10 +274,11 @@ export function planAgentProfiles(input: {
           team: input.manifest.name,
           source,
           taskClass,
+          skillName,
           tier: assignment.tier,
           access: assignment.access,
           consultation: assignment.consultation,
-          limits: input.config.limits,
+          limits: config.limits,
         });
         const model = candidate.model;
         const effort =
@@ -281,6 +304,11 @@ export function planAgentProfiles(input: {
                 ownershipMarker,
               });
         const extension = target === "codex" ? "toml" : "md";
+        const agentDir = resolve(input.homeDir, `.${target}`, "agents");
+        const destination = resolve(agentDir, `${profileId}.${extension}`);
+        if (!destination.startsWith(`${agentDir}${sep}`)) {
+          throw new Error(`Agent profile destination escapes target directory: ${destination}`);
+        }
         profiles.push({
           source,
           taskClass,
@@ -292,7 +320,7 @@ export function planAgentProfiles(input: {
           access: assignment.access,
           candidateIndex,
           candidateCount: candidates.length,
-          destination: join(input.homeDir, `.${target}`, "agents", `${profileId}.${extension}`),
+          destination,
           content,
           contentHash: hashAgentProfileContent(content),
         });

@@ -48,9 +48,20 @@ const manifest = WorkflowBundleManifestSchema.parse({
   ],
   steps: [
     { id: "route", title: "Route", skill: "./skills/coordinator" },
-    { id: "implement", title: "Implement", skill: "mattpocock:implement" },
+    {
+      id: "execute",
+      title: "Implement",
+      skill: "mattpocock:implement",
+      phase: "implementation",
+    },
   ],
 });
+
+const roleSkillNames = {
+  "./skills/coordinator": "coordinator",
+  "catalog:cto": "cto",
+  "mattpocock:implement": "implement",
+};
 
 describe("orchestration configuration", () => {
   test("rejects empty candidates and silent tier downgrades", () => {
@@ -60,6 +71,18 @@ describe("orchestration configuration", () => {
         tiers: {
           ...DEFAULT_ORCHESTRATION_CONFIG.tiers,
           deep: { ...DEFAULT_ORCHESTRATION_CONFIG.tiers.deep, codex: [] },
+        },
+      }),
+    ).toThrow();
+    expect(() =>
+      OrchestrationConfigSchema.parse({
+        ...DEFAULT_ORCHESTRATION_CONFIG,
+        tiers: {
+          ...DEFAULT_ORCHESTRATION_CONFIG.tiers,
+          deep: {
+            ...DEFAULT_ORCHESTRATION_CONFIG.tiers.deep,
+            claude: [{ model: "opus\nextra: injected", effort: "high" }],
+          },
         },
       }),
     ).toThrow();
@@ -107,6 +130,7 @@ describe("orchestration configuration", () => {
       config: DEFAULT_ORCHESTRATION_CONFIG,
       homeDir: "/tmp/orchestration-home",
       targets: ["codex", "claude"],
+      roleSkillNames,
     });
 
     expect(profiles.map(({ profileId, target, tier }) => ({ profileId, target, tier }))).toEqual([
@@ -133,6 +157,9 @@ describe("orchestration configuration", () => {
       "Never expand scope, bypass an approval gate, change permissions, or downgrade a tier",
     );
     expect(profiles.find(({ source }) => source === "catalog:cto")?.content).toContain(
+      "When native messaging is unavailable, return the same structured consultation request as your result and stop",
+    );
+    expect(profiles.find(({ source }) => source === "catalog:cto")?.content).toContain(
       "load and follow the installed `$cto` skill",
     );
     expect(profiles.find(({ source }) => source === "catalog:cto")?.content).toContain(
@@ -140,6 +167,11 @@ describe("orchestration configuration", () => {
     );
     expect(profiles.find(({ source }) => source === "catalog:cto")?.taskClass).toBe("role");
     expect(profiles.find(({ source }) => source === "explorer")?.taskClass).toBe("support");
+    const readOnlyClaude = profiles.find(
+      ({ source, target }) => source === "catalog:cto" && target === "claude",
+    );
+    expect(readOnlyClaude?.content).toContain("tools: Read, Glob, Grep, SendMessage");
+    expect(readOnlyClaude?.content).not.toContain("Bash");
     expect(profiles.find(({ source }) => source === "mattpocock:implement")?.content).toContain(
       "Workspace-write tools are authorized only while executing an explicitly assigned implementation step",
     );
@@ -170,6 +202,7 @@ describe("orchestration configuration", () => {
       config,
       homeDir: "/tmp/orchestration-home",
       targets: ["codex"],
+      roleSkillNames,
     });
     expect(
       profiles
@@ -205,6 +238,7 @@ describe("orchestration configuration", () => {
       config: DEFAULT_ORCHESTRATION_CONFIG,
       homeDir: "/tmp/orchestration-home",
       targets: ["claude"],
+      roleSkillNames,
     }).find(({ source }) => source === "catalog:cto");
 
     expect(profile?.content).not.toContain("SendMessage");
@@ -233,7 +267,36 @@ describe("orchestration configuration", () => {
         config: DEFAULT_ORCHESTRATION_CONFIG,
         homeDir: "/tmp/orchestration-home",
         targets: ["codex"],
+        roleSkillNames: { ...roleSkillNames, "other:cto": "other-cto" },
       }),
     ).toThrow("Duplicate agent profile identifier: omniskills-test-team-cto");
+  });
+
+  test("rejects unsafe profile identity components", () => {
+    const unsafeManifest = WorkflowBundleManifestSchema.parse({
+      ...manifest,
+      skills: [...manifest.skills, { source: "catalog:../escape" }],
+      orchestration: {
+        ...manifest.orchestration,
+        roles: {
+          ...manifest.orchestration?.roles,
+          "catalog:../escape": {
+            tier: "deep",
+            access: "read-only",
+            consultation: "request",
+          },
+        },
+      },
+    });
+
+    expect(() =>
+      planAgentProfiles({
+        manifest: unsafeManifest,
+        config: DEFAULT_ORCHESTRATION_CONFIG,
+        homeDir: "/tmp/orchestration-home",
+        targets: ["codex"],
+        roleSkillNames: { ...roleSkillNames, "catalog:../escape": "escape" },
+      }),
+    ).toThrow("Unsafe agent profile identifier component: ../escape");
   });
 });

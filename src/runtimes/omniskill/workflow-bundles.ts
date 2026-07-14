@@ -33,6 +33,7 @@ const WorkflowStepSchema = z.object({
   id: z.string().min(1),
   title: z.string().min(1),
   skill: z.string().min(1),
+  phase: z.enum(["implementation"]).optional(),
   gate: z.enum(["human_approval"]).optional(),
   instruction: z.string().min(1).optional(),
   verify: WorkflowStepVerifySchema.optional(),
@@ -67,7 +68,9 @@ export const WorkflowBundleManifestSchema = z
   .object({
     schemaVersion: z.literal("0.1"),
     kind: z.enum(["workflow", "team"]).optional(),
-    name: z.string().min(1),
+    name: z
+      .string()
+      .regex(workflowAliasPattern, "Workflow name must be a lowercase kebab-case identifier"),
     version: z.string().min(1),
     description: z.string().min(1),
     coordinator: z.string().min(1).optional(),
@@ -111,7 +114,7 @@ export const WorkflowBundleManifestSchema = z
 
     if (manifest.orchestration && effectiveKind === "team") {
       const implementationSources = new Set(
-        manifest.steps.filter((step) => step.id === "implement").map((step) => step.skill),
+        manifest.steps.filter((step) => step.phase === "implementation").map((step) => step.skill),
       );
 
       for (const source of Object.keys(manifest.orchestration.roles)) {
@@ -459,6 +462,7 @@ export interface WorkflowDependencyGraph {
   displaySources: string[];
   workflows: WorkflowDependencyGraphWorkflow[];
   edges: WorkflowDependencyGraphEdge[];
+  roleSkillNames: Record<string, string>;
   cleanup?: () => Promise<void>;
 }
 
@@ -535,6 +539,7 @@ export interface WorkflowLoopMetadata {
 export interface PreparedWorkflowSkillInstallDependencies {
   dependencies: WorkflowSkillInstallDependency[];
   displaySources: string[];
+  roleSkillNames: Record<string, string>;
   cleanup?: () => Promise<void>;
 }
 
@@ -1108,10 +1113,39 @@ export async function resolveWorkflowDependencyGraph(input: {
     displaySources: getWorkflowDependencyDisplaySources(input.bundle, workflows, dependencies),
     workflows,
     edges,
+    roleSkillNames: getTeamRoleSkillNames({
+      root: input.bundle,
+      resolvedChildren,
+      selectedByName,
+    }),
     ...(cleanups.length > 0
       ? { cleanup: async () => Promise.all(cleanups.map((cleanup) => cleanup())).then(() => {}) }
       : {}),
   };
+}
+
+function getTeamRoleSkillNames(input: {
+  root: WorkflowBundle;
+  resolvedChildren: Map<string, WorkflowBundle>;
+  selectedByName: Map<string, WorkflowBundle>;
+}): Record<string, string> {
+  const roles = input.root.manifest.orchestration?.roles;
+  if (!roles) return {};
+  const rootId = getCanonicalWorkflowIdentity(input.root);
+
+  return Object.fromEntries(
+    Object.keys(roles).map((source) => {
+      const skillIndex = input.root.manifest.skills.findIndex((skill) => skill.source === source);
+      const discovered = input.resolvedChildren.get(`${rootId}\n${skillIndex}`);
+      const child = discovered
+        ? (input.selectedByName.get(discovered.manifest.name) ?? discovered)
+        : null;
+      const childEntry = child?.manifest.skills.find((skill) => skill.entry === true);
+      if (childEntry) return [source, basename(childEntry.source)];
+      if (source.includes(":")) return [source, source.slice(source.indexOf(":") + 1)];
+      return [source, basename(source)];
+    }),
+  );
 }
 
 function getResolvedWorkflowSkillLockSource(
@@ -1373,6 +1407,7 @@ export async function getPreparedWorkflowSkillInstallDependencies(input: {
     return {
       dependencies,
       displaySources: graph.displaySources,
+      roleSkillNames: graph.roleSkillNames,
       ...(graph.cleanup ? { cleanup: graph.cleanup } : {}),
     };
   }
@@ -1419,6 +1454,7 @@ export async function getPreparedWorkflowSkillInstallDependencies(input: {
   return {
     dependencies: preparedDependencies,
     displaySources: graph.displaySources,
+    roleSkillNames: graph.roleSkillNames,
     cleanup: async () => {
       await rm(preparedRoot, { recursive: true, force: true });
       await graph.cleanup?.();
