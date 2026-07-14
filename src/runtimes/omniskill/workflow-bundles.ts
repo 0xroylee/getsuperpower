@@ -106,6 +106,16 @@ export const WorkflowBundleManifestSchema = z
             path: ["coordinator"],
           });
         }
+        const coordinatorSkill = manifest.skills.find(
+          (skill) => skill.source === manifest.coordinator,
+        );
+        if (coordinatorSkill && coordinatorSkill.entry !== true) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Team coordinator must be marked as the entry skill",
+            path: ["coordinator"],
+          });
+        }
       }
 
       if (!manifest.members || manifest.members.length === 0) {
@@ -121,13 +131,6 @@ export const WorkflowBundleManifestSchema = z
             context.addIssue({
               code: z.ZodIssueCode.custom,
               message: `Team member references unknown skill: ${member}`,
-              path: ["members", index],
-            });
-          }
-          if (!isLocalWorkflowSkillSource(member)) {
-            context.addIssue({
-              code: z.ZodIssueCode.custom,
-              message: `Team member must be a local skill path: ${member}`,
               path: ["members", index],
             });
           }
@@ -340,6 +343,10 @@ export interface WorkflowSkillInstallDependency {
   repo?: string;
 }
 
+const canonicalWorkflowSkillAliases: Record<string, string> = {
+  implement: "mattpocock:implement",
+};
+
 export interface WorkflowDependencyResolver {
   resolve(input: {
     dependency: WorkflowSkillInstallDependency;
@@ -361,6 +368,7 @@ export interface WorkflowDependencyGraphEdge {
 
 export interface WorkflowDependencyGraph {
   dependencies: WorkflowSkillInstallDependency[];
+  lockSources: string[];
   displaySources: string[];
   workflows: WorkflowDependencyGraphWorkflow[];
   edges: WorkflowDependencyGraphEdge[];
@@ -530,7 +538,11 @@ export async function createWorkflowLockFile(
       generatedAt,
       workflows: createLockedWorkflowGraph(bundle.sourceDir, graph.workflows),
       edges: graph.edges,
-      skills: await createWorkflowLockSkillEntries(bundle.sourceDir, graph.dependencies),
+      skills: await createWorkflowLockSkillEntries(
+        bundle.sourceDir,
+        graph.dependencies,
+        graph.lockSources,
+      ),
     });
   } finally {
     await graph.cleanup?.();
@@ -714,6 +726,44 @@ export function getWorkflowSkillInstallDependencies(
   });
 }
 
+function validateResolvedTeamMembers(input: {
+  root: WorkflowBundle;
+  resolvedChildren: Map<string, WorkflowBundle>;
+  selectedByName: Map<string, WorkflowBundle>;
+}): void {
+  if (input.root.manifest.kind !== "team") {
+    return;
+  }
+
+  const rootId = getCanonicalWorkflowIdentity(input.root);
+  const workflowNames = new Set<string>();
+  const entryNames = new Set<string>();
+
+  for (const member of input.root.manifest.members ?? []) {
+    const index = input.root.manifest.skills.findIndex((skill) => skill.source === member);
+    const discovered = input.resolvedChildren.get(`${rootId}\n${index}`);
+    const child = discovered
+      ? (input.selectedByName.get(discovered.manifest.name) ?? discovered)
+      : null;
+    const entries = child?.manifest.skills.filter((skill) => skill.entry === true) ?? [];
+    const entry = entries[0];
+    if (!child || entries.length !== 1 || !entry || !isLocalWorkflowSkillSource(entry.source)) {
+      throw new Error(
+        `Team member must reference a child workflow with exactly one local entry skill: ${member}`,
+      );
+    }
+    if (workflowNames.has(child.manifest.name)) {
+      throw new Error(`Duplicate resolved team workflow: ${child.manifest.name}`);
+    }
+    const entryName = basename(entry.source);
+    if (entryNames.has(entryName)) {
+      throw new Error(`Duplicate resolved team entry skill: ${entryName}`);
+    }
+    workflowNames.add(child.manifest.name);
+    entryNames.add(entryName);
+  }
+}
+
 export async function resolveWorkflowDependencyGraph(input: {
   bundle: WorkflowBundle;
   resolver?: WorkflowDependencyResolver;
@@ -764,20 +814,49 @@ export async function resolveWorkflowDependencyGraph(input: {
 
     const nextActive = [...active, bundle];
     for (const [index, dependency] of getWorkflowSkillInstallDependencies(bundle).entries()) {
-      const child = await resolver.resolve({ dependency, parent: bundle });
-      if (!child) {
-        continue;
+      const memberSource =
+        bundle.manifest.kind === "team"
+          ? bundle.manifest.members?.find(
+              (source) => source === bundle.manifest.skills[index]?.source,
+            )
+          : undefined;
+      try {
+        const child = await resolver.resolve({ dependency, parent: bundle });
+        if (!child) {
+          continue;
+        }
+        resolvedChildren.set(`${canonicalId}\n${index}`, child);
+        if (child.cleanup) {
+          cleanups.push(child.cleanup);
+        }
+        await discover(child, nextActive);
+      } catch (error) {
+        if (!memberSource) {
+          throw error;
+        }
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(`Failed to resolve team member ${memberSource}: ${message}`, {
+          cause: error,
+        });
       }
-      resolvedChildren.set(`${canonicalId}\n${index}`, child);
-      if (child.cleanup) {
-        cleanups.push(child.cleanup);
-      }
-      await discover(child, nextActive);
     }
   };
 
   try {
     await discover(input.bundle, []);
+  } catch (error) {
+    await Promise.allSettled(cleanups.map((cleanup) => cleanup()));
+    throw error;
+  }
+
+  try {
+    for (const bundle of selectedByName.values()) {
+      validateResolvedTeamMembers({
+        root: bundle,
+        resolvedChildren,
+        selectedByName,
+      });
+    }
   } catch (error) {
     await Promise.allSettled(cleanups.map((cleanup) => cleanup()));
     throw error;
@@ -794,7 +873,10 @@ export async function resolveWorkflowDependencyGraph(input: {
     );
   }
 
-  const selectedDependencies = new Map<string, WorkflowSkillInstallDependency>();
+  const selectedDependencies = new Map<
+    string,
+    { dependency: WorkflowSkillInstallDependency; lockSource: string }
+  >();
   const dependencyOrder: string[] = [];
   const workflows: WorkflowDependencyGraphWorkflow[] = [];
   const edges: WorkflowDependencyGraphEdge[] = [];
@@ -846,12 +928,17 @@ export async function resolveWorkflowDependencyGraph(input: {
       }
 
       const dependencyId = dependency.source;
-      const selectedDependency = selectedDependencies.get(dependencyId);
-      if (!selectedDependency) {
+      const selected = selectedDependencies.get(dependencyId);
+      const lockSource = getResolvedWorkflowSkillLockSource(
+        bundle,
+        dependency,
+        bundle === input.bundle,
+      );
+      if (!selected) {
         dependencyOrder.push(dependencyId);
-        selectedDependencies.set(dependencyId, dependency);
-      } else if (isPreferredWorkflowSkillDependency(dependency, selectedDependency)) {
-        selectedDependencies.set(dependencyId, dependency);
+        selectedDependencies.set(dependencyId, { dependency, lockSource });
+      } else if (isPreferredWorkflowSkillDependency(dependency, selected.dependency)) {
+        selectedDependencies.set(dependencyId, { dependency, lockSource });
       }
     }
   };
@@ -863,10 +950,19 @@ export async function resolveWorkflowDependencyGraph(input: {
     throw error;
   }
 
-  const dependencies = dependencyOrder.flatMap((dependencyId) => {
-    const dependency = selectedDependencies.get(dependencyId);
-    return dependency ? [dependency] : [];
+  const selectedDependencyList = dependencyOrder.flatMap((dependencyId) => {
+    const selected = selectedDependencies.get(dependencyId);
+    return selected ? [selected] : [];
   });
+  const selectedSources = new Set(
+    selectedDependencyList.map(({ dependency }) => dependency.source),
+  );
+  const deduplicatedDependencyList = selectedDependencyList.filter(({ dependency }) => {
+    const canonicalSource = canonicalWorkflowSkillAliases[dependency.source];
+    return !canonicalSource || !selectedSources.has(canonicalSource);
+  });
+  const dependencies = deduplicatedDependencyList.map(({ dependency }) => dependency);
+  const lockSources = deduplicatedDependencyList.map(({ lockSource }) => lockSource);
 
   if (!input.ignoreLockValidation && input.bundle.lock?.schemaVersion === "0.2") {
     try {
@@ -876,6 +972,7 @@ export async function resolveWorkflowDependencyGraph(input: {
         workflows,
         edges,
         dependencies,
+        lockSources,
       });
     } catch (error) {
       await Promise.allSettled(cleanups.map((cleanup) => cleanup()));
@@ -885,6 +982,7 @@ export async function resolveWorkflowDependencyGraph(input: {
 
   return {
     dependencies,
+    lockSources,
     displaySources: getWorkflowDependencyDisplaySources(input.bundle, workflows, dependencies),
     workflows,
     edges,
@@ -892,6 +990,20 @@ export async function resolveWorkflowDependencyGraph(input: {
       ? { cleanup: async () => Promise.all(cleanups.map((cleanup) => cleanup())).then(() => {}) }
       : {}),
   };
+}
+
+function getResolvedWorkflowSkillLockSource(
+  bundle: WorkflowBundle,
+  dependency: WorkflowSkillInstallDependency,
+  isRoot: boolean,
+): string {
+  if (isRoot || bundle.source.kind !== "git" || !isAbsolute(dependency.source)) {
+    return dependency.source;
+  }
+  return `${getDisplayWorkflowIdentity(bundle)}#${getPortableLocalLockSource(
+    bundle.sourceDir,
+    dependency.source,
+  )}`;
 }
 
 function isPreferredWorkflowSkillDependency(
@@ -1468,13 +1580,18 @@ async function validateResolvedTransitiveWorkflowLock(input: {
   workflows: WorkflowDependencyGraphWorkflow[];
   edges: WorkflowDependencyGraphEdge[];
   dependencies: WorkflowSkillInstallDependency[];
+  lockSources: string[];
 }): Promise<void> {
   const resolvedWorkflows = createLockedWorkflowGraph(input.rootDir, input.workflows);
   const lockedWorkflows = input.lock.workflows.map((workflow, index) => ({
     ...workflow,
     source: index === 0 ? validateLockedRootSource(workflow.source) : workflow.source,
   }));
-  const resolvedSkills = await createWorkflowLockSkillEntries(input.rootDir, input.dependencies);
+  const resolvedSkills = await createWorkflowLockSkillEntries(
+    input.rootDir,
+    input.dependencies,
+    input.lockSources,
+  );
   const matches =
     JSON.stringify(lockedWorkflows) === JSON.stringify(resolvedWorkflows) &&
     JSON.stringify(input.lock.edges) === JSON.stringify(input.edges) &&
@@ -1522,14 +1639,20 @@ function getPortableLockedWorkflowSource(
 async function createWorkflowLockSkillEntries(
   rootDir: string,
   dependencies: WorkflowSkillInstallDependency[],
+  lockSources?: string[],
 ): Promise<WorkflowSkillLockEntry[]> {
   return Promise.all(
-    dependencies.map(async (skill) => {
+    dependencies.map(async (skill, index) => {
       const isLocal = isAbsolute(skill.source);
-      const lockSource = isLocal ? getPortableLocalLockSource(rootDir, skill.source) : skill.source;
+      const selectedLockSource = lockSources?.[index];
+      const lockSource =
+        selectedLockSource && isAbsolute(selectedLockSource)
+          ? getPortableLocalLockSource(rootDir, selectedLockSource)
+          : (selectedLockSource ??
+            (isLocal ? getPortableLocalLockSource(rootDir, skill.source) : skill.source));
       return {
         source: lockSource,
-        resolvedName: getWorkflowLockResolvedName(lockSource),
+        resolvedName: isLocal ? basename(skill.source) : getWorkflowLockResolvedName(lockSource),
         kind: isLocal ? "local" : "external",
         ...(skill.repo ? { repo: skill.repo } : {}),
         hash: isLocal
