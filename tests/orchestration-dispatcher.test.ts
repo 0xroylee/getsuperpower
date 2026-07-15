@@ -107,6 +107,50 @@ describe("Codex orchestration dispatcher", () => {
     });
   });
 
+  test("resumes with the verified model, effort, sandbox, instructions, and cwd", async () => {
+    const { dispatcher, commands } = dispatcherWith({
+      exitCode: 0,
+      stderr: "",
+      stdout: JSON.stringify({ type: "turn.completed" }),
+    });
+
+    await dispatcher.resume({
+      plan: readOnlyPlan,
+      sessionId: "thread-1",
+      decision: "continue",
+      message: "Continue with the compatibility boundary.",
+    });
+
+    expect(commands).toHaveLength(1);
+    expect(commands[0]).toEqual({
+      executable: "codex",
+      args: [
+        "exec",
+        "resume",
+        "thread-1",
+        "--json",
+        "--skip-git-repo-check",
+        "-C",
+        "/tmp/project",
+        "-m",
+        "gpt-5.6",
+        "-c",
+        'model_reasoning_effort="high"',
+        "-c",
+        'developer_instructions="You are the catalog:cto agent."',
+        "-s",
+        "read-only",
+        "-",
+      ],
+      cwd: "/tmp/project",
+      stdin: JSON.stringify({
+        decision: "continue",
+        message: "Continue with the compatibility boundary.",
+      }),
+      onStdoutLine: expect.any(Function),
+    });
+  });
+
   test("reports runtime model evidence and fails closed on mismatch", async () => {
     const matching = dispatcherWith({
       exitCode: 0,
