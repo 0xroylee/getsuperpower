@@ -26,6 +26,21 @@ export interface CodexModelCapability {
   supportedReasoningEfforts: readonly z.infer<typeof CodexReasoningEffortSchema>[];
 }
 
+export type OrchestrationModelCompatibilityErrorCode =
+  | "tier_effort_unavailable"
+  | "model_unavailable"
+  | "effort_unsupported";
+
+export class OrchestrationModelCompatibilityError extends Error {
+  constructor(
+    public readonly code: OrchestrationModelCompatibilityErrorCode,
+    message: string,
+  ) {
+    super(message);
+    this.name = "OrchestrationModelCompatibilityError";
+  }
+}
+
 const CodexCandidateSchema = z
   .object({
     model: z.string().min(1),
@@ -121,6 +136,77 @@ export const DEFAULT_ORCHESTRATION_CONFIG: OrchestrationConfig = {
     lowerTierFallback: "human_approval",
   },
 };
+
+const codexTierEffort = {
+  deep: "high",
+  standard: "medium",
+  fast: "low",
+} as const;
+
+function selectCodexModel(
+  tier: OrchestrationTier,
+  catalog: readonly CodexModelCapability[],
+): { model: string; reasoningEffort: z.infer<typeof CodexReasoningEffortSchema> } {
+  const reasoningEffort = codexTierEffort[tier];
+  const selected = catalog
+    .filter(
+      (model) =>
+        model.visibility === "list" && model.supportedReasoningEfforts.includes(reasoningEffort),
+    )
+    .sort(
+      (left, right) => left.priority - right.priority || left.slug.localeCompare(right.slug),
+    )[0];
+  if (!selected) {
+    throw new OrchestrationModelCompatibilityError(
+      "tier_effort_unavailable",
+      `${tier} requires Codex effort ${reasoningEffort}, but no visible model supports it. Update Codex or authenticate the intended identity.`,
+    );
+  }
+  return { model: selected.slug, reasoningEffort };
+}
+
+export function createCatalogOrchestrationConfig(
+  catalog: readonly CodexModelCapability[],
+): OrchestrationConfig {
+  return OrchestrationConfigSchema.parse({
+    ...DEFAULT_ORCHESTRATION_CONFIG,
+    tiers: Object.fromEntries(
+      orchestrationTiers.map((tier) => [
+        tier,
+        {
+          codex: [selectCodexModel(tier, catalog)],
+          claude: DEFAULT_ORCHESTRATION_CONFIG.tiers[tier].claude,
+        },
+      ]),
+    ),
+  });
+}
+
+export function validateCodexOrchestrationConfig(
+  config: OrchestrationConfig,
+  catalog: readonly CodexModelCapability[],
+): void {
+  const visibleBySlug = new Map(
+    catalog.filter(({ visibility }) => visibility === "list").map((model) => [model.slug, model]),
+  );
+  for (const tier of orchestrationTiers) {
+    for (const candidate of config.tiers[tier].codex) {
+      const model = visibleBySlug.get(candidate.model);
+      if (!model) {
+        throw new OrchestrationModelCompatibilityError(
+          "model_unavailable",
+          `${tier} Codex model ${candidate.model} is unavailable. Edit the custom orchestration configuration or authenticate the intended identity.`,
+        );
+      }
+      if (!model.supportedReasoningEfforts.includes(candidate.reasoningEffort)) {
+        throw new OrchestrationModelCompatibilityError(
+          "effort_unsupported",
+          `${tier} Codex model ${candidate.model} does not support effort ${candidate.reasoningEffort}. Edit the custom orchestration configuration.`,
+        );
+      }
+    }
+  }
+}
 
 export interface PlannedAgentProfile {
   source: string;

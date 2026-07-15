@@ -1,9 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import {
+  type CodexModelCapability,
+  createCatalogOrchestrationConfig,
   DEFAULT_ORCHESTRATION_CONFIG,
   OrchestrationConfigSchema,
+  OrchestrationModelCompatibilityError,
   planAgentProfiles,
+  validateCodexOrchestrationConfig,
 } from "../src/runtimes/omniskill/orchestration";
 import { WorkflowBundleManifestSchema } from "../src/runtimes/omniskill/workflow-bundles";
 
@@ -122,6 +126,121 @@ describe("orchestration configuration", () => {
         },
       }),
     ).toThrow("Duplicate deep codex orchestration candidate: gpt-5.6/high");
+  });
+
+  test("selects the highest-priority visible Codex model supporting each tier effort", () => {
+    const catalog = [
+      {
+        slug: "gpt-high",
+        visibility: "list",
+        priority: 0,
+        supportedReasoningEfforts: ["high"],
+      },
+      {
+        slug: "gpt-general",
+        visibility: "list",
+        priority: 1,
+        supportedReasoningEfforts: ["low", "medium"],
+      },
+      {
+        slug: "gpt-medium",
+        visibility: "list",
+        priority: 0,
+        supportedReasoningEfforts: ["medium"],
+      },
+      {
+        slug: "gpt-hidden",
+        visibility: "hidden",
+        priority: -1,
+        supportedReasoningEfforts: ["low", "medium", "high"],
+      },
+    ] satisfies CodexModelCapability[];
+
+    expect(createCatalogOrchestrationConfig(catalog).tiers).toEqual({
+      deep: {
+        codex: [{ model: "gpt-high", reasoningEffort: "high" }],
+        claude: DEFAULT_ORCHESTRATION_CONFIG.tiers.deep.claude,
+      },
+      standard: {
+        codex: [{ model: "gpt-medium", reasoningEffort: "medium" }],
+        claude: DEFAULT_ORCHESTRATION_CONFIG.tiers.standard.claude,
+      },
+      fast: {
+        codex: [{ model: "gpt-general", reasoningEffort: "low" }],
+        claude: DEFAULT_ORCHESTRATION_CONFIG.tiers.fast.claude,
+      },
+    });
+  });
+
+  test("reports when no visible model supports a required tier effort", () => {
+    try {
+      createCatalogOrchestrationConfig([
+        {
+          slug: "gpt-medium",
+          visibility: "list",
+          priority: 0,
+          supportedReasoningEfforts: ["low", "medium"],
+        },
+      ]);
+      throw new Error("Expected a tier effort compatibility error");
+    } catch (error) {
+      expect(error).toBeInstanceOf(OrchestrationModelCompatibilityError);
+      expect((error as OrchestrationModelCompatibilityError).code).toBe("tier_effort_unavailable");
+      expect((error as Error).message).toContain("deep requires Codex effort high");
+    }
+  });
+
+  test("rejects unavailable models in custom Codex configuration", () => {
+    const customConfig = OrchestrationConfigSchema.parse({
+      ...DEFAULT_ORCHESTRATION_CONFIG,
+      tiers: {
+        ...DEFAULT_ORCHESTRATION_CONFIG.tiers,
+        deep: {
+          ...DEFAULT_ORCHESTRATION_CONFIG.tiers.deep,
+          codex: [{ model: "missing-model", reasoningEffort: "high" }],
+        },
+      },
+    });
+
+    try {
+      validateCodexOrchestrationConfig(customConfig, [
+        {
+          slug: "gpt-5.5",
+          visibility: "list",
+          priority: 0,
+          supportedReasoningEfforts: ["low", "medium", "high"],
+        },
+      ]);
+      throw new Error("Expected a model compatibility error");
+    } catch (error) {
+      expect(error).toBeInstanceOf(OrchestrationModelCompatibilityError);
+      expect((error as OrchestrationModelCompatibilityError).code).toBe("model_unavailable");
+      expect((error as Error).message).toContain("deep Codex model missing-model is unavailable");
+    }
+  });
+
+  test("rejects unsupported efforts in custom Codex configuration", () => {
+    try {
+      validateCodexOrchestrationConfig(DEFAULT_ORCHESTRATION_CONFIG, [
+        {
+          slug: "gpt-5.6",
+          visibility: "list",
+          priority: 0,
+          supportedReasoningEfforts: ["low", "medium"],
+        },
+        {
+          slug: "gpt-5.6-terra",
+          visibility: "list",
+          priority: 1,
+          supportedReasoningEfforts: ["low"],
+        },
+      ]);
+      throw new Error("Expected an effort compatibility error");
+    } catch (error) {
+      expect(error).toBeInstanceOf(OrchestrationModelCompatibilityError);
+      expect((error as OrchestrationModelCompatibilityError).code).toBe("effort_unsupported");
+      expect((error as Error).message).toContain("gpt-5.6 does not support effort high");
+    }
   });
 
   test("renders deterministic Codex and Claude profiles", () => {
