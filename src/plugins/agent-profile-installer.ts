@@ -2,12 +2,15 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import {
+  type CodexModelCapability,
+  createCatalogOrchestrationConfig,
   DEFAULT_ORCHESTRATION_CONFIG,
   hashAgentProfileContent,
   type OrchestrationConfig,
   OrchestrationConfigSchema,
   orchestrationConfigFileName,
   type PlannedAgentProfile,
+  validateCodexOrchestrationConfig,
   type WorkflowInstallAgentProfileArtifact,
 } from "../runtimes/omniskill";
 
@@ -39,22 +42,46 @@ export type PlannedAgentProfileWrite =
   | PlannedDesiredAgentProfileWrite
   | PlannedObsoleteAgentProfileWrite;
 
-export async function loadOrchestrationConfigPlan(input: { homeDir: string }): Promise<{
+export async function loadOrchestrationConfigPlan(input: {
+  homeDir: string;
+  codexCatalog?: readonly CodexModelCapability[];
+}): Promise<{
   path: string;
-  status: "create" | "unchanged";
+  status: "create" | "update" | "unchanged";
   config: OrchestrationConfig;
   content: string;
 }> {
   const path = join(input.homeDir, ".omniskills", orchestrationConfigFileName);
+  const legacyContent = `${JSON.stringify(DEFAULT_ORCHESTRATION_CONFIG, null, 2)}\n`;
+  const generatedConfig = input.codexCatalog
+    ? createCatalogOrchestrationConfig(input.codexCatalog)
+    : DEFAULT_ORCHESTRATION_CONFIG;
+  const generatedContent = `${JSON.stringify(generatedConfig, null, 2)}\n`;
   if (!existsSync(path)) {
-    const content = `${JSON.stringify(DEFAULT_ORCHESTRATION_CONFIG, null, 2)}\n`;
-    return { path, status: "create", config: DEFAULT_ORCHESTRATION_CONFIG, content };
+    return {
+      path,
+      status: "create",
+      config: generatedConfig,
+      content: generatedContent,
+    };
   }
   const content = await readFile(path, "utf8");
+  if (input.codexCatalog && content === legacyContent) {
+    return {
+      path,
+      status: "update",
+      config: generatedConfig,
+      content: generatedContent,
+    };
+  }
+  const config = OrchestrationConfigSchema.parse(JSON.parse(content) as unknown);
+  if (input.codexCatalog) {
+    validateCodexOrchestrationConfig(config, input.codexCatalog);
+  }
   return {
     path,
     status: "unchanged",
-    config: OrchestrationConfigSchema.parse(JSON.parse(content)),
+    config,
     content,
   };
 }
@@ -128,7 +155,7 @@ export async function preflightAgentProfiles(input: {
 
 export async function executeAgentProfilePlan(input: {
   profiles: PlannedAgentProfileWrite[];
-  config?: { path: string; status: "create" | "unchanged"; content: string };
+  config?: { path: string; status: "create" | "update" | "unchanged"; content: string };
 }): Promise<AgentProfileArtifact[]> {
   const conflict = input.profiles.find(({ status }) => status === "conflict");
   if (conflict) {
@@ -137,6 +164,17 @@ export async function executeAgentProfilePlan(input: {
 
   const changed: Array<{ path: string; previous: string | null }> = [];
   try {
+    if (input.config && input.config.status !== "unchanged") {
+      const previous = existsSync(input.config.path)
+        ? await readFile(input.config.path, "utf8")
+        : null;
+      await mkdir(dirname(input.config.path), { recursive: true });
+      const temporary = `${input.config.path}.omniskills-tmp`;
+      await writeFile(temporary, input.config.content);
+      await rename(temporary, input.config.path);
+      changed.push({ path: input.config.path, previous });
+    }
+
     for (const planned of input.profiles) {
       if (planned.status === "unchanged" || planned.status === "keep") continue;
       const destination = planned.artifact.path;
@@ -152,14 +190,6 @@ export async function executeAgentProfilePlan(input: {
       await writeFile(temporary, planned.profile.content);
       await rename(temporary, destination);
       changed.push({ path: destination, previous });
-    }
-
-    if (input.config?.status === "create") {
-      await mkdir(dirname(input.config.path), { recursive: true });
-      const temporary = `${input.config.path}.omniskills-tmp`;
-      await writeFile(temporary, input.config.content);
-      await rename(temporary, input.config.path);
-      changed.push({ path: input.config.path, previous: null });
     }
   } catch (error) {
     for (const entry of changed.reverse()) {

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -9,9 +9,20 @@ import {
   preflightAgentProfiles,
 } from "../src/plugins/agent-profile-installer";
 import {
+  type CodexModelCapability,
   DEFAULT_ORCHESTRATION_CONFIG,
+  OrchestrationConfigSchema,
   type PlannedAgentProfile,
 } from "../src/runtimes/omniskill/orchestration";
+
+const codexCatalog = [
+  {
+    slug: "gpt-5.5",
+    visibility: "list",
+    priority: 0,
+    supportedReasoningEfforts: ["low", "medium", "high"],
+  },
+] satisfies CodexModelCapability[];
 
 function profile(homeDir: string): PlannedAgentProfile {
   const content = 'name = "omniskills-test-team-cto"\n';
@@ -43,6 +54,156 @@ describe("agent profile installer", () => {
       expect(plan.status).toBe("create");
       expect(plan.config).toEqual(DEFAULT_ORCHESTRATION_CONFIG);
       await expect(readFile(plan.path, "utf8")).rejects.toThrow();
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test("plans a missing global config from the verified Codex catalog", async () => {
+    const homeDir = await mkdtemp(join(tmpdir(), "orchestration-catalog-config-"));
+    try {
+      const plan = await loadOrchestrationConfigPlan({ homeDir, codexCatalog });
+      expect(plan.status).toBe("create");
+      expect(plan.config.tiers).toEqual({
+        deep: {
+          codex: [{ model: "gpt-5.5", reasoningEffort: "high" }],
+          claude: DEFAULT_ORCHESTRATION_CONFIG.tiers.deep.claude,
+        },
+        standard: {
+          codex: [{ model: "gpt-5.5", reasoningEffort: "medium" }],
+          claude: DEFAULT_ORCHESTRATION_CONFIG.tiers.standard.claude,
+        },
+        fast: {
+          codex: [{ model: "gpt-5.5", reasoningEffort: "low" }],
+          claude: DEFAULT_ORCHESTRATION_CONFIG.tiers.fast.claude,
+        },
+      });
+      await expect(readFile(plan.path, "utf8")).rejects.toThrow();
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test("plans migration only for the exact legacy generated config", async () => {
+    const homeDir = await mkdtemp(join(tmpdir(), "orchestration-legacy-config-"));
+    const configPath = join(homeDir, ".omniskills", "orchestration.json");
+    const legacyContent = `${JSON.stringify(DEFAULT_ORCHESTRATION_CONFIG, null, 2)}\n`;
+    try {
+      await mkdir(join(homeDir, ".omniskills"), { recursive: true });
+      await writeFile(configPath, legacyContent);
+
+      const plan = await loadOrchestrationConfigPlan({ homeDir, codexCatalog });
+
+      expect(plan.status).toBe("update");
+      expect(plan.config.tiers.deep.codex).toEqual([{ model: "gpt-5.5", reasoningEffort: "high" }]);
+      expect(await readFile(configPath, "utf8")).toBe(legacyContent);
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test("keeps supported custom config unchanged and byte-for-byte user owned", async () => {
+    const homeDir = await mkdtemp(join(tmpdir(), "orchestration-custom-config-"));
+    const configPath = join(homeDir, ".omniskills", "orchestration.json");
+    const customConfig = OrchestrationConfigSchema.parse({
+      ...DEFAULT_ORCHESTRATION_CONFIG,
+      tiers: {
+        deep: {
+          ...DEFAULT_ORCHESTRATION_CONFIG.tiers.deep,
+          codex: [{ model: "gpt-5.5", reasoningEffort: "high" }],
+        },
+        standard: {
+          ...DEFAULT_ORCHESTRATION_CONFIG.tiers.standard,
+          codex: [{ model: "gpt-5.5", reasoningEffort: "medium" }],
+        },
+        fast: {
+          ...DEFAULT_ORCHESTRATION_CONFIG.tiers.fast,
+          codex: [{ model: "gpt-5.5", reasoningEffort: "low" }],
+        },
+      },
+    });
+    const customContent = `${JSON.stringify(customConfig)}\n`;
+    try {
+      await mkdir(join(homeDir, ".omniskills"), { recursive: true });
+      await writeFile(configPath, customContent);
+
+      const plan = await loadOrchestrationConfigPlan({ homeDir, codexCatalog });
+
+      expect(plan.status).toBe("unchanged");
+      expect(plan.content).toBe(customContent);
+      expect(await readFile(configPath, "utf8")).toBe(customContent);
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test("rejects unsupported custom config without rewriting it", async () => {
+    const homeDir = await mkdtemp(join(tmpdir(), "orchestration-invalid-custom-config-"));
+    const configPath = join(homeDir, ".omniskills", "orchestration.json");
+    const customConfig = OrchestrationConfigSchema.parse({
+      ...DEFAULT_ORCHESTRATION_CONFIG,
+      tiers: {
+        ...DEFAULT_ORCHESTRATION_CONFIG.tiers,
+        deep: {
+          ...DEFAULT_ORCHESTRATION_CONFIG.tiers.deep,
+          codex: [{ model: "missing-model", reasoningEffort: "high" }],
+        },
+      },
+    });
+    const customContent = `${JSON.stringify(customConfig, null, 2)}\n`;
+    try {
+      await mkdir(join(homeDir, ".omniskills"), { recursive: true });
+      await writeFile(configPath, customContent);
+
+      await expect(loadOrchestrationConfigPlan({ homeDir, codexCatalog })).rejects.toThrow(
+        "deep Codex model missing-model is unavailable",
+      );
+      expect(await readFile(configPath, "utf8")).toBe(customContent);
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test("executes a planned legacy config migration", async () => {
+    const homeDir = await mkdtemp(join(tmpdir(), "orchestration-config-update-"));
+    const configPath = join(homeDir, ".omniskills", "orchestration.json");
+    const legacyContent = `${JSON.stringify(DEFAULT_ORCHESTRATION_CONFIG, null, 2)}\n`;
+    try {
+      await mkdir(join(homeDir, ".omniskills"), { recursive: true });
+      await writeFile(configPath, legacyContent);
+      const config = await loadOrchestrationConfigPlan({ homeDir, codexCatalog });
+
+      await executeAgentProfilePlan({ profiles: [], config });
+
+      expect(JSON.parse(await readFile(configPath, "utf8"))).toEqual(config.config);
+      expect(await readFile(configPath, "utf8")).not.toBe(legacyContent);
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test("restores migrated config when a later profile write fails", async () => {
+    const homeDir = await mkdtemp(join(tmpdir(), "orchestration-config-rollback-"));
+    const configPath = join(homeDir, ".omniskills", "orchestration.json");
+    const legacyContent = `${JSON.stringify(DEFAULT_ORCHESTRATION_CONFIG, null, 2)}\n`;
+    const blockedParent = join(homeDir, "blocked-parent");
+    const blockedProfile = {
+      ...profile(homeDir),
+      destination: join(blockedParent, "omniskills-test-team-cto.toml"),
+    };
+    try {
+      await mkdir(join(homeDir, ".omniskills"), { recursive: true });
+      await writeFile(configPath, legacyContent);
+      await writeFile(blockedParent, "not a directory\n");
+      const config = await loadOrchestrationConfigPlan({ homeDir, codexCatalog });
+      const profiles = await preflightAgentProfiles({
+        profiles: [blockedProfile],
+        previousArtifacts: [],
+      });
+
+      await expect(executeAgentProfilePlan({ profiles, config })).rejects.toThrow();
+
+      expect(await readFile(configPath, "utf8")).toBe(legacyContent);
     } finally {
       await rm(homeDir, { recursive: true, force: true });
     }
