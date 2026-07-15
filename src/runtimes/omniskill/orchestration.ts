@@ -8,10 +8,28 @@ export const orchestrationTiers = ["deep", "standard", "fast"] as const;
 export type OrchestrationTier = (typeof orchestrationTiers)[number];
 export type AgentProfileTarget = "codex" | "claude";
 
+export const CodexReasoningEffortSchema = z.enum([
+  "none",
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+  "ultra",
+]);
+
+export interface CodexModelCapability {
+  slug: string;
+  visibility: string;
+  priority: number;
+  supportedReasoningEfforts: readonly z.infer<typeof CodexReasoningEffortSchema>[];
+}
+
 const CodexCandidateSchema = z
   .object({
     model: z.string().min(1),
-    reasoningEffort: z.enum(["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"]),
+    reasoningEffort: CodexReasoningEffortSchema,
   })
   .strict();
 const ClaudeCandidateSchema = z
