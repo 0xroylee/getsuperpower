@@ -19,6 +19,7 @@ src/
       orchestration.ts
       workflow-bundles.ts
       workflow-loop-runtime.mjs
+      workflow-milestones.mjs
 ```
 
 ## CLI
@@ -202,6 +203,17 @@ Goal-based loops add `loop.type: "goal_based"`, `loop.goal`,
 "action-only"`. The runtime exposes that goal contract in `loop start` and
 `loop status` output, and optional `steps[].verify` rules add a verification
 action before the generated advance action.
+
+Milestone-based team loops add `loop.type: "milestone_based"` and explicit
+coordinator, implementer, and verifier owners. `workflow-milestones.mjs` owns
+the Zod-validated goal tunnel, feature milestones, input and output packets,
+evidence gaps, approval decisions, transition table, and User Outcome Replay.
+`workflow-loop-runtime.mjs` persists that state under the normal run directory,
+projects only safe review fields in status and summaries, and emits manual
+`Prepared, not executed` actions with the exact structured event required by
+the current stage. Critical evidence gaps pause advancement, and scope changes
+block the run pending renewed human approval; role reasoning methods remain
+outside the coordinator and runtime contracts.
 
 ## Boundaries
 
