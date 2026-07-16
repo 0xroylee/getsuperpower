@@ -1,35 +1,199 @@
-const clone = (value) => structuredClone(value);
-const object = (value, name) => {
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new Error(`${name} must be an object`);
-  return value;
-};
-const string = (value, name) => {
-  if (typeof value !== "string" || !value.trim())
-    throw new Error(`${name} must be a non-empty string`);
-  return value;
-};
-const strings = (value, name) => {
-  if (!Array.isArray(value) || value.some((item) => typeof item !== "string" || !item.trim()))
-    throw new Error(`${name} must be an array of strings`);
-  return value;
+import { z } from "zod";
+
+const NonEmptyString = z.string().trim().min(1);
+const StringArray = z.array(NonEmptyString);
+
+const GoalTunnelSchema = z
+  .object({
+    goal: NonEmptyString,
+    user: NonEmptyString,
+    problem: NonEmptyString,
+    outcome: NonEmptyString,
+    scope: StringArray,
+    nonGoals: StringArray,
+    constraints: StringArray,
+    successCriteria: StringArray,
+    assumptions: StringArray,
+  })
+  .strict();
+
+const MilestoneInputSchema = z
+  .object({
+    id: NonEmptyString,
+    title: NonEmptyString,
+    outcome: NonEmptyString,
+    accountableRole: NonEmptyString,
+    dependencies: StringArray,
+    acceptanceCriteria: StringArray,
+  })
+  .strict();
+
+const StartInputSchema = z
+  .object({
+    goalTunnel: GoalTunnelSchema,
+    milestones: z.array(MilestoneInputSchema).min(1),
+  })
+  .strict();
+
+const InputPacketSchema = z
+  .object({
+    featureOutcome: NonEmptyString,
+    sourceContext: StringArray,
+    constraints: StringArray,
+    permissions: StringArray,
+    decision: NonEmptyString,
+    expectedArtifact: NonEmptyString,
+    acceptanceCriteria: StringArray,
+    priorDecisions: StringArray,
+    accountableRole: NonEmptyString,
+  })
+  .strict();
+
+const EvidenceItemSchema = z.discriminatedUnion("classification", [
+  z
+    .object({
+      claim: NonEmptyString,
+      classification: z.literal("verified"),
+      risk: z.enum(["low", "high"]),
+      source: NonEmptyString,
+    })
+    .strict(),
+  z
+    .object({
+      claim: NonEmptyString,
+      classification: z.literal("inferred"),
+      risk: z.enum(["low", "high"]),
+      supports: z.array(NonEmptyString).min(1),
+    })
+    .strict(),
+  z
+    .object({
+      claim: NonEmptyString,
+      classification: z.literal("assumed"),
+      risk: z.enum(["low", "high"]),
+      consequence: NonEmptyString,
+      validationAction: NonEmptyString,
+    })
+    .strict(),
+]);
+
+const RoleOutputSchema = z
+  .object({
+    role: NonEmptyString,
+    recommendation: NonEmptyString,
+    alternatives: StringArray,
+    evidence: z.array(EvidenceItemSchema),
+    risks: StringArray,
+    unresolvedQuestions: StringArray,
+    verificationMethod: NonEmptyString,
+    nextAction: NonEmptyString,
+  })
+  .strict();
+
+const OutcomeItemSchema = z
+  .object({
+    original: NonEmptyString,
+    originalEvidence: NonEmptyString,
+    status: z.enum(["met", "partially_met", "unmet", "not_evaluated"]),
+    resultEvidence: NonEmptyString,
+    gapType: z.enum(["approved_requirement", "new_wish", "none"]),
+  })
+  .strict();
+
+const JourneyStepSchema = z
+  .object({
+    expected: NonEmptyString,
+    actual: NonEmptyString,
+    status: z.enum(["met", "partially_met", "unmet", "not_evaluated"]),
+    resultEvidence: NonEmptyString,
+  })
+  .strict();
+
+const OutcomeReplaySchema = z
+  .object({
+    user: NonEmptyString,
+    expectations: z.array(OutcomeItemSchema),
+    needs: z.array(OutcomeItemSchema),
+    wishes: z.array(OutcomeItemSchema),
+    steps: z.array(JourneyStepSchema),
+    recommendation: z.enum(["accept", "rework", "new_milestone"]),
+  })
+  .strict();
+
+const PlanDecisionSchema = z
+  .object({
+    decision: z.enum(["approve", "revise", "research", "skip", "stop"]),
+    approvedBy: NonEmptyString,
+  })
+  .strict();
+
+const ImplementationResultSchema = z
+  .object({
+    summary: NonEmptyString,
+    changedFiles: StringArray,
+    verificationCommands: StringArray,
+  })
+  .strict();
+
+const VerificationResultSchema = z
+  .object({
+    result: z.enum(["pass", "fail"]),
+    evidence: StringArray,
+    residualRisk: StringArray,
+  })
+  .strict();
+
+const AcceptanceDecisionSchema = z
+  .object({
+    decision: z.enum(["accept", "rework", "new_milestone", "rollback", "stop"]),
+    approvedBy: NonEmptyString,
+    newMilestone: MilestoneInputSchema.optional(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.decision === "new_milestone" && !value.newMilestone) {
+      context.addIssue({ code: "custom", message: "newMilestone is required" });
+    }
+  });
+
+const EventSchemas = {
+  input_packet: InputPacketSchema,
+  role_output: RoleOutputSchema,
+  evidence_gap: z
+    .object({ name: NonEmptyString, critical: z.boolean(), reason: NonEmptyString })
+    .strict(),
+  evidence_resolved: z.object({ name: NonEmptyString, resolution: NonEmptyString }).strict(),
+  plan_decision: PlanDecisionSchema,
+  implementation_result: ImplementationResultSchema,
+  verification_result: VerificationResultSchema,
+  outcome_replay: OutcomeReplaySchema,
+  acceptance_decision: AcceptanceDecisionSchema,
+  repair_request: z.object({ reason: NonEmptyString }).strict(),
+  targeted_review: z.object({ reason: NonEmptyString }).strict(),
+  scope_change: z
+    .object({ requested: NonEmptyString, approved: z.boolean(), impact: NonEmptyString })
+    .strict(),
 };
 
+const StageEvents = {
+  input_packet: ["preparing"],
+  role_output: ["planning"],
+  plan_decision: ["awaiting_plan_approval"],
+  implementation_result: ["implementing", "rework"],
+  verification_result: ["verifying"],
+  outcome_replay: ["evaluating"],
+  acceptance_decision: ["awaiting_acceptance"],
+  repair_request: ["preparing", "planning"],
+  targeted_review: ["preparing", "planning"],
+};
+
+const clone = (value) => structuredClone(value);
+const active = (state) => state.milestones[state.currentMilestoneIndex];
+
 function validateStart(value) {
-  const input = object(value, "start input");
-  const goal = object(input.goalTunnel, "goalTunnel");
-  for (const key of ["goal", "user", "problem", "outcome"]) string(goal[key], `goalTunnel.${key}`);
-  for (const key of ["scope", "nonGoals", "constraints", "successCriteria", "assumptions"])
-    strings(goal[key], `goalTunnel.${key}`);
-  if (!Array.isArray(input.milestones) || !input.milestones.length)
-    throw new Error("start input milestones must contain at least one milestone");
+  const input = StartInputSchema.parse(value);
   const positions = new Map();
-  input.milestones.forEach((raw, index) => {
-    const item = object(raw, "milestone");
-    for (const key of ["id", "title", "outcome", "accountableRole"])
-      string(item[key], `milestone.${key}`);
-    strings(item.dependencies, "milestone.dependencies");
-    strings(item.acceptanceCriteria, "milestone.acceptanceCriteria");
+  input.milestones.forEach((item, index) => {
     if (positions.has(item.id)) throw new Error(`Duplicate milestone id: ${item.id}`);
     positions.set(item.id, index);
   });
@@ -44,26 +208,24 @@ function validateStart(value) {
   return clone(input);
 }
 
-const active = (state) => state.milestones[state.currentMilestoneIndex];
-const requireFields = (metadata, names, label) => {
-  const value = object(metadata, label);
-  for (const name of names) string(value[name], `${label}.${name}`);
-  return value;
-};
-
-function validateEvidence(items) {
-  if (!Array.isArray(items)) throw new Error("role_output.evidence must be an array");
-  for (const raw of items) {
-    const item = requireFields(raw, ["claim", "classification", "risk"], "evidence");
-    if (item.classification === "verified") string(item.source, "evidence.source");
-    else if (item.classification === "inferred") strings(item.supports, "evidence.supports");
-    else if (item.classification === "assumed") {
-      string(item.consequence, "evidence.consequence");
-      string(item.validationAction, "evidence.validationAction");
-    } else throw new Error(`Unsupported evidence classification: ${item.classification}`);
-    if (!new Set(["low", "high"]).has(item.risk))
-      throw new Error(`Unsupported evidence risk: ${item.risk}`);
-  }
+function createMilestoneRecord(item, status = "pending") {
+  return {
+    ...clone(item),
+    status,
+    stage: "preparing",
+    repairCount: 0,
+    targetedReviewCount: 0,
+    inputPacket: null,
+    roleOutputs: [],
+    evidenceGaps: [],
+    scopeChanges: [],
+    planDecision: null,
+    implementationResults: [],
+    consumedImplementationResults: 0,
+    verificationResult: null,
+    outcomeReplay: null,
+    acceptanceDecision: null,
+  };
 }
 
 export function createMilestoneState(value, now = new Date().toISOString()) {
@@ -73,105 +235,95 @@ export function createMilestoneState(value, now = new Date().toISOString()) {
     status: "active",
     goalTunnel: input.goalTunnel,
     currentMilestoneIndex: 0,
-    milestones: input.milestones.map((item, index) => ({
-      ...item,
-      status: index ? "pending" : "active",
-      stage: "preparing",
-      repairCount: 0,
-      targetedReviewCount: 0,
-      inputPacket: null,
-      roleOutputs: [],
-      evidenceGaps: [],
-      planDecision: null,
-      implementationResults: [],
-      verificationResult: null,
-      outcomeReplay: null,
-      acceptanceDecision: null,
-    })),
+    milestones: input.milestones.map((item, index) =>
+      createMilestoneRecord(item, index ? "pending" : "active"),
+    ),
     createdAt: now,
     updatedAt: now,
   };
 }
 
+function requireEventStage(item, type) {
+  const allowed = StageEvents[type];
+  if (allowed && !allowed.includes(item.stage)) {
+    throw new Error(`${type} is not allowed during ${item.stage}`);
+  }
+}
+
 export function recordMilestoneEvent(original, event) {
   const state = clone(original);
   const item = active(state);
-  const metadata = object(event.metadata ?? {}, `${event.type} metadata`);
+  const schema = EventSchemas[event.type];
+  if (!schema) throw new Error(`Unsupported milestone event type: ${event.type}`);
+  if (state.status === "complete" || state.status === "blocked") {
+    throw new Error(`Cannot record milestone event with status ${state.status}`);
+  }
+  if (
+    state.status === "needs_evidence" &&
+    !["evidence_gap", "evidence_resolved"].includes(event.type)
+  ) {
+    throw new Error("Resolve critical evidence gaps before recording more milestone work");
+  }
+  requireEventStage(item, event.type);
+  const metadata = schema.parse(event.metadata ?? {});
+
   switch (event.type) {
     case "input_packet":
-      requireFields(
-        metadata,
-        ["featureOutcome", "decision", "expectedArtifact", "accountableRole"],
-        "input_packet",
-      );
       if (metadata.accountableRole !== item.accountableRole)
         throw new Error("input_packet accountableRole must match the milestone owner");
-      for (const key of [
-        "sourceContext",
-        "constraints",
-        "permissions",
-        "acceptanceCriteria",
-        "priorDecisions",
-      ])
-        strings(metadata[key], `input_packet.${key}`);
       item.inputPacket = metadata;
       break;
     case "role_output":
-      requireFields(
-        metadata,
-        ["role", "recommendation", "verificationMethod", "nextAction"],
-        "role_output",
-      );
-      for (const key of ["alternatives", "risks", "unresolvedQuestions"])
-        strings(metadata[key], `role_output.${key}`);
-      validateEvidence(metadata.evidence);
       item.roleOutputs.push(metadata);
       break;
+    case "evidence_gap":
+      if (item.evidenceGaps.some((gap) => gap.name === metadata.name))
+        throw new Error(`Evidence gap already exists: ${metadata.name}`);
+      item.evidenceGaps.push(metadata);
+      state.status = "needs_evidence";
+      break;
+    case "evidence_resolved": {
+      const index = item.evidenceGaps.findIndex((gap) => gap.name === metadata.name);
+      if (index < 0) throw new Error(`Unknown evidence gap: ${metadata.name}`);
+      item.evidenceGaps.splice(index, 1);
+      if (!item.evidenceGaps.some((gap) => gap.critical)) state.status = "active";
+      break;
+    }
     case "repair_request":
       if (item.repairCount >= 1) throw new Error("Only one output repair is allowed per milestone");
-      string(metadata.reason, "repair_request.reason");
       item.repairCount += 1;
       break;
     case "targeted_review":
       if (item.targetedReviewCount >= 1)
         throw new Error("Only one targeted second review is allowed per milestone");
-      string(metadata.reason, "targeted_review.reason");
       item.targetedReviewCount += 1;
       break;
     case "plan_decision":
-      item.planDecision = requireFields(metadata, ["decision", "approvedBy"], "plan_decision");
+      item.planDecision = metadata;
       break;
     case "implementation_result":
-      requireFields(metadata, ["summary"], "implementation_result");
-      strings(metadata.changedFiles, "implementation_result.changedFiles");
-      strings(metadata.verificationCommands, "implementation_result.verificationCommands");
       item.implementationResults.push(metadata);
       break;
     case "verification_result":
-      requireFields(metadata, ["result"], "verification_result");
-      strings(metadata.evidence, "verification_result.evidence");
-      strings(metadata.residualRisk, "verification_result.residualRisk");
       item.verificationResult = metadata;
       break;
     case "outcome_replay":
       item.outcomeReplay = metadata;
       break;
     case "acceptance_decision":
-      item.acceptanceDecision = requireFields(
-        metadata,
-        ["decision", "approvedBy"],
-        "acceptance_decision",
-      );
+      item.acceptanceDecision = metadata;
       break;
-    default:
-      throw new Error(`Unsupported milestone event type: ${event.type}`);
+    case "scope_change":
+      item.scopeChanges.push(metadata);
+      state.status = "blocked";
+      break;
   }
   return state;
 }
 
-function activateNext(state) {
+function activateNext(state, completedStatus = "accepted") {
   const item = active(state);
-  item.status = "accepted";
+  item.status = completedStatus;
   const next = state.currentMilestoneIndex + 1;
   if (next >= state.milestones.length) {
     state.status = "complete";
@@ -179,6 +331,23 @@ function activateNext(state) {
   }
   state.currentMilestoneIndex = next;
   state.milestones[next].status = "active";
+}
+
+function appendMilestone(state, value) {
+  const milestone = MilestoneInputSchema.parse(value);
+  if (state.milestones.some((item) => item.id === milestone.id))
+    throw new Error(`Duplicate milestone id: ${milestone.id}`);
+  const known = new Set(state.milestones.map((item) => item.id));
+  for (const dependency of milestone.dependencies) {
+    if (!known.has(dependency)) throw new Error(`Unknown milestone dependency: ${dependency}`);
+  }
+  state.milestones.push(createMilestoneRecord(milestone));
+}
+
+function enterRework(item) {
+  item.stage = "rework";
+  item.outcomeReplay = null;
+  item.acceptanceDecision = null;
 }
 
 export function advanceMilestoneState(original, now = new Date().toISOString()) {
@@ -210,29 +379,35 @@ export function advanceMilestoneState(original, now = new Date().toISOString()) 
       else if (["revise", "research"].includes(item.planDecision.decision)) {
         item.planDecision = null;
         item.stage = "planning";
-      } else if (item.planDecision.decision === "stop") state.status = "blocked";
-      else throw new Error(`Unsupported plan decision: ${item.planDecision.decision}`);
+      } else if (item.planDecision.decision === "skip") activateNext(state, "skipped");
+      else if (item.planDecision.decision === "stop") state.status = "blocked";
       break;
     case "implementing":
     case "rework":
-      if (!item.implementationResults.length) throw new Error("Implementation result is required");
+      if (item.implementationResults.length <= item.consumedImplementationResults)
+        throw new Error("A new implementation result is required");
+      item.consumedImplementationResults = item.implementationResults.length;
+      item.verificationResult = null;
       item.stage = "verifying";
       break;
     case "verifying":
       if (!item.verificationResult) throw new Error("Verification result is required");
-      item.stage = item.verificationResult.result === "pass" ? "evaluating" : "rework";
-      item.verificationResult = null;
+      if (item.verificationResult.result === "pass") item.stage = "evaluating";
+      else enterRework(item);
       break;
     case "evaluating":
       if (!item.outcomeReplay) throw new Error("User Outcome Replay is required");
-      item.stage =
-        item.outcomeReplay.recommendation === "rework" ? "rework" : "awaiting_acceptance";
+      if (item.outcomeReplay.recommendation === "rework") enterRework(item);
+      else item.stage = "awaiting_acceptance";
       break;
     case "awaiting_acceptance":
       if (!item.acceptanceDecision) throw new Error("Acceptance decision is required");
       if (item.acceptanceDecision.decision === "accept") activateNext(state);
-      else if (item.acceptanceDecision.decision === "rework") item.stage = "rework";
-      else state.status = "blocked";
+      else if (item.acceptanceDecision.decision === "rework") enterRework(item);
+      else if (item.acceptanceDecision.decision === "new_milestone") {
+        appendMilestone(state, item.acceptanceDecision.newMilestone);
+        activateNext(state);
+      } else state.status = "blocked";
       break;
     default:
       throw new Error(`Unsupported milestone stage: ${item.stage}`);
@@ -240,6 +415,11 @@ export function advanceMilestoneState(original, now = new Date().toISOString()) 
   state.updatedAt = now;
   return state;
 }
+
+const AvailableDecisions = {
+  awaiting_plan_approval: ["approve", "revise", "research", "skip", "stop"],
+  awaiting_acceptance: ["accept", "rework", "new_milestone", "rollback", "stop"],
+};
 
 export function getMilestoneView(state) {
   const item = active(state);
@@ -260,18 +440,55 @@ export function getMilestoneView(state) {
     evidenceGaps: item?.evidenceGaps ?? [],
     repairCount: item?.repairCount ?? 0,
     targetedReviewCount: item?.targetedReviewCount ?? 0,
+    availableDecisions: AvailableDecisions[item?.stage] ?? [],
   };
 }
 
+const formatItems = (items) =>
+  items.length
+    ? items.map((item) => `- ${item.original}: ${item.status} (${item.resultEvidence})`)
+    : ["- none"];
+
 export function buildMilestoneSummary(state) {
+  const gaps = state.milestones.flatMap((item) =>
+    item.evidenceGaps.map((gap) => `- ${item.id}/${gap.name}: ${gap.reason}`),
+  );
+  const verification = state.milestones.map((item) =>
+    item.verificationResult
+      ? `- ${item.id}: ${item.verificationResult.result}; ${item.verificationResult.evidence.join(", ")}`
+      : `- ${item.id}: not verified`,
+  );
+  const replays = state.milestones.map((item) => item.outcomeReplay).filter(Boolean);
+  const outcomeItems = replays.flatMap((replay) => [
+    ...replay.expectations,
+    ...replay.needs,
+    ...replay.wishes,
+  ]);
   return [
-    `# Goal Tunnel`,
-    state.goalTunnel.goal,
+    "# Goal Tunnel",
+    JSON.stringify(state.goalTunnel, null, 2),
     "",
     "## Milestones",
-    ...state.milestones.map((item) => `- ${item.id}: ${item.status}`),
+    ...state.milestones.map((item) => `- ${item.id}: ${item.status} (${item.stage})`),
+    "",
+    "## Evidence Gaps",
+    ...(gaps.length ? gaps : ["- none"]),
+    "",
+    "## Verification",
+    ...verification,
     "",
     "## User Outcome Replay",
-    JSON.stringify(state.milestones.map((item) => item.outcomeReplay).filter(Boolean), null, 2),
+    "### Approved Requirements",
+    ...formatItems(outcomeItems.filter((item) => item.gapType === "approved_requirement")),
+    "",
+    "### New Wishes",
+    ...formatItems(outcomeItems.filter((item) => item.gapType === "new_wish")),
+    "",
+    "### Journey",
+    ...(replays.flatMap((replay) => replay.steps).length
+      ? replays
+          .flatMap((replay) => replay.steps)
+          .map((step) => `- ${step.expected} -> ${step.actual}: ${step.status}`)
+      : ["- none"]),
   ].join("\n");
 }
