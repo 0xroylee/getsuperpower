@@ -33,6 +33,8 @@ explicit assumptions with a consequence and validation action.
 ## Goals
 
 - Let the user review direction before a milestone consumes implementation time.
+- Evaluate the verified result from the user's original perspective before
+  asking for feature acceptance.
 - Make every material plan claim traceable to evidence, inference, or an
   explicit assumption.
 - Keep role reasoning open-ended while holding every output to a small,
@@ -78,7 +80,7 @@ only when risk triggers it.
 ## Architecture
 
 The design places the seam between orchestration and expert reasoning at the
-role handoff. Five modules sit behind that seam.
+role handoff. Six modules sit behind that seam.
 
 ### Goal Tunnel
 
@@ -107,6 +109,7 @@ preparing
   -> awaiting_plan_approval
   -> implementing
   -> verifying
+  -> evaluating
   -> awaiting_acceptance
   -> accepted
 ```
@@ -129,6 +132,7 @@ Every selected role receives the same small input interface:
 
 - approved goal tunnel;
 - current feature outcome;
+- role accountable for evaluating the milestone outcome;
 - available source and repository context;
 - constraints and permissions;
 - decision required;
@@ -178,6 +182,37 @@ Evidence requirements are risk-based:
 - unavailable critical evidence moves the milestone to `needs_evidence` rather
   than causing the role to invent support.
 
+### User Outcome Replay
+
+After QA finishes, the role accountable for the milestone outcome reconstructs
+the user's original perspective from the approved goal tunnel and input packet.
+This is usually the product manager for user-facing product work and the role
+that owns the outcome for strategy, technical, or operational work. The
+coordinator validates the replay interface but does not write the expert
+evaluation.
+
+The evaluator first recreates, without using implementation details to rewrite
+the target:
+
+- the user or customer;
+- their stated expectations;
+- the needs the milestone must satisfy;
+- wishes that are desirable but were not approved as required behavior;
+- the intended user journey and ordered steps.
+
+It then walks the verified result through that perspective and returns:
+
+- `met`, `partially_met`, `unmet`, or `not_evaluated` for each item;
+- the original requirement or evidence supporting each expectation;
+- QA, demonstration, or observation evidence supporting each result judgment;
+- friction, missing steps, and deviations in the actual journey;
+- whether a gap is a missed approved requirement or a newly discovered desire;
+- a recommendation to accept, rework, or propose a later milestone.
+
+The replay must not convert a new wish into a retroactive requirement. An unmet
+wish blocks acceptance only when it was already part of approved acceptance
+criteria.
+
 ## Milestone Lifecycle
 
 ### 1. Prepare
@@ -212,12 +247,21 @@ material direction or scope change returns to plan approval.
 QA checks the approved acceptance criteria and records concrete evidence,
 untested areas, deviations, and residual risk.
 
-### 7. Feature acceptance
+### 7. Evaluate the user outcome
 
-Show delivered behavior and verification evidence. Available decisions are
-`accept`, `rework`, `rollback`, and `stop`.
+The accountable outcome role creates the User Outcome Replay from the approved
+requirements, then compares the verified result with the user's expectations,
+needs, wishes, and intended steps. Every judgment links the original input to
+result evidence. Missing approved needs return to `rework`; newly discovered
+wishes become proposed future milestones.
 
-### 8. Carry forward
+### 8. Feature acceptance
+
+Show delivered behavior, verification evidence, and the User Outcome Replay.
+Available decisions are `accept`, `rework`, `new_milestone`, `rollback`, and
+`stop`.
+
+### 9. Carry forward
 
 Accepted decisions, outputs, and evidence become read-only context for the next
 milestone unless a later approved change explicitly invalidates them.
@@ -261,6 +305,8 @@ Role-specific behavior becomes:
   gates; TDD is an available method rather than a universal requirement.
 - QA lead: verify acceptance and evidence independently without rewriting
   product direction.
+- Accountable outcome role: reconstruct the approved user perspective after QA
+  and evaluate result fit without inventing retrospective requirements.
 
 ### Founding Engineer and Implement
 
@@ -300,6 +346,10 @@ role contracts.
 - New requirement during implementation: return to `planning`.
 - Failed verification: return concrete reproduction evidence and affected
   acceptance criteria under `rework`.
+- Incomplete original user context: block outcome evaluation and request the
+  missing context instead of guessing expectations or needs.
+- New wish found during evaluation: record it as a proposed milestone rather
+  than failing the completed feature retroactively.
 - Accepted milestone: do not rerun unless an approved later change invalidates
   it.
 
@@ -313,10 +363,12 @@ Persist after every state transition:
 
 - goal tunnel and milestone map;
 - current milestone and state;
+- role accountable for the milestone outcome;
 - approved input packets;
 - role outputs and evidence ledgers;
 - human decisions;
 - verification results;
+- reconstructed user perspective and outcome-evaluation matrix;
 - downstream milestones affected by a change.
 
 Resume continues from the last incomplete gate. It must not repeat accepted
@@ -338,6 +390,11 @@ Add focused tests for:
 - `founding-engineer` framing without file edits;
 - `implement` as the only workspace-write execution phase;
 - conditional specialist review;
+- outcome replay reconstructed only from approved user requirements;
+- requirement-to-result traceability for expectations, needs, wishes, and user
+  journey steps;
+- classification of newly discovered wishes as future work rather than
+  retroactive acceptance failures;
 - visible current milestone, evidence, available decisions, and resume behavior
   in manual CLI smoke checks.
 
@@ -349,6 +406,11 @@ repository gate after implementation.
 - A large approved goal can be decomposed into ordered feature milestones.
 - The user can approve or revise each feature plan before implementation.
 - The user can accept or rework each verified feature before the next milestone.
+- After QA, the result is evaluated against reconstructed user expectations,
+  needs, wishes, and journey steps before acceptance.
+- Every outcome judgment traces an approved input to result evidence.
+- Newly discovered wishes remain proposed future scope unless the user approves
+  them as a new milestone.
 - Every material plan claim is verified, inferred from named evidence, or an
   explicit assumption.
 - Unsupported high-impact claims cannot pass plan approval.
