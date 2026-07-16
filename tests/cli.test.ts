@@ -137,7 +137,6 @@ describe("cli", () => {
       "remove",
       "deps",
       "onboard",
-      "dispatch",
       "loop",
       "bundle",
       "workflow",
@@ -186,6 +185,16 @@ describe("cli", () => {
         .find((command) => command.name() === "install")
         ?.options.map((option) => option.long),
     ).not.toContain("--prehook");
+  });
+
+  test("rejects dispatch before any orchestration execution path is available", async () => {
+    const program = buildProgram();
+    program.exitOverride();
+    program.configureOutput({ writeOut: () => {}, writeErr: () => {} });
+
+    await expect(program.parseAsync(["dispatch"], { from: "user" })).rejects.toMatchObject({
+      code: "commander.excessArguments",
+    });
   });
 
   test("root help presents the Omniskills welcome", () => {

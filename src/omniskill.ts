@@ -291,11 +291,10 @@ function configureOmniskillCommands(
   configureRemoveCommand(command, options);
   configureDependencyCommand(command, options);
   configureOnboardCommand(command, options);
-  configureDispatchCommand(command, options);
   configureLoopCommand(command, options);
 }
 
-function configureDispatchCommand(
+function _configureDispatchCommand(
   command: Command,
   options: ConfigureOmniskillCommandOptions,
 ): void {

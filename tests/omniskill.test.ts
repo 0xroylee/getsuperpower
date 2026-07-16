@@ -368,7 +368,6 @@ describe("omniskill command module", () => {
       "remove",
       "deps",
       "onboard",
-      "dispatch",
       "loop",
       "bundle",
       "workflow",
@@ -580,7 +579,8 @@ describe("omniskill command module", () => {
     }
   });
 
-  test("dispatch dry-run prints a verified plan without launching or writing run state", async () => {
+  // Retained for rollback while the public dispatch command remains disabled.
+  test.skip("dispatch dry-run prints a verified plan without launching or writing run state", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "omniskill-dispatch-root-"));
     const homeDir = await mkdtemp(join(tmpdir(), "omniskill-dispatch-home-"));
     const profileId = "omniskills-startup-team-cto";
@@ -716,7 +716,7 @@ describe("omniskill command module", () => {
     }
   });
 
-  test("dispatch executes a verified profile and persists its receipt", async () => {
+  test.skip("dispatch executes a verified profile and persists its receipt", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "omniskill-dispatch-exec-root-"));
     const homeDir = await mkdtemp(join(tmpdir(), "omniskill-dispatch-exec-home-"));
     const logs: string[] = [];
@@ -793,7 +793,7 @@ describe("omniskill command module", () => {
     }
   });
 
-  test("dispatch retries each candidate and records ordered fallback attempts", async () => {
+  test.skip("dispatch retries each candidate and records ordered fallback attempts", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "omniskill-dispatch-fallback-root-"));
     const homeDir = await mkdtemp(join(tmpdir(), "omniskill-dispatch-fallback-home-"));
     const models: string[] = [];
@@ -894,7 +894,7 @@ describe("omniskill command module", () => {
     }
   });
 
-  test("dispatch does not retry an arbitrary runtime failure", async () => {
+  test.skip("dispatch does not retry an arbitrary runtime failure", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "omniskill-dispatch-runtime-root-"));
     const homeDir = await mkdtemp(join(tmpdir(), "omniskill-dispatch-runtime-home-"));
     const originalLog = console.log;
@@ -973,7 +973,7 @@ describe("omniskill command module", () => {
     }
   });
 
-  test("dispatch fails closed after exhausting configured candidate attempts", async () => {
+  test.skip("dispatch fails closed after exhausting configured candidate attempts", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "omniskill-dispatch-exhaust-root-"));
     const homeDir = await mkdtemp(join(tmpdir(), "omniskill-dispatch-exhaust-home-"));
     const originalLog = console.log;
@@ -1047,7 +1047,7 @@ describe("omniskill command module", () => {
     }
   });
 
-  test("dispatch preserves a terminal runtime failure after model fallbacks", async () => {
+  test.skip("dispatch preserves a terminal runtime failure after model fallbacks", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "omniskill-dispatch-mixed-root-"));
     const homeDir = await mkdtemp(join(tmpdir(), "omniskill-dispatch-mixed-home-"));
     const originalLog = console.log;
@@ -1135,7 +1135,7 @@ describe("omniskill command module", () => {
     }
   });
 
-  test("dispatch resume re-verifies and continues a suspended Codex session", async () => {
+  test.skip("dispatch resume re-verifies and continues a suspended Codex session", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "omniskill-dispatch-resume-root-"));
     const homeDir = await mkdtemp(join(tmpdir(), "omniskill-dispatch-resume-home-"));
     const originalLog = console.log;
@@ -1254,7 +1254,7 @@ describe("omniskill command module", () => {
     }
   });
 
-  test("dispatch resume bounds reassignment and repeated consultations", async () => {
+  test.skip("dispatch resume bounds reassignment and repeated consultations", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "omniskill-dispatch-reassign-root-"));
     const homeDir = await mkdtemp(join(tmpdir(), "omniskill-dispatch-reassign-home-"));
     const originalLog = console.log;
@@ -1442,7 +1442,7 @@ describe("omniskill command module", () => {
     }
   });
 
-  test("dispatch resume makes human escalation terminal", async () => {
+  test.skip("dispatch resume makes human escalation terminal", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "omniskill-dispatch-escalate-root-"));
     const homeDir = await mkdtemp(join(tmpdir(), "omniskill-dispatch-escalate-home-"));
     const originalLog = console.log;
@@ -1563,7 +1563,7 @@ describe("omniskill command module", () => {
     }
   });
 
-  test("dispatch resume rejects profile drift before contacting Codex", async () => {
+  test.skip("dispatch resume rejects profile drift before contacting Codex", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "omniskill-dispatch-drift-root-"));
     const homeDir = await mkdtemp(join(tmpdir(), "omniskill-dispatch-drift-home-"));
     const originalLog = console.log;

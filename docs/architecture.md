@@ -36,11 +36,14 @@ Primary commands:
 - `omniskill install <source>`
 - `omniskill list`
 - `omniskill remove <workflow-name>`
-- `omniskill dispatch <workflow-name> --role <source> --task <text>`
-- `omniskill dispatch resume <run-id> --decision <decision> --message <text>`
 - `omniskill loop <start|status|log|advance|summary> <source>`
 - `skills install [source]`
 - `skills update [source]`
+
+Orchestration dispatch is temporarily disabled at CLI registration because the
+execution path can cause increasing memory usage. Workflow and team bundles
+and profile metadata remain available. Existing dispatch run files are
+preserved but cannot be started or resumed through the CLI.
 
 Compatibility aliases:
 
@@ -115,16 +118,13 @@ models through the read-only `codex debug models` plugin seam. Exact legacy
 generated configuration may migrate to catalog-derived defaults; custom
 configuration is validated but never rewritten automatically.
 
-`src/runtimes/omniskill/orchestration-dispatch.ts` owns verified installed-profile
-selection, approval checks, candidate schedules, consultation contracts, and
-dispatch receipts. `src/plugins/orchestration-dispatcher.ts` owns Codex CLI
-capability checks, argument construction, JSONL classification, and session
-resume. `src/plugins/orchestration-run-store.ts` atomically persists request,
-plan, attempt, and receipt state. `src/omniskill.ts` remains the thin command
-orchestrator across those boundaries. Generic native subagent creation is not
-treated as verified model-selection evidence. Dry-run plans disclose adapter
-and evidence capability only; actual launch evidence exists only in attempts
-and receipts.
+`src/runtimes/omniskill/orchestration-dispatch.ts`,
+`src/plugins/orchestration-dispatcher.ts`, and
+`src/plugins/orchestration-run-store.ts` retain verified profile selection,
+adapter, consultation, retry, and persisted-run behavior for rollback and
+diagnosis. They are dormant because the public command registrar does not
+attach `dispatch` or `dispatch resume`; `src/omniskill.ts` remains the boundary
+that controls availability.
 
 Supported sources include bundled skills, local skill directories, Superpowers
 plugin-cache skills, Matt Pocock installed skills, and external packages routed
@@ -140,9 +140,10 @@ target name. Once the skill exists, installer metadata must match that value.
 Installed workflow records live under
 `~/.omniskills/workflows/`; project-local records are only written when a
 caller passes `--dir`. Optional looped workflows may write per-run state under
-`~/.omniskills/runs/<workflow>/<run-id>/` through `omniskill loop`, the
-compatibility `loop.mjs` wrapper, or verified orchestration dispatch. Dispatch
-runs contain `request.json`, `plan.json`, `attempts.jsonl`, and `receipt.json`.
+`~/.omniskills/runs/<workflow>/<run-id>/` through `omniskill loop` or the
+compatibility `loop.mjs` wrapper. Dispatch run directories from older versions
+may contain `request.json`, `plan.json`, `attempts.jsonl`, and `receipt.json`,
+but the current CLI cannot create or resume them.
 
 ## Bundle Layout
 

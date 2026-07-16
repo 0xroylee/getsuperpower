@@ -4,7 +4,7 @@
 
 **Goal:** Remove every public CLI route to orchestration dispatch while preserving workflow and team bundle behavior and the dormant dispatch implementation.
 
-**Architecture:** The normal Omniskills command registrar stops attaching `dispatch`. The dormant command registrar remains an internal source seam so its existing regression suite can attach it explicitly without exposing it through `buildProgram()` or `configureOmniskillCommand()`. Bundle commands, schemas, profiles, stored runs, and model-routing setup remain unchanged.
+**Architecture:** The normal Omniskills command registrar stops attaching `dispatch`. The dormant command registrar remains private and its legacy command-level integration tests stay skipped for rollback; planner, dispatcher, and run-store suites remain active. Bundle commands, schemas, profiles, stored runs, and model-routing setup remain unchanged.
 
 **Tech Stack:** Bun, TypeScript, Commander, Bun Test, Biome
 
@@ -12,9 +12,9 @@
 
 ## File Structure
 
-- Modify `src/omniskill.ts`: remove dispatch from normal command registration and expose the dormant registrar only for direct regression coverage.
-- Modify `tests/cli.test.ts`: specify the packaged CLI command tree and unknown-command behavior.
-- Modify `tests/omniskill.test.ts`: specify the reusable Omniskills command tree and explicitly attach the dormant registrar only inside legacy dispatch regression tests.
+- Modify `src/omniskill.ts`: remove dispatch from normal command registration and keep the dormant registrar private.
+- Modify `tests/cli.test.ts`: specify the packaged CLI command tree and root-parser rejection behavior.
+- Modify `tests/omniskill.test.ts`: specify the reusable Omniskills command tree and retain legacy command-level dispatch tests as skipped rollback cases.
 - Modify `docs/architecture.md`: mark dispatch as temporarily disabled without removing the dormant runtime map.
 
 ### Task 1: Specify the Disabled Public CLI Boundary
@@ -58,12 +58,9 @@ test("rejects dispatch before any orchestration execution path is available", as
   program.exitOverride();
   program.configureOutput({ writeOut: () => {}, writeErr: () => {} });
 
-  await expect(
-    program.parseAsync(
-      ["dispatch", "startup-team", "--role", "catalog:cto", "--task", "Review"],
-      { from: "user" },
-    ),
-  ).rejects.toMatchObject({ code: "commander.unknownCommand" });
+  await expect(program.parseAsync(["dispatch"], { from: "user" })).rejects.toMatchObject({
+    code: "commander.excessArguments",
+  });
 });
 ```
 
@@ -75,14 +72,13 @@ Run:
 rtk bun test tests/cli.test.ts tests/omniskill.test.ts
 ```
 
-Expected: the command-list assertions fail because `dispatch` is still registered, and the new parsing test does not receive `commander.unknownCommand`.
+Expected: the command-list assertions fail because `dispatch` is still registered, and the new parsing test reaches dispatch instead of receiving `commander.excessArguments`.
 
-### Task 2: Unregister Dispatch and Preserve Dormant Regression Coverage
+### Task 2: Unregister Dispatch and Keep the Dormant Seam Private
 
 **Files:**
 - Modify: `src/omniskill.ts:304-318`
 - Modify: `src/omniskill.ts:400-600`
-- Modify: `tests/omniskill.test.ts:1-20`
 - Modify: `tests/omniskill.test.ts:725-1800`
 
 - [ ] **Step 1: Remove dispatch from normal command registration**
@@ -106,47 +102,29 @@ function configureOmniskillCommands(
 }
 ```
 
-- [ ] **Step 2: Keep the dormant command registrar testable without attaching it publicly**
+- [ ] **Step 2: Mark the private command registrar as intentionally dormant**
 
-Add an internal-use comment and export to the existing function; do not change its implementation:
+Rename the existing private function; do not export or change its implementation:
 
 ```typescript
-/** @internal Retained for dormant dispatch regression coverage while public registration is disabled. */
-export function configureDispatchCommand(
+function _configureDispatchCommand(
   command: Command,
   options: ConfigureOmniskillCommandOptions,
 ): void {
 ```
 
-This export is not re-exported from `src/plugins/index.ts`, referenced by `src/cli.ts`, or called by the normal command setup.
+The underscore records that the local is intentionally unused while keeping the module interface unchanged.
 
-- [ ] **Step 3: Add a test-only registrar helper**
+- [ ] **Step 3: Keep legacy command-level integrations as rollback cases**
 
-Update the import in `tests/omniskill.test.ts` and add the helper after the model-catalog fixture:
+Add one comment before the legacy dispatch block and change its ten `test(...)` declarations to `test.skip(...)`:
 
 ```typescript
-import {
-  configureDispatchCommand,
-  configureOmniskillCommand,
-  type ConfigureOmniskillCommandOptions,
-  installExternalSkillDependencyWithSkillsCli,
-  type OmniskillExternalSkillCommand,
-  type OmniskillOnboardCommand,
-} from "../src/omniskill";
-
-function configureDormantDispatchTestCommand(
-  program: Command,
-  options: ConfigureOmniskillCommandOptions,
-): void {
-  configureOmniskillCommand(program, options);
-  configureDispatchCommand(program, options);
-}
+// Retained for rollback while the public dispatch command remains disabled.
+test.skip("dispatch dry-run prints a verified plan without launching or writing run state", async () => {
 ```
 
-- [ ] **Step 4: Route only dormant dispatch regression tests through the helper**
-
-Replace `configureOmniskillCommand(program, { ... })` with
-`configureDormantDispatchTestCommand(program, { ... })` only in these tests:
+Apply `test.skip` to these cases:
 
 - `dispatch dry-run prints a verified plan without launching or writing run state`
 - `dispatch executes a verified profile and persists its receipt`
@@ -159,7 +137,9 @@ Replace `configureOmniskillCommand(program, { ... })` with
 - `dispatch resume makes human escalation terminal`
 - `dispatch resume rejects profile drift before contacting Codex`
 
-Do not use the helper in command registration, bundle, install, model-routing, or loop tests.
+Keep the dedicated planner, dispatcher, and run-store tests active. Re-enable
+these command-level cases only after a bounded-memory regression covers launch
+and resume.
 
 - [ ] **Step 5: Run the focused suite and confirm GREEN**
 
@@ -169,7 +149,7 @@ Run:
 rtk bun test tests/cli.test.ts tests/omniskill.test.ts
 ```
 
-Expected: all focused tests pass. The public programs reject dispatch, while the explicitly constructed dormant test programs retain the prior dispatch behavior coverage.
+Expected: all active focused tests pass and the ten legacy command-level cases are reported as intentionally skipped. The public programs reject dispatch, while dedicated runtime suites retain active behavior coverage.
 
 - [ ] **Step 6: Commit the behavior change narrowly**
 
@@ -280,7 +260,7 @@ Expected: help lists bundle commands and `setup-model-routing`, but does not lis
 rtk bun run dev -- dispatch startup-team --role catalog:cto --task Review
 ```
 
-Expected: exits nonzero with Commander's unknown-command error before a run directory or child process is created.
+Expected: exits nonzero with a Commander parse error before a run directory or child process is created.
 
 - [ ] **Step 3: Smoke-test the preserved bundle surface**
 

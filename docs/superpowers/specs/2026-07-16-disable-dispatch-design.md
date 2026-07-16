@@ -21,8 +21,10 @@ retaining it preserves compatibility with installed bundle profile metadata.
 ## User-Visible Behavior
 
 - `omniskill --help` does not list `dispatch`.
-- Calling `omniskill dispatch ...` fails as an unknown command before any
-  dispatcher, run store, child process, or run-state write can occur.
+- Calling `omniskill dispatch ...` is rejected by Commander as invalid root
+  input before any dispatcher, run store, child process, or run-state write can
+  occur. The exact diagnostic depends on whether legacy dispatch flags are
+  present.
 - `init`, `validate`, `lock`, `deps`, `install`, `list`, `remove`, `onboard`,
   `setup-model-routing`, and `loop` retain their current behavior.
 - Existing installed bundles and existing dispatch run files are not modified
@@ -43,15 +45,21 @@ memory-safety mitigation with a larger runtime removal.
 Use the public CLI command tree as the primary seam:
 
 1. Assert that `dispatch` is absent from the Omniskills command list.
-2. Assert that parsing a dispatch invocation rejects it as an unknown command.
+2. Assert that parsing the bare dispatch token rejects it at the root parser.
 3. Retain existing install, validation, dependency, and model-routing tests to
    guard the preserved bundle surface.
+
+Legacy command-level dispatch tests remain skipped while the command is
+disabled. Planner, dispatcher, and run-store suites continue exercising the
+dormant runtime. Re-enable the command-level cases only with the command, after
+a bounded-memory regression proves the original growth issue is fixed.
 
 Run the focused CLI tests first, then the repository gate and CLI smoke checks.
 
 ## Rollback
 
 Re-register the existing dispatch command in the Omniskills command setup and
-restore the corresponding help documentation. No runtime reconstruction or
-state migration is required because the implementation and stored runs remain
-untouched.
+restore the corresponding help documentation and skipped command-level tests.
+No runtime reconstruction or state migration is required because the
+implementation and stored runs remain untouched. Re-enabling requires a
+bounded-memory regression that covers both launch and resume.
