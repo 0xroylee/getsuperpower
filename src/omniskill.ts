@@ -1114,8 +1114,7 @@ async function runOmniskillLoop(
 }
 
 async function importWorkflowLoopRuntime(): Promise<unknown> {
-  const runtimeModulePath = "./runtimes/omniskill/workflow-loop-runtime.mjs";
-  return import(runtimeModulePath);
+  return import("./runtimes/omniskill/workflow-loop-runtime.mjs");
 }
 
 function createLoopCommandPrefix(source: string, homeDir: string): (command: string) => string {

@@ -6,6 +6,50 @@ import { join } from "node:path";
 const repoRoot = join(import.meta.dir, "..");
 
 describe("production CLI spawn boundary", () => {
+  test("runs loop commands from the built bundle", async () => {
+    const outputDir = await mkdtemp(join(tmpdir(), "omniskill-cli-loop-bundle-"));
+    const outputPath = join(outputDir, "cli.js");
+    const homeDir = join(outputDir, "home");
+    try {
+      const build = Bun.spawn(
+        ["bun", "build", "--target=node", `--outfile=${outputPath}`, "src/cli.ts"],
+        { cwd: repoRoot, stdout: "pipe", stderr: "pipe" },
+      );
+      expect(await build.exited).toBe(0);
+
+      const loop = Bun.spawn(
+        [
+          "node",
+          outputPath,
+          "loop",
+          "start",
+          "examples/workflows/grilled-product-dev",
+          "--home",
+          homeDir,
+          "--run",
+          "bundle-smoke",
+          "--json",
+        ],
+        { cwd: repoRoot, stdout: "pipe", stderr: "pipe" },
+      );
+      const [stdout, stderr, exitCode] = await Promise.all([
+        new Response(loop.stdout).text(),
+        new Response(loop.stderr).text(),
+        loop.exited,
+      ]);
+
+      expect(stderr).toBe("");
+      expect(exitCode).toBe(0);
+      expect(JSON.parse(stdout)).toMatchObject({
+        workflow: "grilled-product-dev",
+        runId: "bundle-smoke",
+        status: "active",
+      });
+    } finally {
+      await rm(outputDir, { recursive: true, force: true });
+    }
+  });
+
   test("excludes dormant dispatch modules from source entrypoints and the built bundle", async () => {
     const sourceContracts = [
       {
