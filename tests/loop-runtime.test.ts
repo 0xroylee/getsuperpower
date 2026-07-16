@@ -468,6 +468,8 @@ describe("loop runtime", () => {
     const homeDir = await mkdtemp(join(tmpdir(), "milestone-loop-home-"));
     const fixtureDir = await mkdtemp(join(tmpdir(), "milestone-loop-workflow-"));
     const manifestPath = join(fixtureDir, "workflow.json");
+    const inputPath = join(fixtureDir, "input.json");
+    const packetPath = join(fixtureDir, "input-packet.json");
     const startInput = {
       goalTunnel: {
         goal: "Improve onboarding",
@@ -518,11 +520,26 @@ describe("loop runtime", () => {
         ],
       }),
     );
+    await writeFile(inputPath, JSON.stringify(startInput));
+    await writeFile(
+      packetPath,
+      JSON.stringify({
+        featureOutcome: "The next action is clear",
+        decision: "Approve milestone execution",
+        sourceContext: ["approved goal tunnel"],
+        constraints: ["manual execution"],
+        permissions: ["edit onboarding copy"],
+        expectedArtifact: "Updated onboarding copy",
+        acceptanceCriteria: ["next action is explicit"],
+        priorDecisions: ["billing is outside scope"],
+        accountableRole: "product-manager",
+      }),
+    );
 
     try {
       const started = parseJsonOutput(
         await runRuntime(
-          ["start", "--run", "milestone", "--input", JSON.stringify(startInput), "--json"],
+          ["start", "--run", "milestone", "--input-file", inputPath, "--json"],
           homeDir,
           manifestPath,
         ),
@@ -539,6 +556,24 @@ describe("loop runtime", () => {
         await runRuntime(["status", "--latest", "--json"], homeDir, manifestPath),
       ) as { runId: string; milestone: { stage: string } };
       expect(resumed).toMatchObject({ runId: "milestone", milestone: { stage: "preparing" } });
+
+      const logged = parseJsonOutput(
+        await runRuntime(
+          [
+            "log",
+            "--run",
+            "milestone",
+            "--type",
+            "input_packet",
+            "--metadata-file",
+            packetPath,
+            "--json",
+          ],
+          homeDir,
+          manifestPath,
+        ),
+      ) as { event: { metadata: { expectedArtifact: string } } };
+      expect(logged.event.metadata.expectedArtifact).toBe("Updated onboarding copy");
 
       const forced = await runRuntime(
         ["advance", "--run", "milestone", "--to", "implementing", "--force", "--reason", "skip"],

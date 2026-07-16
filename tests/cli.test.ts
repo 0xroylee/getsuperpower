@@ -179,6 +179,11 @@ describe("cli", () => {
       "advance",
       "summary",
     ]);
+    const loopStart = loopCommand?.commands.find((command) => command.name() === "start");
+    const loopLog = loopCommand?.commands.find((command) => command.name() === "log");
+    expect(loopStart?.options.map((option) => option.long)).toContain("--input");
+    expect(loopStart?.options.map((option) => option.long)).toContain("--input-file");
+    expect(loopLog?.options.map((option) => option.long)).toContain("--metadata-file");
     expect(skillsCommand?.commands.map((command) => command.name())).toEqual(["install", "update"]);
     expect(
       skillsCommand?.commands

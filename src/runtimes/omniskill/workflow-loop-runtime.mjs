@@ -24,6 +24,15 @@ const eventTypes = new Set([
   "advance",
   "force_advance",
   "complete",
+  "input_packet",
+  "role_output",
+  "repair_request",
+  "targeted_review",
+  "plan_decision",
+  "implementation_result",
+  "verification_result",
+  "outcome_replay",
+  "acceptance_decision",
 ]);
 
 export async function runWorkflowLoopCli(input = {}) {
@@ -118,16 +127,9 @@ async function startRun(context, options) {
     updatedAt: now.toISOString(),
   };
   if (context.manifest.loop?.type === "milestone_based") {
-    if (!options.input) {
-      throw new Error(
-        "start requires --input <json> or --input-file <path> for milestone-based loops",
-      );
-    }
+    const milestoneInput = await readJsonInput(context, options.input, options.inputFile, "start");
     state.schemaVersion = "0.2";
-    state.milestone = createMilestoneState(
-      parseJsonOption(options.input, "--input"),
-      now.toISOString(),
-    );
+    state.milestone = createMilestoneState(milestoneInput, now.toISOString());
     state.currentStep = "preparing";
     state.currentStepIndex = context.manifest.steps.findIndex((step) => step.id === "preparing");
   }
@@ -169,7 +171,10 @@ async function logEventCommand(context, options) {
   }
 
   const state = await readState(context, runId);
-  const metadata = options.metadata ? parseJsonOption(options.metadata, "--metadata") : {};
+  const metadata =
+    options.metadata || options.metadataFile
+      ? await readJsonInput(context, options.metadata, options.metadataFile, "log")
+      : {};
   if (state.milestone) {
     state.milestone = recordMilestoneEvent(state.milestone, { type, metadata });
   }
@@ -561,6 +566,31 @@ function parseJsonOption(value, name) {
   } catch {
     throw new Error(`${name} must be valid JSON`);
   }
+}
+
+async function readJsonInput(context, inline, file, command) {
+  if (inline && file) {
+    throw new Error("Pass only one inline JSON value or JSON file");
+  }
+  if (inline) {
+    return parseJsonOption(inline, command === "start" ? "--input" : "--metadata");
+  }
+  if (file) {
+    const path = resolve(context.cwd, file);
+    try {
+      return JSON.parse(await readFile(path, "utf8"));
+    } catch {
+      throw new Error(
+        `${command === "start" ? "--input-file" : "--metadata-file"} must contain valid JSON: ${path}`,
+      );
+    }
+  }
+  if (command === "start") {
+    throw new Error(
+      "start requires --input <json> or --input-file <path> for milestone-based loops",
+    );
+  }
+  return {};
 }
 
 function requireOption(options, name, message) {

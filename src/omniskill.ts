@@ -186,12 +186,15 @@ type OmniskillLoopCommandName = "start" | "status" | "log" | "advance" | "summar
 interface OmniskillLoopCommandOptions {
   home: string;
   run?: string;
+  input?: string;
+  inputFile?: string;
   latest?: boolean;
   json?: boolean;
   type?: string;
   step?: string;
   message?: string;
   metadata?: string;
+  metadataFile?: string;
   to?: string;
   force?: boolean;
   reason?: string;
@@ -1024,6 +1027,8 @@ function configureLoopCommand(command: Command, options: ConfigureOmniskillComma
 
   configureLoopSubcommand(loopCommand, "start", "Start a looped workflow run.", options)
     .option("--run <id>", "run id to create")
+    .option("--input <json>", "milestone goal tunnel and milestone map as JSON")
+    .option("--input-file <path>", "read milestone goal tunnel and milestone map from JSON")
     .option("--json", "print JSON output", false);
 
   configureLoopSubcommand(loopCommand, "status", "Show looped workflow run status.", options)
@@ -1037,6 +1042,7 @@ function configureLoopCommand(command: Command, options: ConfigureOmniskillComma
     .option("--step <step-id>", "override the event step id")
     .option("--message <message>", "event message")
     .option("--metadata <json>", "event metadata as JSON")
+    .option("--metadata-file <path>", "read structured event metadata from JSON")
     .option("--json", "print JSON output", false);
 
   configureLoopSubcommand(loopCommand, "advance", "Advance a looped workflow run.", options)
@@ -1124,10 +1130,13 @@ function buildLoopRuntimeArgs(
 ): string[] {
   const args = [command];
   appendStringOption(args, "run", options.run);
+  appendStringOption(args, "input", options.input);
+  appendStringOption(args, "input-file", options.inputFile);
   appendStringOption(args, "type", options.type);
   appendStringOption(args, "step", options.step);
   appendStringOption(args, "message", options.message);
   appendStringOption(args, "metadata", options.metadata);
+  appendStringOption(args, "metadata-file", options.metadataFile);
   appendStringOption(args, "to", options.to);
   appendStringOption(args, "reason", options.reason);
   appendBooleanOption(args, "latest", options.latest);
