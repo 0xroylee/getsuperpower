@@ -53,14 +53,21 @@ const WorkflowStepSchema = z.object({
   verify: WorkflowStepVerifySchema.optional(),
 });
 
+const WorkflowMilestoneLoopSchema = z.object({
+  coordinator: z.string().min(1),
+  implementer: z.string().min(1),
+  verifier: z.string().min(1),
+});
+
 const WorkflowLoopSchema = z.object({
   script: z.string().min(1),
   state: z.literal("global"),
   execution: z.literal("action-only"),
-  type: z.enum(["goal_based"]).optional(),
+  type: z.enum(["goal_based", "milestone_based"]).optional(),
   goal: z.string().min(1).optional(),
   done_when: z.array(z.string().min(1)).min(1).optional(),
   stop_when: z.array(z.string().min(1)).min(1).optional(),
+  milestone: WorkflowMilestoneLoopSchema.optional(),
 });
 
 const WorkflowOrchestrationAssignmentSchema = z.object({
@@ -305,28 +312,56 @@ export const WorkflowBundleManifestSchema = z
       }
     }
 
-    if (manifest.loop?.type === "goal_based") {
+    if (manifest.loop?.type === "goal_based" || manifest.loop?.type === "milestone_based") {
       if (!manifest.loop.goal) {
         context.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Goal-based loops must declare loop.goal",
+          message: "Goal and milestone loops must declare loop.goal",
           path: ["loop", "goal"],
         });
       }
       if (!manifest.loop.done_when) {
         context.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Goal-based loops must declare loop.done_when",
+          message: "Goal and milestone loops must declare loop.done_when",
           path: ["loop", "done_when"],
         });
       }
       if (!manifest.loop.stop_when) {
         context.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Goal-based loops must declare loop.stop_when",
+          message: "Goal and milestone loops must declare loop.stop_when",
           path: ["loop", "stop_when"],
         });
       }
+    }
+
+    if (manifest.loop?.type === "milestone_based") {
+      if (!manifest.loop.milestone) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Milestone-based loops must declare loop.milestone",
+          path: ["loop", "milestone"],
+        });
+      } else {
+        for (const [owner, source] of Object.entries(manifest.loop.milestone)) {
+          if (!skillSources.has(source)) {
+            context.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `Milestone loop owner must be declared in skills: ${source}`,
+              path: ["loop", "milestone", owner],
+            });
+          }
+        }
+      }
+    }
+
+    if (manifest.loop?.type !== "milestone_based" && manifest.loop?.milestone) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "loop.milestone requires loop.type milestone_based",
+        path: ["loop", "milestone"],
+      });
     }
   });
 
@@ -551,10 +586,15 @@ export interface WorkflowLoopMetadata {
   loopScript: string;
   state: "global";
   execution: "action-only";
-  type?: "goal_based";
+  type?: "goal_based" | "milestone_based";
   goal?: string;
   done_when?: string[];
   stop_when?: string[];
+  milestone?: {
+    coordinator: string;
+    implementer: string;
+    verifier: string;
+  };
   commands: ["start", "status", "log", "advance", "summary"];
 }
 
@@ -1430,6 +1470,7 @@ export function createWorkflowLoopMetadata(bundle: WorkflowBundle): WorkflowLoop
     ...(bundle.manifest.loop.goal ? { goal: bundle.manifest.loop.goal } : {}),
     ...(bundle.manifest.loop.done_when ? { done_when: bundle.manifest.loop.done_when } : {}),
     ...(bundle.manifest.loop.stop_when ? { stop_when: bundle.manifest.loop.stop_when } : {}),
+    ...(bundle.manifest.loop.milestone ? { milestone: bundle.manifest.loop.milestone } : {}),
     commands: ["start", "status", "log", "advance", "summary"],
   };
 }

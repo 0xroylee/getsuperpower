@@ -1472,6 +1472,65 @@ describe("workflow bundles", () => {
     }
   });
 
+  test("loads a milestone-based team loop with explicit execution owners", () => {
+    const manifest = WorkflowBundleManifestSchema.parse({
+      ...validTeamManifest,
+      loop: {
+        script: "./loop.mjs",
+        state: "global",
+        execution: "action-only",
+        type: "milestone_based",
+        goal: "Deliver approved startup milestones.",
+        done_when: ["all_milestones_accepted"],
+        stop_when: ["human_stops", "critical_evidence_missing"],
+        milestone: {
+          coordinator: "./skills/coordinator",
+          implementer: "external-review",
+          verifier: "catalog:member-workflow",
+        },
+      },
+    });
+
+    expect(manifest.loop?.type).toBe("milestone_based");
+    expect(manifest.loop?.milestone).toEqual({
+      coordinator: "./skills/coordinator",
+      implementer: "external-review",
+      verifier: "catalog:member-workflow",
+    });
+  });
+
+  test("rejects incomplete or undeclared milestone-loop owners", () => {
+    const base = {
+      ...validTeamManifest,
+      loop: {
+        script: "./loop.mjs" as const,
+        state: "global" as const,
+        execution: "action-only" as const,
+        type: "milestone_based" as const,
+        goal: "Deliver approved startup milestones.",
+        done_when: ["all_milestones_accepted"],
+        stop_when: ["human_stops"],
+      },
+    };
+
+    expect(() => WorkflowBundleManifestSchema.parse(base)).toThrow(
+      "Milestone-based loops must declare loop.milestone",
+    );
+    expect(() =>
+      WorkflowBundleManifestSchema.parse({
+        ...base,
+        loop: {
+          ...base.loop,
+          milestone: {
+            coordinator: "./skills/coordinator",
+            implementer: "missing-implementer",
+            verifier: "catalog:member-workflow",
+          },
+        },
+      }),
+    ).toThrow("Milestone loop owner must be declared in skills: missing-implementer");
+  });
+
   test("loads grilled-product-dev as a looped workflow example", async () => {
     const bundle = await loadWorkflowBundle(
       join(import.meta.dir, "..", "examples", "workflows", "grilled-product-dev"),
