@@ -137,6 +137,7 @@ describe("cli", () => {
       "remove",
       "deps",
       "onboard",
+      "setup-model-routing",
       "loop",
       "bundle",
       "workflow",
@@ -179,12 +180,27 @@ describe("cli", () => {
       "advance",
       "summary",
     ]);
+    const loopStart = loopCommand?.commands.find((command) => command.name() === "start");
+    const loopLog = loopCommand?.commands.find((command) => command.name() === "log");
+    expect(loopStart?.options.map((option) => option.long)).toContain("--input");
+    expect(loopStart?.options.map((option) => option.long)).toContain("--input-file");
+    expect(loopLog?.options.map((option) => option.long)).toContain("--metadata-file");
     expect(skillsCommand?.commands.map((command) => command.name())).toEqual(["install", "update"]);
     expect(
       skillsCommand?.commands
         .find((command) => command.name() === "install")
         ?.options.map((option) => option.long),
     ).not.toContain("--prehook");
+  });
+
+  test("rejects dispatch before any orchestration execution path is available", async () => {
+    const program = buildProgram();
+    program.exitOverride();
+    program.configureOutput({ writeOut: () => {}, writeErr: () => {} });
+
+    await expect(program.parseAsync(["dispatch"], { from: "user" })).rejects.toMatchObject({
+      code: "commander.excessArguments",
+    });
   });
 
   test("root help presents the Omniskills welcome", () => {
@@ -241,7 +257,7 @@ describe("cli", () => {
 
   test("prints the CLI version with -v", async () => {
     const program = buildProgram();
-    const expectedVersion = "0.5.5";
+    const expectedVersion = "0.6.0";
     const output: string[] = [];
 
     expect(program.version()).toBe(expectedVersion);
@@ -594,6 +610,7 @@ describe("cli", () => {
   test("skills install and update help list supported agent target aliases", () => {
     const program = buildProgram();
     const skillsCommand = program.commands.find((command) => command.name() === "skills");
+    const installCommand = program.commands.find((command) => command.name() === "install");
 
     for (const commandName of ["install", "update"]) {
       const command = skillsCommand?.commands.find(
@@ -601,9 +618,43 @@ describe("cli", () => {
       );
       const help = stripAnsi(command?.helpInformation() ?? "");
 
-      expect(help).toContain("claude,copilot,codex,cursor,opencode");
+      expect(help).toContain("claude,copilot,codex,cursor,hermes,openclaw,opencode");
       expect(help).toContain("github-copilot");
       expect(help).toContain("opencodex");
+    }
+
+    const installHelp = stripAnsi(installCommand?.helpInformation() ?? "");
+    expect(installHelp).toContain("codex,claude,cursor,copilot,hermes,openclaw,opencode");
+  });
+
+  test("skills install dry-runs Hermes and OpenClaw destinations", async () => {
+    const homeDir = await mkdtemp(join(tmpdir(), "omniskill-cli-home-"));
+    const logs: string[] = [];
+    const originalLog = console.log;
+
+    console.log = (...values: unknown[]) => {
+      logs.push(values.join(" "));
+    };
+
+    try {
+      await buildProgram({ cwd: homeDir }).parseAsync(
+        [
+          "skills",
+          "install",
+          "writing-workflow-skills",
+          "--agents",
+          "hermes,openclaw",
+          "--home",
+          homeDir,
+          "--dry-run",
+        ],
+        { from: "user" },
+      );
+      expect(logs.some((line) => line.includes("hermes: would install"))).toBe(true);
+      expect(logs.some((line) => line.includes("openclaw: would install"))).toBe(true);
+    } finally {
+      console.log = originalLog;
+      await rm(homeDir, { recursive: true, force: true });
     }
   });
 

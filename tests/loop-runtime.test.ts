@@ -463,4 +463,382 @@ describe("loop runtime", () => {
       await rm(homeDir, { recursive: true, force: true });
     }
   });
+
+  test("runs and resumes an action-only milestone workflow", async () => {
+    const homeDir = await mkdtemp(join(tmpdir(), "milestone-loop-home-"));
+    const fixtureDir = await mkdtemp(join(tmpdir(), "milestone-loop-workflow-"));
+    const manifestPath = join(fixtureDir, "workflow.json");
+    const inputPath = join(fixtureDir, "input.json");
+    const packetPath = join(fixtureDir, "input-packet.json");
+    const startInput = {
+      goalTunnel: {
+        goal: "Improve onboarding",
+        user: "A new founder",
+        problem: "The first action is unclear",
+        outcome: "The first action completes",
+        scope: ["onboarding"],
+        nonGoals: ["billing"],
+        constraints: ["manual execution"],
+        successCriteria: ["first action completes"],
+        assumptions: [],
+      },
+      milestones: [
+        {
+          id: "copy",
+          title: "Clarify copy",
+          outcome: "The next action is clear",
+          accountableRole: "product-manager",
+          dependencies: [],
+          acceptanceCriteria: ["next action is explicit"],
+        },
+      ],
+    };
+    await writeFile(
+      manifestPath,
+      JSON.stringify({
+        name: "milestone-fixture",
+        loop: { type: "milestone_based", goal: "Improve onboarding" },
+        steps: [
+          { id: "preparing", title: "Prepare", skill: "coordinator" },
+          { id: "planning", title: "Plan", skill: "coordinator" },
+          {
+            id: "awaiting_plan_approval",
+            title: "Approve plan",
+            skill: "coordinator",
+            gate: "human_approval",
+          },
+          { id: "implementing", title: "Implement", skill: "implement" },
+          { id: "rework", title: "Rework", skill: "implement" },
+          { id: "verifying", title: "Verify", skill: "qa" },
+          { id: "evaluating", title: "Evaluate", skill: "coordinator" },
+          {
+            id: "awaiting_acceptance",
+            title: "Accept",
+            skill: "coordinator",
+            gate: "human_approval",
+          },
+        ],
+      }),
+    );
+    await writeFile(inputPath, JSON.stringify(startInput));
+    await writeFile(
+      packetPath,
+      JSON.stringify({
+        featureOutcome: "The next action is clear",
+        decision: "Approve milestone execution",
+        sourceContext: ["approved goal tunnel"],
+        constraints: ["manual execution"],
+        permissions: ["edit onboarding copy"],
+        expectedArtifact: "Updated onboarding copy",
+        acceptanceCriteria: ["next action is explicit"],
+        priorDecisions: ["billing is outside scope"],
+        accountableRole: "product-manager",
+      }),
+    );
+
+    try {
+      const conflictingInput = await runRuntime(
+        [
+          "start",
+          "--run",
+          "conflict",
+          "--input",
+          JSON.stringify(startInput),
+          "--input-file",
+          inputPath,
+          "--json",
+        ],
+        homeDir,
+        manifestPath,
+      );
+      expect(conflictingInput.exitCode).toBe(1);
+      expect(conflictingInput.stderr).toContain("Pass only one of --input or --input-file");
+
+      const started = parseJsonOutput(
+        await runRuntime(
+          ["start", "--run", "milestone", "--input-file", inputPath, "--json"],
+          homeDir,
+          manifestPath,
+        ),
+      ) as {
+        milestone: { stage: string; milestone: { id: string } };
+        actions: Array<{ type: string; command?: string; description: string }>;
+      };
+      expect(started.milestone).toMatchObject({ stage: "preparing", milestone: { id: "copy" } });
+      expect(
+        started.actions.some((action) =>
+          action.description.includes("Prepare the bounded stage packet without launching a role"),
+        ),
+      ).toBe(true);
+      expect(
+        started.actions.every(
+          (action) => !action.description.includes("Launch the configured internal role"),
+        ),
+      ).toBe(true);
+      expect(started.actions.find((action) => action.type === "log_event")?.command).toContain(
+        "--type input_packet",
+      );
+
+      const resumed = parseJsonOutput(
+        await runRuntime(["status", "--latest", "--json"], homeDir, manifestPath),
+      ) as { runId: string; milestone: { stage: string } };
+      expect(resumed).toMatchObject({ runId: "milestone", milestone: { stage: "preparing" } });
+
+      const textStatus = await runRuntime(["status", "--run", "milestone"], homeDir, manifestPath);
+      expect(textStatus.exitCode).toBe(0);
+      expect(textStatus.stdout).toContain("Milestone: copy - Clarify copy");
+      expect(textStatus.stdout).toContain("Stage: preparing");
+      expect(textStatus.stdout).toContain("Evidence gaps: none");
+      expect(textStatus.stdout).toContain("Available decisions: none");
+
+      const logged = parseJsonOutput(
+        await runRuntime(
+          [
+            "log",
+            "--run",
+            "milestone",
+            "--type",
+            "input_packet",
+            "--metadata-file",
+            packetPath,
+            "--json",
+          ],
+          homeDir,
+          manifestPath,
+        ),
+      ) as {
+        event: { metadata: { expectedArtifact: string } };
+        actions: Array<{ type: string; command?: string }>;
+      };
+      expect(logged.event.metadata.expectedArtifact).toBe("Updated onboarding copy");
+      expect(logged.actions.find((action) => action.type === "log_event")?.command).toContain(
+        "--type input_packet",
+      );
+
+      const evidenceGap = parseJsonOutput(
+        await runRuntime(
+          [
+            "log",
+            "--run",
+            "milestone",
+            "--type",
+            "evidence_gap",
+            "--metadata",
+            JSON.stringify({
+              name: "founder interviews",
+              critical: true,
+              reason: "Source unavailable",
+            }),
+            "--json",
+          ],
+          homeDir,
+          manifestPath,
+        ),
+      ) as { actions: unknown[] };
+      expect(evidenceGap.actions).toBeArray();
+      expect(
+        parseJsonOutput(await runRuntime(["status", "--latest", "--json"], homeDir, manifestPath)),
+      ).toMatchObject({ status: "needs_evidence", runId: "milestone" });
+
+      parseJsonOutput(
+        await runRuntime(
+          [
+            "log",
+            "--run",
+            "milestone",
+            "--type",
+            "evidence_resolved",
+            "--metadata",
+            JSON.stringify({
+              name: "founder interviews",
+              resolution: "Interview notes attached",
+            }),
+            "--json",
+          ],
+          homeDir,
+          manifestPath,
+        ),
+      );
+      const planning = parseJsonOutput(
+        await runRuntime(["advance", "--run", "milestone", "--json"], homeDir, manifestPath),
+      ) as {
+        milestone: { stage: string };
+        actions: Array<{ type: string; command?: string; description: string }>;
+      };
+      expect(planning.milestone.stage).toBe("planning");
+      expect(
+        planning.actions.some((action) =>
+          action.description.includes("Launch the configured internal role"),
+        ),
+      ).toBe(true);
+      expect(
+        planning.actions.some((action) =>
+          action.description.includes("Prepared, not executed fallback"),
+        ),
+      ).toBe(true);
+      expect(planning.actions.find((action) => action.type === "log_event")?.command).toContain(
+        "--type role_output",
+      );
+
+      parseJsonOutput(
+        await runRuntime(
+          [
+            "log",
+            "--run",
+            "milestone",
+            "--type",
+            "role_output",
+            "--metadata",
+            JSON.stringify({
+              role: "product-manager",
+              recommendation: "Lead with the first action",
+              alternatives: ["Long tutorial"],
+              evidence: [
+                {
+                  claim: "Current copy is unclear",
+                  classification: "verified",
+                  risk: "high",
+                  source: "approved brief",
+                  observedAt: "2026-07-17",
+                },
+              ],
+              risks: [],
+              unresolvedQuestions: [],
+              verificationMethod: "Replay onboarding",
+              nextAction: "Approve plan",
+            }),
+            "--json",
+          ],
+          homeDir,
+          manifestPath,
+        ),
+      );
+      const planGate = parseJsonOutput(
+        await runRuntime(["advance", "--run", "milestone", "--json"], homeDir, manifestPath),
+      ) as {
+        milestone: { stage: string };
+        actions: Array<{ type: string; description: string }>;
+      };
+      expect(planGate.milestone.stage).toBe("awaiting_plan_approval");
+      expect(
+        planGate.actions.some((action) =>
+          action.description.includes("Wait for explicit human plan approval"),
+        ),
+      ).toBe(true);
+      expect(
+        planGate.actions.every(
+          (action) => !action.description.includes("Launch the configured internal role"),
+        ),
+      ).toBe(true);
+
+      const lifecycleEvents = [
+        ["plan_decision", { decision: "approve", approvedBy: "human" }],
+        [
+          "implementation_result",
+          {
+            summary: "Changed copy",
+            changedFiles: ["onboarding.ts"],
+            verificationCommands: ["bun test"],
+          },
+        ],
+        ["verification_result", { result: "pass", evidence: ["bun test"], residualRisk: [] }],
+        [
+          "outcome_replay",
+          {
+            user: "A new founder",
+            expectations: [
+              {
+                original: "See the next action",
+                originalEvidence: "brief",
+                status: "met",
+                resultEvidence: "QA",
+                gapType: "approved_requirement",
+              },
+            ],
+            needs: [
+              {
+                original: "Complete first action",
+                originalEvidence: "brief",
+                status: "met",
+                resultEvidence: "QA",
+                gapType: "none",
+              },
+            ],
+            wishes: [],
+            steps: [{ expected: "Start", actual: "Started", status: "met", resultEvidence: "QA" }],
+            recommendation: "accept",
+          },
+        ],
+      ] as const;
+      let acceptanceGate:
+        | { milestone: { stage: string }; actions: Array<{ type: string; description: string }> }
+        | undefined;
+      for (const [type, metadata] of lifecycleEvents) {
+        parseJsonOutput(
+          await runRuntime(
+            [
+              "log",
+              "--run",
+              "milestone",
+              "--type",
+              type,
+              "--metadata",
+              JSON.stringify(metadata),
+              "--json",
+            ],
+            homeDir,
+            manifestPath,
+          ),
+        );
+        acceptanceGate = parseJsonOutput(
+          await runRuntime(["advance", "--run", "milestone", "--json"], homeDir, manifestPath),
+        ) as typeof acceptanceGate;
+      }
+      expect(acceptanceGate?.milestone.stage).toBe("awaiting_acceptance");
+      expect(
+        acceptanceGate?.actions.some((action) =>
+          action.description.includes("Wait for explicit human feature acceptance"),
+        ),
+      ).toBe(true);
+      expect(
+        acceptanceGate?.actions.every(
+          (action) => !action.description.includes("Launch the configured internal role"),
+        ),
+      ).toBe(true);
+
+      const forced = await runRuntime(
+        ["advance", "--run", "milestone", "--to", "implementing", "--force", "--reason", "skip"],
+        homeDir,
+        manifestPath,
+      );
+      expect(forced.exitCode).toBe(1);
+      expect(forced.stderr).toContain("Milestone runs cannot bypass lifecycle transitions");
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+      await rm(fixtureDir, { recursive: true, force: true });
+    }
+  });
+
+  test("keeps goal-based latest selection limited to active runs", async () => {
+    const homeDir = await mkdtemp(join(tmpdir(), "goal-loop-blocked-home-"));
+    try {
+      parseJsonOutput(await runRuntime(["start", "--run", "blocked", "--json"], homeDir));
+      const statePath = join(
+        homeDir,
+        ".omniskills",
+        "runs",
+        "grilled-product-dev",
+        "blocked",
+        "state.json",
+      );
+      const state = JSON.parse(await readFile(statePath, "utf8"));
+      await writeFile(statePath, JSON.stringify({ ...state, status: "blocked" }));
+
+      const latest = await runRuntime(["status", "--latest", "--json"], homeDir);
+      expect(latest.exitCode).toBe(1);
+      expect(latest.stderr).toContain("No active runs found for grilled-product-dev");
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
 });

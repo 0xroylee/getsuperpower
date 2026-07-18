@@ -1,22 +1,38 @@
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import { cp, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { z } from "zod";
 import { runSubprocess } from "../../process";
+import { hashAgentProfileContent } from "./orchestration";
 
 export const workflowFileName = "workflow.json";
 export const workflowLockFileName = "workflow.lock.json";
 const workflowStoreDir = ".omniskills/workflows";
+const workflowInstallJournalDir = ".omniskills/workflow-installs";
 const canonicalExamplesGitUrl = "https://github.com/devos-ing/omni-skills.git";
 const canonicalExamplesTeamPath = "examples/teams";
 const canonicalExamplesWorkflowPath = "examples/workflows";
 const workflowAliasPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const WorkflowSkillSchema = z.object({
-  source: z.string().min(1),
+  source: z
+    .string()
+    .min(1)
+    .refine(
+      (source) =>
+        [...source].every((character) => {
+          const code = character.charCodeAt(0);
+          return code > 31 && code !== 127;
+        }),
+      "Workflow skill source cannot contain control characters",
+    ),
   repo: z.string().min(1).optional(),
+  installedName: z
+    .string()
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+    .optional(),
   optional: z.boolean().optional(),
   entry: z.boolean().optional(),
 });
@@ -32,30 +48,60 @@ const WorkflowStepSchema = z.object({
   id: z.string().min(1),
   title: z.string().min(1),
   skill: z.string().min(1),
+  phase: z.enum(["implementation"]).optional(),
   gate: z.enum(["human_approval"]).optional(),
   instruction: z.string().min(1).optional(),
   verify: WorkflowStepVerifySchema.optional(),
+});
+
+const WorkflowMilestoneLoopSchema = z.object({
+  coordinator: z.string().min(1),
+  implementer: z.string().min(1),
+  verifier: z.string().min(1),
 });
 
 const WorkflowLoopSchema = z.object({
   script: z.string().min(1),
   state: z.literal("global"),
   execution: z.literal("action-only"),
-  type: z.enum(["goal_based"]).optional(),
+  type: z.enum(["goal_based", "milestone_based"]).optional(),
   goal: z.string().min(1).optional(),
   done_when: z.array(z.string().min(1)).min(1).optional(),
   stop_when: z.array(z.string().min(1)).min(1).optional(),
+  milestone: WorkflowMilestoneLoopSchema.optional(),
+});
+
+export const ModelRoleSchema = z.enum(["planning", "implementation", "verification"]);
+export type ModelRole = z.infer<typeof ModelRoleSchema>;
+
+const WorkflowOrchestrationAssignmentSchema = z.object({
+  tier: z.enum(["deep", "standard", "fast"]),
+  modelRole: ModelRoleSchema.optional(),
+  access: z.enum(["read-only", "workspace-write"]),
+  consultation: z.enum(["receive", "request", "none"]),
+});
+
+const WorkflowOrchestrationSchema = z.object({
+  roles: z
+    .record(z.string().min(1), WorkflowOrchestrationAssignmentSchema)
+    .refine((roles) => Object.keys(roles).length > 0, "Team orchestration must declare roles"),
+  support: z
+    .record(z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/), WorkflowOrchestrationAssignmentSchema)
+    .optional(),
 });
 
 export const WorkflowBundleManifestSchema = z
   .object({
     schemaVersion: z.literal("0.1"),
     kind: z.enum(["workflow", "team"]).optional(),
-    name: z.string().min(1),
+    name: z
+      .string()
+      .regex(workflowAliasPattern, "Workflow name must be a lowercase kebab-case identifier"),
     version: z.string().min(1),
     description: z.string().min(1),
     coordinator: z.string().min(1).optional(),
     members: z.array(z.string().min(1)).optional(),
+    orchestration: WorkflowOrchestrationSchema.optional(),
     loop: WorkflowLoopSchema.optional(),
     skills: z.array(WorkflowSkillSchema).min(1),
     steps: z.array(WorkflowStepSchema).min(1),
@@ -83,6 +129,109 @@ export const WorkflowBundleManifestSchema = z
 
     const skillSources = new Set(manifest.skills.map((skill) => skill.source));
     const effectiveKind = manifest.kind ?? "workflow";
+
+    if (manifest.orchestration && effectiveKind !== "team") {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Workflow manifests cannot declare orchestration",
+        path: ["orchestration"],
+      });
+    }
+
+    if (manifest.orchestration && effectiveKind === "team") {
+      const implementationSources = new Set(
+        manifest.steps.filter((step) => step.phase === "implementation").map((step) => step.skill),
+      );
+
+      for (const source of Object.keys(manifest.orchestration.roles)) {
+        if (!skillSources.has(source)) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Team orchestration references unknown skill: ${source}`,
+            path: ["orchestration", "roles", source],
+          });
+        }
+      }
+
+      if (
+        manifest.coordinator &&
+        manifest.orchestration.roles[manifest.coordinator]?.consultation !== "receive"
+      ) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Team orchestration coordinator must receive consultations",
+          path: ["orchestration", "roles", manifest.coordinator, "consultation"],
+        });
+      }
+
+      const coordinatorAssignment = manifest.coordinator
+        ? manifest.orchestration.roles[manifest.coordinator]
+        : undefined;
+      if (coordinatorAssignment?.modelRole && coordinatorAssignment.modelRole !== "planning") {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Team coordinator must use modelRole planning",
+          path: ["orchestration", "roles", manifest.coordinator ?? "", "modelRole"],
+        });
+      }
+
+      for (const [source, assignment] of Object.entries(manifest.orchestration.roles)) {
+        if (source !== manifest.coordinator && assignment.consultation === "receive") {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Only the team coordinator can receive consultations: ${source}`,
+            path: ["orchestration", "roles", source, "consultation"],
+          });
+        }
+      }
+
+      for (const [source, assignment] of Object.entries(manifest.orchestration.support ?? {})) {
+        if (assignment.consultation === "receive") {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Only the team coordinator can receive consultations: ${source}`,
+            path: ["orchestration", "support", source, "consultation"],
+          });
+        }
+      }
+
+      for (const [taskClass, assignments] of [
+        ["roles", manifest.orchestration.roles],
+        ["support", manifest.orchestration.support ?? {}],
+      ] as const) {
+        for (const [source, assignment] of Object.entries(assignments)) {
+          if (assignment.access === "workspace-write" && !implementationSources.has(source)) {
+            context.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `Workspace-write orchestration access requires an explicit implement step: ${source}`,
+              path: ["orchestration", taskClass, source, "access"],
+            });
+          }
+          if (
+            assignment.access === "workspace-write" &&
+            assignment.modelRole !== undefined &&
+            assignment.modelRole !== "implementation"
+          ) {
+            context.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `Workspace-write orchestration must use modelRole implementation: ${source}`,
+              path: ["orchestration", taskClass, source, "modelRole"],
+            });
+          }
+          if (
+            implementationSources.has(source) &&
+            assignment.modelRole !== undefined &&
+            assignment.modelRole !== "implementation"
+          ) {
+            context.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `Implementation step must use modelRole implementation: ${source}`,
+              path: ["orchestration", taskClass, source, "modelRole"],
+            });
+          }
+        }
+      }
+    }
 
     if (effectiveKind === "team") {
       if (!manifest.coordinator) {
@@ -201,28 +350,56 @@ export const WorkflowBundleManifestSchema = z
       }
     }
 
-    if (manifest.loop?.type === "goal_based") {
+    if (manifest.loop?.type === "goal_based" || manifest.loop?.type === "milestone_based") {
       if (!manifest.loop.goal) {
         context.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Goal-based loops must declare loop.goal",
+          message: "Goal and milestone loops must declare loop.goal",
           path: ["loop", "goal"],
         });
       }
       if (!manifest.loop.done_when) {
         context.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Goal-based loops must declare loop.done_when",
+          message: "Goal and milestone loops must declare loop.done_when",
           path: ["loop", "done_when"],
         });
       }
       if (!manifest.loop.stop_when) {
         context.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Goal-based loops must declare loop.stop_when",
+          message: "Goal and milestone loops must declare loop.stop_when",
           path: ["loop", "stop_when"],
         });
       }
+    }
+
+    if (manifest.loop?.type === "milestone_based") {
+      if (!manifest.loop.milestone) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Milestone-based loops must declare loop.milestone",
+          path: ["loop", "milestone"],
+        });
+      } else {
+        for (const [owner, source] of Object.entries(manifest.loop.milestone)) {
+          if (!skillSources.has(source)) {
+            context.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `Milestone loop owner must be declared in skills: ${source}`,
+              path: ["loop", "milestone", owner],
+            });
+          }
+        }
+      }
+    }
+
+    if (manifest.loop?.type !== "milestone_based" && manifest.loop?.milestone) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "loop.milestone requires loop.type milestone_based",
+        path: ["loop", "milestone"],
+      });
     }
   });
 
@@ -341,6 +518,7 @@ export interface WorkflowBundleScaffold {
 export interface WorkflowSkillInstallDependency {
   source: string;
   repo?: string;
+  installedName?: string;
 }
 
 const canonicalWorkflowSkillAliases: Record<string, string> = {
@@ -372,15 +550,54 @@ export interface WorkflowDependencyGraph {
   displaySources: string[];
   workflows: WorkflowDependencyGraphWorkflow[];
   edges: WorkflowDependencyGraphEdge[];
+  roleSkills: Record<string, WorkflowRoleSkillResolution>;
   cleanup?: () => Promise<void>;
 }
 
 export interface WorkflowInstallSkillArtifact {
+  kind?: "skill";
   source: string;
   skillName: string;
   agent: string;
   status: string;
   paths: string[];
+  /** Positive provenance that a bootstrap created this artifact before a subsequent update. */
+  createdByBootstrap?: boolean;
+}
+
+export interface WorkflowInstallAgentProfileArtifact {
+  kind: "agent_profile";
+  source: string;
+  profileId: string;
+  agent: "codex" | "claude";
+  status: string;
+  path: string;
+  contentHash: string;
+  taskClass?: "role" | "support";
+  tier?: "deep" | "standard" | "fast";
+  modelRole?: ModelRole;
+  model?: string;
+  effort?: string;
+  access?: "read-only" | "workspace-write";
+  instructions?: string;
+  consultation?: "receive" | "request" | "none";
+  limits?: {
+    retryPerCandidate: number;
+    reassignmentPerWorkItem: number;
+    consultationsPerAgent: number;
+  };
+  candidateIndex?: number;
+  candidateCount?: number;
+}
+
+export type WorkflowInstallArtifact =
+  | WorkflowInstallSkillArtifact
+  | WorkflowInstallAgentProfileArtifact;
+
+export interface WorkflowInstallJournal {
+  schemaVersion: "0.1";
+  workflowName: string;
+  artifacts: WorkflowInstallArtifact[];
 }
 
 export interface WorkflowRemovalArtifact {
@@ -407,6 +624,8 @@ export interface WorkflowRemovalPlan {
   artifactsToRemove: WorkflowRemovalArtifact[];
   artifactsToKeep: WorkflowRemovalKeptArtifact[];
   skippedArtifacts: WorkflowRemovalSkippedArtifact[];
+  incomplete?: boolean;
+  journalPath?: string;
 }
 
 export interface WorkflowLoopMetadata {
@@ -416,22 +635,35 @@ export interface WorkflowLoopMetadata {
   loopScript: string;
   state: "global";
   execution: "action-only";
-  type?: "goal_based";
+  type?: "goal_based" | "milestone_based";
   goal?: string;
   done_when?: string[];
   stop_when?: string[];
+  milestone?: {
+    coordinator: string;
+    implementer: string;
+    verifier: string;
+  };
   commands: ["start", "status", "log", "advance", "summary"];
 }
 
 export interface PreparedWorkflowSkillInstallDependencies {
   dependencies: WorkflowSkillInstallDependency[];
   displaySources: string[];
+  roleSkills: Record<string, WorkflowRoleSkillResolution>;
   cleanup?: () => Promise<void>;
+}
+
+export interface WorkflowRoleSkillResolution {
+  source: string;
+  installedName?: string;
 }
 
 export interface InstalledWorkflowBundle extends WorkflowBundleManifest {
   source: WorkflowBundleSource;
-  installArtifacts?: WorkflowInstallSkillArtifact[];
+  installArtifacts?: WorkflowInstallArtifact[];
+  /** Exact installed identities keyed by the manifest's logical orchestration role source. */
+  installedRoleSkillNames?: Record<string, string>;
 }
 
 export interface WorkflowInstallResult {
@@ -600,9 +832,14 @@ export async function createWorkflowBundleScaffold(input: {
 export async function installWorkflowBundle(input: {
   rootDir: string;
   bundle: WorkflowBundle;
-  installArtifacts?: WorkflowInstallSkillArtifact[];
+  installArtifacts?: WorkflowInstallArtifact[];
+  installedRoleSkillNames?: Record<string, string>;
 }): Promise<WorkflowInstallResult> {
-  const workflow = createInstalledWorkflowBundle(input.bundle, input.installArtifacts ?? []);
+  const workflow = createInstalledWorkflowBundle(
+    input.bundle,
+    input.installArtifacts ?? [],
+    input.installedRoleSkillNames ?? {},
+  );
   const workflowDir = join(input.rootDir, workflowStoreDir);
   const path = join(workflowDir, `${workflow.name}.json`);
 
@@ -610,6 +847,85 @@ export async function installWorkflowBundle(input: {
   await writeFile(path, `${JSON.stringify(workflow, null, 2)}\n`);
 
   return { workflow, path };
+}
+
+export function getWorkflowInstallJournalPath(input: {
+  rootDir: string;
+  workflowName: string;
+}): string {
+  if (!workflowAliasPattern.test(input.workflowName)) {
+    throw new Error(`Unsafe workflow install journal name: ${input.workflowName}`);
+  }
+  return join(input.rootDir, workflowInstallJournalDir, `${input.workflowName}.json`);
+}
+
+export async function loadWorkflowInstallJournal(input: {
+  rootDir: string;
+  workflowName: string;
+}): Promise<WorkflowInstallJournal | null> {
+  const path = getWorkflowInstallJournalPath(input);
+  try {
+    const journal = JSON.parse(await readFile(path, "utf8")) as WorkflowInstallJournal;
+    if (journal.schemaVersion !== "0.1" || journal.workflowName !== input.workflowName) {
+      throw new Error(`Invalid workflow install journal: ${path}`);
+    }
+    return journal;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+export async function appendWorkflowInstallJournal(input: {
+  rootDir: string;
+  workflowName: string;
+  artifacts: WorkflowInstallArtifact[];
+}): Promise<WorkflowInstallJournal> {
+  const existing = await loadWorkflowInstallJournal(input);
+  const journal: WorkflowInstallJournal = {
+    schemaVersion: "0.1",
+    workflowName: input.workflowName,
+    artifacts: mergeWorkflowInstallArtifacts(existing?.artifacts ?? [], input.artifacts),
+  };
+  const path = getWorkflowInstallJournalPath(input);
+  await mkdir(dirname(path), { recursive: true });
+  const temporary = `${path}.omniskills-tmp`;
+  await writeFile(temporary, `${JSON.stringify(journal, null, 2)}\n`);
+  await rename(temporary, path);
+  return journal;
+}
+
+export async function clearWorkflowInstallJournal(input: {
+  rootDir: string;
+  workflowName: string;
+}): Promise<void> {
+  await rm(getWorkflowInstallJournalPath(input), { force: true });
+}
+
+export function mergeWorkflowInstallArtifacts(
+  journalArtifacts: WorkflowInstallArtifact[],
+  currentArtifacts: WorkflowInstallArtifact[],
+): WorkflowInstallArtifact[] {
+  const journalByIdentity = new Map(
+    journalArtifacts.map((artifact) => [workflowInstallArtifactIdentity(artifact), artifact]),
+  );
+  const merged = currentArtifacts.map((artifact) => {
+    const identity = workflowInstallArtifactIdentity(artifact);
+    const journalArtifact = journalByIdentity.get(identity);
+    if (!journalArtifact) return artifact;
+    journalByIdentity.delete(identity);
+    if (isAgentProfileArtifact(artifact) || isAgentProfileArtifact(journalArtifact)) {
+      return { ...artifact, status: journalArtifact.status } as WorkflowInstallArtifact;
+    }
+    return {
+      ...artifact,
+      status: journalArtifact.status,
+      ...(artifact.createdByBootstrap || journalArtifact.createdByBootstrap
+        ? { createdByBootstrap: true }
+        : {}),
+    } as WorkflowInstallArtifact;
+  });
+  return [...merged, ...journalByIdentity.values()];
 }
 
 export async function listInstalledWorkflowBundles(input: {
@@ -637,6 +953,9 @@ export function getInstalledWorkflowBundlePath(input: {
   rootDir: string;
   workflowName: string;
 }): string {
+  if (!workflowAliasPattern.test(input.workflowName)) {
+    throw new Error(`Unsafe installed workflow name: ${input.workflowName}`);
+  }
   return join(input.rootDir, workflowStoreDir, `${input.workflowName}.json`);
 }
 
@@ -661,18 +980,80 @@ export async function createWorkflowRemovalPlan(input: {
   homeDir: string;
   workflowName: string;
 }): Promise<WorkflowRemovalPlan> {
-  const installed = await loadInstalledWorkflowBundle({
-    rootDir: input.rootDir,
-    workflowName: input.workflowName,
-  });
+  let installed: Awaited<ReturnType<typeof loadInstalledWorkflowBundle>> | null = null;
+  try {
+    installed = await loadInstalledWorkflowBundle({
+      rootDir: input.rootDir,
+      workflowName: input.workflowName,
+    });
+  } catch (error) {
+    if (!String(error).includes(`Omniskills workflow is not installed: ${input.workflowName}`)) {
+      throw error;
+    }
+  }
+  const journal = installed
+    ? null
+    : await loadWorkflowInstallJournal({
+        rootDir: input.rootDir,
+        workflowName: input.workflowName,
+      });
+  if (!installed && !journal) {
+    throw new Error(`Omniskills workflow is not installed: ${input.workflowName}`);
+  }
   const otherWorkflows = (await listInstalledWorkflowBundles({ rootDir: input.rootDir })).filter(
     (workflow) => workflow.name !== input.workflowName,
   );
+  if (!installed && journal) {
+    const candidates = flattenInstallArtifacts(journal.artifacts);
+    const otherPathOwners = getArtifactPathOwners(otherWorkflows);
+    const artifactsToRemove: WorkflowRemovalArtifact[] = [];
+    const artifactsToKeep: WorkflowRemovalKeptArtifact[] = [];
+    for (const candidate of candidates) {
+      const usedByWorkflows = otherPathOwners.get(candidate.path) ?? [];
+      if (usedByWorkflows.length > 0) {
+        artifactsToKeep.push({ ...candidate, usedByWorkflows });
+      } else {
+        artifactsToRemove.push(candidate);
+      }
+    }
+    return {
+      workflow: {
+        schemaVersion: "0.1",
+        name: input.workflowName,
+        version: "incomplete",
+        description: "Incomplete Omniskills install journal.",
+        skills: [],
+        steps: [],
+        source: { kind: "local", path: input.rootDir },
+      },
+      workflowRecordPath: getInstalledWorkflowBundlePath(input),
+      legacy: false,
+      incomplete: true,
+      journalPath: getWorkflowInstallJournalPath(input),
+      artifactsToRemove,
+      artifactsToKeep,
+      skippedArtifacts: [],
+    };
+  }
+  if (!installed) throw new Error(`Omniskills workflow is not installed: ${input.workflowName}`);
   const legacy = !installed.workflow.installArtifacts?.length;
   const skippedArtifacts: WorkflowRemovalSkippedArtifact[] = [];
+  const driftedProfilePaths = new Set<string>();
+  for (const artifact of installed.workflow.installArtifacts ?? []) {
+    if (isAgentProfileArtifact(artifact) && !(await profileMatchesInstalledHash(artifact))) {
+      driftedProfilePaths.add(artifact.path);
+      skippedArtifacts.push({
+        source: artifact.source,
+        reason: `Modified agent profile kept: ${artifact.path}`,
+      });
+    }
+  }
+
   const candidates = legacy
     ? inferLegacyRemovalArtifacts(installed.workflow, input.homeDir, skippedArtifacts)
-    : flattenInstallArtifacts(installed.workflow.installArtifacts ?? []);
+    : flattenInstallArtifacts(installed.workflow.installArtifacts ?? []).filter(
+        (artifact) => !driftedProfilePaths.has(artifact.path),
+      );
   const otherPathOwners = getArtifactPathOwners(otherWorkflows);
   const artifactsToRemove: WorkflowRemovalArtifact[] = [];
   const artifactsToKeep: WorkflowRemovalKeptArtifact[] = [];
@@ -705,6 +1086,10 @@ export async function executeWorkflowRemovalPlan(plan: WorkflowRemovalPlan): Pro
   for (const artifact of plan.artifactsToRemove) {
     await rm(artifact.path, { recursive: true, force: true });
   }
+  if (plan.journalPath) {
+    await rm(plan.journalPath, { force: true });
+    return;
+  }
   await rm(plan.workflowRecordPath, { force: true });
 }
 
@@ -722,6 +1107,7 @@ export function getWorkflowSkillInstallDependencies(
     return {
       source,
       ...(skill.repo ? { repo: skill.repo } : {}),
+      ...(skill.installedName ? { installedName: skill.installedName } : {}),
     };
   });
 }
@@ -986,10 +1372,55 @@ export async function resolveWorkflowDependencyGraph(input: {
     displaySources: getWorkflowDependencyDisplaySources(input.bundle, workflows, dependencies),
     workflows,
     edges,
+    roleSkills: getTeamRoleSkills({
+      root: input.bundle,
+      resolvedChildren,
+      selectedByName,
+    }),
     ...(cleanups.length > 0
       ? { cleanup: async () => Promise.all(cleanups.map((cleanup) => cleanup())).then(() => {}) }
       : {}),
   };
+}
+
+function getTeamRoleSkills(input: {
+  root: WorkflowBundle;
+  resolvedChildren: Map<string, WorkflowBundle>;
+  selectedByName: Map<string, WorkflowBundle>;
+}): Record<string, WorkflowRoleSkillResolution> {
+  const roles = input.root.manifest.orchestration?.roles;
+  if (!roles) return {};
+  const rootId = getCanonicalWorkflowIdentity(input.root);
+
+  return Object.fromEntries(
+    Object.keys(roles).map((source) => {
+      const skillIndex = input.root.manifest.skills.findIndex((skill) => skill.source === source);
+      const discovered = input.resolvedChildren.get(`${rootId}\n${skillIndex}`);
+      const child = discovered
+        ? (input.selectedByName.get(discovered.manifest.name) ?? discovered)
+        : null;
+      const childEntry = child?.manifest.skills.find((skill) => skill.entry === true);
+      if (child && childEntry) {
+        return [
+          source,
+          {
+            source: resolve(child.sourceDir, childEntry.source),
+            ...(childEntry.installedName ? { installedName: childEntry.installedName } : {}),
+          },
+        ];
+      }
+      const rootSkill = input.root.manifest.skills[skillIndex];
+      return [
+        source,
+        {
+          source: isLocalWorkflowSkillSource(source)
+            ? resolve(input.root.sourceDir, source)
+            : source,
+          ...(rootSkill?.installedName ? { installedName: rootSkill.installedName } : {}),
+        },
+      ];
+    }),
+  );
 }
 
 function getResolvedWorkflowSkillLockSource(
@@ -1230,6 +1661,7 @@ export function createWorkflowLoopMetadata(bundle: WorkflowBundle): WorkflowLoop
     ...(bundle.manifest.loop.goal ? { goal: bundle.manifest.loop.goal } : {}),
     ...(bundle.manifest.loop.done_when ? { done_when: bundle.manifest.loop.done_when } : {}),
     ...(bundle.manifest.loop.stop_when ? { stop_when: bundle.manifest.loop.stop_when } : {}),
+    ...(bundle.manifest.loop.milestone ? { milestone: bundle.manifest.loop.milestone } : {}),
     commands: ["start", "status", "log", "advance", "summary"],
   };
 }
@@ -1251,6 +1683,7 @@ export async function getPreparedWorkflowSkillInstallDependencies(input: {
     return {
       dependencies,
       displaySources: graph.displaySources,
+      roleSkills: graph.roleSkills,
       ...(graph.cleanup ? { cleanup: graph.cleanup } : {}),
     };
   }
@@ -1293,10 +1726,19 @@ export async function getPreparedWorkflowSkillInstallDependencies(input: {
   const preparedDependencies = dependencies.map((dependency, index) =>
     index === entryIndex ? { ...dependency, source: preparedSkillDir } : dependency,
   );
+  const preparedRoleSkills = Object.fromEntries(
+    Object.entries(graph.roleSkills).map(([roleSource, roleSkill]) => [
+      roleSource,
+      roleSkill.source === sourceDependency.source
+        ? { ...roleSkill, source: preparedSkillDir }
+        : roleSkill,
+    ]),
+  );
 
   return {
     dependencies: preparedDependencies,
     displaySources: graph.displaySources,
+    roleSkills: preparedRoleSkills,
     cleanup: async () => {
       await rm(preparedRoot, { recursive: true, force: true });
       await graph.cleanup?.();
@@ -1350,23 +1792,40 @@ function getWorkflowEntrySkill(manifest: WorkflowBundleManifest) {
 
 function createInstalledWorkflowBundle(
   bundle: WorkflowBundle,
-  installArtifacts: WorkflowInstallSkillArtifact[],
+  installArtifacts: WorkflowInstallArtifact[],
+  installedRoleSkillNames: Record<string, string>,
 ): InstalledWorkflowBundle {
   return {
     ...bundle.manifest,
     source: bundle.source,
     ...(installArtifacts.length > 0 ? { installArtifacts } : {}),
+    ...(Object.keys(installedRoleSkillNames).length > 0 ? { installedRoleSkillNames } : {}),
   };
 }
 
-function flattenInstallArtifacts(
-  artifacts: WorkflowInstallSkillArtifact[],
-): WorkflowRemovalArtifact[] {
+function isAgentProfileArtifact(
+  artifact: WorkflowInstallArtifact,
+): artifact is WorkflowInstallAgentProfileArtifact {
+  return artifact.kind === "agent_profile";
+}
+
+function artifactPaths(artifact: WorkflowInstallArtifact): string[] {
+  return isAgentProfileArtifact(artifact) ? [artifact.path] : artifact.paths;
+}
+
+function workflowInstallArtifactIdentity(artifact: WorkflowInstallArtifact): string {
+  if (isAgentProfileArtifact(artifact)) {
+    return `agent_profile:${artifact.agent}:${artifact.profileId}:${artifact.path}`;
+  }
+  return `skill:${artifact.agent}:${artifact.skillName}:${[...artifact.paths].sort().join("\n")}`;
+}
+
+function flattenInstallArtifacts(artifacts: WorkflowInstallArtifact[]): WorkflowRemovalArtifact[] {
   return artifacts.flatMap((artifact) =>
-    isRemovableInstallStatus(artifact.status)
-      ? artifact.paths.map((path) => ({
+    isRemovableInstallArtifact(artifact)
+      ? artifactPaths(artifact).map((path) => ({
           source: artifact.source,
-          skillName: artifact.skillName,
+          skillName: isAgentProfileArtifact(artifact) ? artifact.profileId : artifact.skillName,
           agent: artifact.agent,
           status: artifact.status,
           path,
@@ -1375,15 +1834,36 @@ function flattenInstallArtifacts(
   );
 }
 
-function isRemovableInstallStatus(status: string): boolean {
-  return status === "installed" || status === "updated" || status === "overwritten";
+async function profileMatchesInstalledHash(
+  artifact: WorkflowInstallAgentProfileArtifact,
+): Promise<boolean> {
+  try {
+    const content = await readFile(artifact.path, "utf8");
+    return hashAgentProfileContent(content) === artifact.contentHash;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return true;
+    throw error;
+  }
+}
+
+function isRemovableInstallArtifact(artifact: WorkflowInstallArtifact): boolean {
+  if (!isAgentProfileArtifact(artifact)) {
+    return artifact.status === "installed" || artifact.createdByBootstrap === true;
+  }
+
+  return (
+    artifact.status === "installed" ||
+    artifact.status === "updated" ||
+    artifact.status === "overwritten" ||
+    artifact.status === "unchanged"
+  );
 }
 
 function getArtifactPathOwners(workflows: InstalledWorkflowBundle[]): Map<string, string[]> {
   const owners = new Map<string, string[]>();
   for (const workflow of workflows) {
     for (const artifact of workflow.installArtifacts ?? []) {
-      for (const path of artifact.paths) {
+      for (const path of artifactPaths(artifact)) {
         const existing = owners.get(path) ?? [];
         existing.push(workflow.name);
         owners.set(path, existing);
@@ -1864,7 +2344,8 @@ function parseWorkflowAliasSource(source: string): GitWorkflowSource | null {
   const catalogPath = source.endsWith("-team")
     ? canonicalExamplesTeamPath
     : canonicalExamplesWorkflowPath;
-  const url = `${canonicalExamplesGitUrl}#${catalogPath}/${source}`;
+  const catalogDirectory = source === "openspec-delivery" ? "openspec-superpowers" : source;
+  const url = `${canonicalExamplesGitUrl}#${catalogPath}/${catalogDirectory}`;
   const gitSource = parseGitWorkflowSource(url);
   if (!gitSource) {
     throw new Error(`Could not build canonical Omniskills alias URL: ${source}`);

@@ -3,6 +3,13 @@ import { access, appendFile, mkdir, readdir, readFile, writeFile } from "node:fs
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  advanceMilestoneState,
+  buildMilestoneSummary,
+  createMilestoneState,
+  getMilestoneView,
+  recordMilestoneEvent,
+} from "./workflow-milestones.mjs";
 
 const commandNames = new Set(["start", "status", "log", "advance", "summary"]);
 const eventTypes = new Set([
@@ -17,7 +24,30 @@ const eventTypes = new Set([
   "advance",
   "force_advance",
   "complete",
+  "input_packet",
+  "role_output",
+  "evidence_gap",
+  "evidence_resolved",
+  "repair_request",
+  "targeted_review",
+  "plan_decision",
+  "implementation_result",
+  "verification_result",
+  "outcome_replay",
+  "acceptance_decision",
+  "scope_change",
 ]);
+
+const milestoneStageEvent = {
+  preparing: "input_packet",
+  planning: "role_output",
+  awaiting_plan_approval: "plan_decision",
+  implementing: "implementation_result",
+  rework: "implementation_result",
+  verifying: "verification_result",
+  evaluating: "outcome_replay",
+  awaiting_acceptance: "acceptance_decision",
+};
 
 export async function runWorkflowLoopCli(input = {}) {
   const stdout = input.stdout ?? ((value) => process.stdout.write(value));
@@ -110,6 +140,13 @@ async function startRun(context, options) {
     startedAt: now.toISOString(),
     updatedAt: now.toISOString(),
   };
+  if (context.manifest.loop?.type === "milestone_based") {
+    const milestoneInput = await readJsonInput(context, options.input, options.inputFile, "start");
+    state.schemaVersion = "0.2";
+    state.milestone = createMilestoneState(milestoneInput, now.toISOString());
+    state.currentStep = "preparing";
+    state.currentStepIndex = context.manifest.steps.findIndex((step) => step.id === "preparing");
+  }
 
   await mkdir(runDir, { recursive: true });
   await writeState(context, state);
@@ -148,7 +185,17 @@ async function logEventCommand(context, options) {
   }
 
   const state = await readState(context, runId);
-  const metadata = options.metadata ? parseJsonOption(options.metadata, "--metadata") : {};
+  const metadata =
+    options.metadata || options.metadataFile
+      ? await readJsonInput(context, options.metadata, options.metadataFile, "log")
+      : {};
+  if (state.milestone) {
+    state.milestone = recordMilestoneEvent(state.milestone, { type, metadata });
+    const view = getMilestoneView(state.milestone);
+    state.status = view.status;
+    state.currentStep = view.stage;
+    state.currentStepIndex = context.manifest.steps.findIndex((item) => item.id === view.stage);
+  }
   const step = options.step ?? state.currentStep;
   await appendEvent(context, runId, {
     timestamp: new Date().toISOString(),
@@ -172,6 +219,35 @@ async function advanceRun(context, options) {
   const state = await readState(context, runId);
   const now = new Date().toISOString();
   const previousStep = getCurrentStep(context, state);
+
+  if (state.milestone) {
+    if (options.to || options.force) {
+      throw new Error("Milestone runs cannot bypass lifecycle transitions");
+    }
+    state.milestone = advanceMilestoneState(state.milestone, now);
+    const view = getMilestoneView(state.milestone);
+    state.status = view.status;
+    state.currentStep = view.stage;
+    state.currentStepIndex = context.manifest.steps.findIndex((step) => step.id === view.stage);
+    state.updatedAt = now;
+    if (view.status === "complete") {
+      state.currentStep = null;
+      state.completedAt = now;
+    }
+    await writeState(context, state);
+    await appendEvent(context, runId, {
+      timestamp: now,
+      type: view.status === "complete" ? "complete" : "advance",
+      step: state.currentStep,
+      message:
+        view.status === "complete"
+          ? `Completed ${context.workflowName}`
+          : `Advanced to ${view.stage}`,
+      metadata: { milestone: view.milestone?.id ?? null },
+    });
+    writeOutput(context, buildStatusPayload(context, state));
+    return;
+  }
 
   if (options.to) {
     if (options.force !== true) {
@@ -277,6 +353,7 @@ function buildStatusPayload(context, state, extra = {}) {
       : null,
     instruction: step?.instruction ?? "Workflow is complete.",
     goal: buildGoalPayload(context),
+    ...(state.milestone ? { milestone: getMilestoneView(state.milestone) } : {}),
     actions: buildActions(context, state),
   };
 }
@@ -294,6 +371,19 @@ function buildGoalPayload(context) {
   };
 }
 
+function milestoneRunPhaseDescription(stage) {
+  if (stage === "preparing") {
+    return "Prepare the bounded stage packet without launching a role.";
+  }
+  if (stage === "awaiting_plan_approval") {
+    return "Wait for explicit human plan approval; do not launch an internal role.";
+  }
+  if (stage === "awaiting_acceptance") {
+    return "Wait for explicit human feature acceptance; do not launch an internal role.";
+  }
+  return "Launch the configured internal role with the bounded stage packet and wait for its Output Packet. If internal launch or the role profile is unavailable, return a Prepared, not executed fallback.";
+}
+
 function buildActions(context, state) {
   const step = getCurrentStep(context, state);
   if (!step) {
@@ -306,18 +396,29 @@ function buildActions(context, state) {
     ];
   }
 
+  const expectedEvent = state.milestone
+    ? milestoneStageEvent[getMilestoneView(state.milestone).stage]
+    : "phase_result";
+  const logCommand = state.milestone
+    ? `${formatCommand(context, "log")} --run ${state.runId} --type ${expectedEvent} --metadata-file path/to/${expectedEvent}.json`
+    : `${formatCommand(context, "log")} --run ${state.runId} --type phase_result --message "..."`;
+
   return [
     {
       type: "run_phase",
       step: step.id,
       skill: step.skill,
       instruction: step.instruction ?? "",
-      description: "Use the named skill and perform the phase work yourself.",
+      description: state.milestone
+        ? milestoneRunPhaseDescription(getMilestoneView(state.milestone).stage)
+        : "Use the named skill and perform the phase work yourself.",
     },
     {
       type: "log_event",
-      command: `${formatCommand(context, "log")} --run ${state.runId} --type phase_result --message "..."`,
-      description: "Record what happened before advancing.",
+      command: logCommand,
+      description: state.milestone
+        ? `Record the required ${expectedEvent} packet before advancing.`
+        : "Record what happened before advancing.",
     },
     ...(step.verify
       ? [
@@ -379,6 +480,7 @@ function buildSummary(context, state, events) {
       .map((action) => `- ${action.type}: ${action.description}`)
       .join("\n"),
     "",
+    ...(state.milestone ? [buildMilestoneSummary(state.milestone), ""] : []),
   ].join("\n");
 }
 
@@ -424,7 +526,8 @@ async function latestActiveRunId(context) {
     }
     try {
       const state = await readState(context, entry.name);
-      if (state.status === "active") {
+      const selectable = state.milestone ? state.status !== "complete" : state.status === "active";
+      if (selectable) {
         states.push(state);
       }
     } catch {
@@ -445,6 +548,9 @@ async function latestActiveRunId(context) {
 function getCurrentStep(context, state) {
   if (state.status === "complete") {
     return null;
+  }
+  if (state.milestone) {
+    return context.manifest.steps.find((step) => step.id === state.currentStep) ?? null;
   }
   return context.manifest.steps[state.currentStepIndex] ?? null;
 }
@@ -503,6 +609,35 @@ function parseJsonOption(value, name) {
   }
 }
 
+async function readJsonInput(context, inline, file, command) {
+  if (inline && file) {
+    throw new Error(
+      command === "start"
+        ? "Pass only one of --input or --input-file"
+        : "Pass only one of --metadata or --metadata-file",
+    );
+  }
+  if (inline) {
+    return parseJsonOption(inline, command === "start" ? "--input" : "--metadata");
+  }
+  if (file) {
+    const path = resolve(context.cwd, file);
+    try {
+      return JSON.parse(await readFile(path, "utf8"));
+    } catch {
+      throw new Error(
+        `${command === "start" ? "--input-file" : "--metadata-file"} must contain valid JSON: ${path}`,
+      );
+    }
+  }
+  if (command === "start") {
+    throw new Error(
+      "start requires --input <json> or --input-file <path> for milestone-based loops",
+    );
+  }
+  return {};
+}
+
 function requireOption(options, name, message) {
   const value = options[name];
   if (value === undefined || value === "") {
@@ -545,6 +680,25 @@ function writeOutput(context, payload) {
     lines.push(`Instruction: ${step.instruction}`);
     if (step.verify) {
       lines.push(`Verify: ${formatVerifyRule(step.verify)}`);
+    }
+    if (payload.milestone) {
+      const milestone = payload.milestone.milestone;
+      lines.push(milestone ? `Milestone: ${milestone.id} - ${milestone.title}` : "Milestone: none");
+      lines.push(`Stage: ${payload.milestone.stage ?? "complete"}`);
+      lines.push(
+        `Evidence gaps: ${
+          payload.milestone.evidenceGaps.length
+            ? payload.milestone.evidenceGaps.map((gap) => gap.name).join(", ")
+            : "none"
+        }`,
+      );
+      lines.push(
+        `Available decisions: ${
+          payload.milestone.availableDecisions.length
+            ? payload.milestone.availableDecisions.join(", ")
+            : "none"
+        }`,
+      );
     }
   } else if (payload.instruction) {
     lines.push(`Instruction: ${payload.instruction}`);

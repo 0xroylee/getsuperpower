@@ -74,6 +74,13 @@ describe("landing content markdown mirrors", () => {
         expectIncludes(markdown, step.skill);
         expectIncludes(markdown, step.description);
       }
+
+      if (workflow.usageExample) {
+        expectIncludes(markdown, workflow.usageExample.imageSrc);
+        expectIncludes(markdown, workflow.usageExample.imageAlt);
+        expectIncludes(markdown, workflow.usageExample.invocation);
+        expectIncludes(markdown, workflow.usageExample.caption);
+      }
     }
   });
 
@@ -120,6 +127,32 @@ describe("landing content markdown mirrors", () => {
         expectIncludes(markdown, step.label);
         expectIncludes(markdown, step.skill);
       }
+
+      if (workflow.usageExample) {
+        expectIncludes(markdown, workflow.usageExample.imageSrc);
+        expectIncludes(markdown, workflow.usageExample.imageAlt);
+        expectIncludes(markdown, workflow.usageExample.invocation);
+        expectIncludes(markdown, workflow.usageExample.caption);
+      }
     }
+  });
+
+  test("mirror lifecycle, lock, preview, and safe-refresh boundaries", () => {
+    const english = readRepoFile("docs/landing-content.md");
+    const traditionalChinese = readRepoFile("docs/landing-content.zh-Hant.md");
+    const lifecycle =
+      "Prepare -> Plan -> Plan approval -> Implement -> Rework if needed -> Verify -> User Outcome Replay -> Feature acceptance";
+
+    for (const markdown of [english, traditionalChinese]) {
+      expectIncludes(markdown, lifecycle);
+      expectIncludes(markdown, "schema `0.2`");
+      expectIncludes(markdown, "same checkout");
+      expectIncludes(markdown, "mixed ownership");
+      expectIncludes(markdown, "npx omniskill@latest setup-model-routing");
+      expectIncludes(markdown, "Example run · hardcoded preview");
+    }
+
+    expectIncludes(english, "Finance Team and Market Team remain lockless local previews");
+    expectIncludes(traditionalChinese, "Finance Team 與 Market Team 仍是無 lock 的 local previews");
   });
 });

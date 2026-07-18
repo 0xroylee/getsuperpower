@@ -1,32 +1,28 @@
 {
   "schemaVersion": "0.1",
   "name": "founding-engineer",
-  "version": "0.1.1",
-  "description": "Act as the startup founding engineer for implementation, testing, debugging, review, and verification before handoff.",
+  "version": "0.2.0",
+  "description": "Act as the startup founding engineer for read-only implementation framing, affected seams, test strategy, and technical risk before execution handoff.",
   "skills": [
     {
       "source": "./skills/founding-engineer",
       "entry": true
     },
     {
-      "source": "mattpocock:implement",
-      "repo": "https://github.com/mattpocock/skills/tree/v1.1.0"
-    },
-    {
       "source": "mattpocock:tdd",
-      "repo": "https://github.com/mattpocock/skills/tree/v1.1.0"
+      "repo": "https://github.com/mattpocock/skills/tree/d574778f94cf620fcc8ce741584093bc650a61d3"
     },
     {
       "source": "mattpocock:diagnosing-bugs",
-      "repo": "https://github.com/mattpocock/skills/tree/v1.1.0"
+      "repo": "https://github.com/mattpocock/skills/tree/d574778f94cf620fcc8ce741584093bc650a61d3"
     },
     {
       "source": "mattpocock:code-review",
-      "repo": "https://github.com/mattpocock/skills/tree/v1.1.0"
+      "repo": "https://github.com/mattpocock/skills/tree/d574778f94cf620fcc8ce741584093bc650a61d3"
     },
     {
       "source": "superpowers:verification-before-completion",
-      "repo": "obra/superpowers"
+      "repo": "https://github.com/obra/superpowers/tree/d884ae04edebef577e82ff7c4e143debd0bbec99"
     }
   ],
   "steps": [
@@ -35,31 +31,6 @@
       "title": "Set the implementation frame",
       "skill": "./skills/founding-engineer",
       "gate": "human_approval"
-    },
-    {
-      "id": "implement",
-      "title": "Implement the planned change",
-      "skill": "mattpocock:implement"
-    },
-    {
-      "id": "tdd",
-      "title": "Use test-first development where practical",
-      "skill": "mattpocock:tdd"
-    },
-    {
-      "id": "debug",
-      "title": "Diagnose failures systematically",
-      "skill": "mattpocock:diagnosing-bugs"
-    },
-    {
-      "id": "review",
-      "title": "Review the implementation",
-      "skill": "mattpocock:code-review"
-    },
-    {
-      "id": "verify",
-      "title": "Verify before completion",
-      "skill": "superpowers:verification-before-completion"
     }
   ]
 }

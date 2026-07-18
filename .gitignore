@@ -3,6 +3,7 @@ bun.lock
 dist/
 coverage/
 .getsuperpower/
+.superpowers/
 .omniskill/
 .ponyrace/
 work/
